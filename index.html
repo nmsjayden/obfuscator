@@ -1033,7 +1033,8 @@ function buildDecoder(arrName,decName,enc,rk,xk,rotAmt,opts){
     opts._xorfn=f;
   }
   if(rotAmt>0){
-    code+=`(function(){for(var _r=0;_r<${hexInt(rotAmt)};_r++)${arrName}.unshift(${arrName}.pop());})();\n`;
+    // Encoder did unshift(pop()) = rotate-right; decoder must do push(shift()) = rotate-left to invert it
+    code+=`(function(){for(var _r=0;_r<${hexInt(rotAmt)};_r++)${arrName}.push(${arrName}.shift());})();\n`;
   }
   const shift=opts.idxshift||0;
   code+=`function ${decName}(_i){\n`;
@@ -1387,10 +1388,13 @@ function passNativeCheck(code){
     +`})();\n`+code;
 }
 function passDbg(code,ms){
+  const fn=freshId();
   return `(function(){\n`
-    +`  setInterval(function(){\n`
+    +`  var ${fn}=function(){\n`
     +`    (function(){return![];})[${JSON.stringify('constructor')}](${JSON.stringify('debugger')})[${JSON.stringify('call')}](${JSON.stringify('action')});\n`
-    +`  },${hexInt(ms||2000)});\n`
+    +`  };\n`
+    +`  ${fn}();\n`
+    +`  setInterval(${fn},${hexInt(ms||2000)});\n`
     +`})();\n`+code;
 }
 function passTamp(code){
@@ -1458,13 +1462,12 @@ function minify(code,opts){
   code=code.replace(/ ?([\{\}\[\]\(\);,]) ?/g,'$1');
   code=code.replace(/([\)\]\}0-9]) ([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:])/g,'$1$2');
   code=code.replace(/([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:]) ([\(\[\{0-9_$])/g,'$1$2');
-  // Use negative lookahead (?![a-zA-Z0-9_$]) so keywords like 'in' don't match
-  // inside longer words like 'indexOf' or 'instanceof'. Also exclude dot-preceded
-  // contexts (method calls) with negative lookbehind (?<!\.).
+  // \b(keyword)\b ensures we only match the standalone keyword, never a prefix of a longer
+  // word (e.g. 'in' won't match 'indexOf', 'instanceof', 'innerHTML', etc.)
   ['return','typeof','instanceof','in','of','new','delete','void','throw','case','var','let',
    'const','function','class','extends','else','if','do','while','for','switch','try','catch',
    'finally','async','await','yield','export','import'].forEach(k=>{
-    code=code.replace(new RegExp('(?<!\\.)\\b('+k+')(?![a-zA-Z0-9_$])([a-zA-Z0-9_$`\'"])', 'g'),'$1 $2');
+    code=code.replace(new RegExp('\\b('+k+')\\b([^\\s])', 'g'),'$1 $2');
   });
   if(opts.semi){code=code.replace(/;var /g,',');code=code.replace(/^,/,'var ');}
   return code.trim();
