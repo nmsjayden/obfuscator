@@ -5,843 +5,831 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OBSCURA — JS Obfuscator</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;500;700&display=swap');
-:root{--bg:#080c10;--panel:#0d1520;--border:#1a2d45;--accent:#00e5ff;--accent2:#ff3d71;--green:#00ff88;--text:#c8d8e8;--dim:#4a6080;--glow:0 0 18px rgba(0,229,255,0.35);}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;min-height:100vh;display:flex;flex-direction:column;overflow:hidden;}
-header{border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,#0d1520,#080c10);flex-shrink:0;}
-.logo{font-family:'Rajdhani',sans-serif;font-size:1.45rem;font-weight:700;color:var(--accent);letter-spacing:3px;text-shadow:var(--glow);}
-.badge{font-size:.6rem;background:var(--accent2);color:#fff;padding:2px 8px;border-radius:3px;letter-spacing:2px;font-family:'Rajdhani',sans-serif;font-weight:700;}
-.main{display:flex;flex:1;height:calc(100vh - 52px);overflow:hidden;}
-.pane-hdr{padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--border);font-family:'Rajdhani',sans-serif;font-weight:500;font-size:.78rem;letter-spacing:2px;color:var(--accent);display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.editor-pane{display:flex;flex-direction:column;flex:1;min-width:0;overflow:hidden;}
-textarea{flex:1;background:var(--bg);color:var(--text);border:none;outline:none;padding:14px;font-family:'Share Tech Mono',monospace;font-size:.77rem;line-height:1.65;resize:none;width:100%;height:100%;}
-.divider{width:1px;background:var(--border);flex-shrink:0;}
-.controls{width:262px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;}
-.cs{border-bottom:1px solid var(--border);padding:10px 13px;}
-.ct{font-family:'Rajdhani',sans-serif;font-size:.7rem;letter-spacing:2px;color:var(--dim);margin-bottom:8px;text-transform:uppercase;}
-.tr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;gap:6px;}
-.tl{font-size:.7rem;color:var(--text);flex:1;line-height:1.3;}
-.tl small{display:block;color:var(--dim);font-size:.58rem;margin-top:1px;}
-.switch{position:relative;width:32px;height:18px;flex-shrink:0;margin-top:1px;}
-.switch input{display:none;}
-.slider{position:absolute;inset:0;background:#0a1825;border:1px solid var(--border);border-radius:20px;cursor:pointer;transition:.15s;}
-.slider::before{content:'';position:absolute;width:12px;height:12px;left:2px;top:2px;background:var(--dim);border-radius:50%;transition:.15s;}
-input:checked+.slider{background:rgba(0,229,255,.12);border-color:rgba(0,229,255,.3);}
-input:checked+.slider::before{transform:translateX(14px);background:var(--accent);box-shadow:0 0 6px var(--accent);}
-.warn{background:rgba(255,61,113,.07);border:1px solid rgba(255,61,113,.25);border-radius:3px;padding:4px 7px;font-size:.6rem;color:var(--accent2);margin-top:3px;line-height:1.5;}
-.btn-run{margin:12px 13px 6px;padding:10px;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Rajdhani',sans-serif;font-size:.9rem;font-weight:700;letter-spacing:3px;cursor:pointer;border-radius:3px;transition:all .2s;text-transform:uppercase;}
-.btn-run:hover{background:rgba(0,229,255,.08);box-shadow:var(--glow);}
-.btn-cp{margin:0 13px 10px;padding:6px;background:transparent;border:1px solid var(--border);color:var(--dim);font-family:'Rajdhani',sans-serif;font-size:.78rem;letter-spacing:2px;cursor:pointer;border-radius:3px;transition:all .2s;}
-.btn-cp:hover{color:var(--green);border-color:var(--green);}
-.stats{margin:0 13px 8px;font-size:.6rem;color:var(--dim);line-height:1.9;}
-.stats span{color:var(--green);}
-select{background:var(--bg);color:var(--text);border:1px solid var(--border);padding:4px 7px;font-family:'Share Tech Mono',monospace;font-size:.68rem;border-radius:3px;width:100%;margin-top:3px;outline:none;}
-.incompat{font-size:.59rem;color:var(--accent2);line-height:1.65;}
-.dot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;box-shadow:0 0 5px var(--accent);animation:pulse 2s infinite;}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
-#output{color:#7fc8da;}
-::-webkit-scrollbar{width:4px;height:4px;}
-::-webkit-scrollbar-track{background:var(--bg);}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Orbitron:wght@600;900&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #06090f;
+  --surface: #0c1220;
+  --surface2: #111928;
+  --border: #1c2e47;
+  --border2: #243650;
+  --cyan: #00d4ff;
+  --cyan-dim: rgba(0,212,255,0.15);
+  --red: #ff4466;
+  --green: #00ffaa;
+  --yellow: #ffcc00;
+  --text: #b8cfe0;
+  --text-dim: #4a6070;
+  --text-bright: #deeeff;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+}
+
+/* ── TOP BAR ── */
+#topbar {
+  height: 46px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+}
+#topbar .logo {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--cyan);
+  letter-spacing: 4px;
+  text-shadow: 0 0 20px rgba(0,212,255,0.5);
+}
+#topbar .ver {
+  font-size: .6rem;
+  background: var(--red);
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 2px;
+  letter-spacing: 2px;
+  font-weight: 600;
+}
+#topbar .sub {
+  margin-left: auto;
+  font-size: .62rem;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+/* ── MAIN 3-COLUMN LAYOUT ── */
+#app {
+  display: flex;
+  height: calc(100vh - 46px);
+  overflow: hidden;
+}
+
+/* ── EDITOR COLUMNS ── */
+.col-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid var(--border);
+}
+.col-hdr {
+  height: 32px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  font-size: .65rem;
+  letter-spacing: 2px;
+  color: var(--cyan);
+  flex-shrink: 0;
+}
+.pulse {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 6px var(--cyan);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+textarea {
+  flex: 1;
+  background: var(--bg);
+  color: var(--text-bright);
+  border: none;
+  outline: none;
+  padding: 14px;
+  font-family: var(--mono);
+  font-size: .76rem;
+  line-height: 1.7;
+  resize: none;
+}
+#output { color: #5fb8d4; }
+
+/* ── RIGHT PANEL ── */
+#panel {
+  width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+/* Preset row at top */
+#panel-top {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#panel-top label {
+  font-size: .6rem;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  display: block;
+  margin-bottom: 5px;
+}
+select {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border2);
+  padding: 5px 8px;
+  font-family: var(--mono);
+  font-size: .7rem;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Scrollable options */
+#panel-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+#panel-scroll::-webkit-scrollbar { width: 3px; }
+#panel-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* Section */
+.sec {
+  border-bottom: 1px solid var(--border);
+}
+.sec-hdr {
+  padding: 7px 12px;
+  font-size: .6rem;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  background: var(--surface2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+.sec-hdr:hover { color: var(--text); }
+.sec-hdr .arr { font-size: .55rem; transition: transform .2s; }
+.sec-hdr.open .arr { transform: rotate(90deg); }
+.sec-body {
+  display: none;
+  padding: 6px 12px 8px;
+}
+.sec-body.open { display: block; }
+
+/* Toggle row */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 0;
+  gap: 8px;
+}
+.row-label {
+  font-size: .68rem;
+  color: var(--text);
+  line-height: 1.3;
+  flex: 1;
+}
+.row-label span {
+  display: block;
+  font-size: .57rem;
+  color: var(--text-dim);
+  margin-top: 1px;
+}
+
+/* Toggle switch */
+.tog {
+  position: relative;
+  width: 30px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.tog input { display: none; }
+.tog-track {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: .15s;
+}
+.tog-track::before {
+  content: '';
+  position: absolute;
+  width: 10px; height: 10px;
+  left: 2px; top: 2px;
+  background: var(--text-dim);
+  border-radius: 50%;
+  transition: .15s;
+}
+.tog input:checked ~ .tog-track {
+  background: rgba(0,212,255,.12);
+  border-color: var(--cyan);
+}
+.tog input:checked ~ .tog-track::before {
+  transform: translateX(14px);
+  background: var(--cyan);
+  box-shadow: 0 0 5px var(--cyan);
+}
+
+.warn-box {
+  margin-top: 5px;
+  padding: 4px 7px;
+  background: rgba(255,68,102,.07);
+  border: 1px solid rgba(255,68,102,.2);
+  border-radius: 3px;
+  font-size: .58rem;
+  color: var(--red);
+  line-height: 1.55;
+}
+.incompat {
+  font-size: .58rem;
+  color: var(--red);
+  line-height: 1.7;
+  padding: 4px 0;
+}
+
+/* Domain input */
+.domain-input {
+  width: 100%;
+  margin-top: 5px;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: 4px 7px;
+  font-family: var(--mono);
+  font-size: .67rem;
+  border-radius: 3px;
+  outline: none;
+}
+
+/* ── STICKY FOOTER ── */
+#panel-footer {
+  flex-shrink: 0;
+  border-top: 2px solid var(--border2);
+  background: var(--surface);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 8px;
+  font-size: .58rem;
+  color: var(--text-dim);
+}
+.stats-row b { color: var(--green); font-weight: 600; }
+
+#btn-run {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  font-family: 'Orbitron', sans-serif;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: 3px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all .15s;
+  text-transform: uppercase;
+}
+#btn-run:hover {
+  background: var(--cyan-dim);
+  box-shadow: 0 0 14px rgba(0,212,255,.3);
+}
+#btn-run:active { transform: scale(.98); }
+
+#btn-copy {
+  width: 100%;
+  padding: 7px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: .68rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all .15s;
+}
+#btn-copy:hover { color: var(--green); border-color: var(--green); }
 </style>
 </head>
 <body>
-<header>
-  <span class="logo">OBSCURA</span>
-  <span class="badge">VM 7.99</span>
-  <span style="color:var(--dim);font-size:.65rem;margin-left:auto;letter-spacing:1px;">ADVANCED JS OBFUSCATOR — CONSOLE &amp; TAMPERMONKEY</span>
-</header>
-<div class="main">
-  <div class="editor-pane" style="border-right:1px solid var(--border);">
-    <div class="pane-hdr"><span class="dot"></span> INPUT</div>
-    <textarea id="input" placeholder="// Paste JavaScript here&#10;// Works with console scripts &amp; Tampermonkey&#10;&#10;console.log('gurt');"></textarea>
-  </div>
-  <div class="editor-pane">
-    <div class="pane-hdr"><span class="dot"></span> OUTPUT</div>
-    <textarea id="output" readonly placeholder="// Obfuscated output appears here..."></textarea>
-  </div>
-  <div class="controls">
 
-    <div class="cs">
-      <div class="ct">⚙ Preset</div>
+<div id="topbar">
+  <span class="logo">OBSCURA</span>
+  <span class="ver">VM 7.99</span>
+  <span class="sub">CONSOLE &amp; TAMPERMONKEY</span>
+</div>
+
+<div id="app">
+
+  <!-- INPUT -->
+  <div class="col-editor">
+    <div class="col-hdr"><span class="pulse"></span> INPUT SOURCE</div>
+    <textarea id="input" spellcheck="false" placeholder="// Paste your JavaScript here&#10;&#10;console.log('gurt');"></textarea>
+  </div>
+
+  <!-- OUTPUT -->
+  <div class="col-editor" style="border-right:none;">
+    <div class="col-hdr"><span class="pulse"></span> OBFUSCATED OUTPUT</div>
+    <textarea id="output" readonly spellcheck="false" placeholder="// Output appears here after obfuscation..."></textarea>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="panel">
+
+    <div id="panel-top">
+      <label>⚙ PRESET LEVEL</label>
       <select id="preset" onchange="applyPreset()">
-        <option value="light">Light — Safe</option>
-        <option value="medium">Medium</option>
-        <option value="high" selected>High — VM 7.99</option>
-        <option value="max">Maximum</option>
-        <option value="custom">Custom</option>
+        <option value="light">☀ Light — Safe</option>
+        <option value="medium">⚡ Medium</option>
+        <option value="high" selected>🔥 High — VM 7.99</option>
+        <option value="max">☠ Maximum</option>
+        <option value="custom">✎ Custom</option>
       </select>
     </div>
 
-    <div class="cs">
-      <div class="ct">🔤 String Encryption</div>
-      <div class="tr"><label class="tl">Escape Encoding<small>\x61\u0067 literals</small></label><label class="switch"><input type="checkbox" id="o_senc" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">String Array<small>extract → indexed pool</small></label><label class="switch"><input type="checkbox" id="o_sarr" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">Array Rotation<small>shift + self-correct</small></label><label class="switch"><input type="checkbox" id="o_srot" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">Array Shuffle<small>Fisher-Yates randomise</small></label><label class="switch"><input type="checkbox" id="o_sshuf" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">RC4 + Base64<small>key-encrypted strings ✓fixed</small></label><label class="switch"><input type="checkbox" id="o_rc4" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">XOR Layer<small>secondary XOR pass</small></label><label class="switch"><input type="checkbox" id="o_xor" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">String Splitting<small>"ab"+"cd" concat at runtime</small></label><label class="switch"><input type="checkbox" id="o_ssplit" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">Charcode Arrays<small>"hi"→[104,105] rebuild</small></label><label class="switch"><input type="checkbox" id="o_charcode" checked><span class="slider"></span></label></div>
-    </div>
+    <div id="panel-scroll">
 
-    <div class="cs">
-      <div class="ct">🏷 Identifiers</div>
-      <div class="tr"><label class="tl">Rename Variables<small>_0x1a2b hex style</small></label><label class="switch"><input type="checkbox" id="o_ren" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">Property Bracket Access<small>obj.foo → obj['foo']</small></label><label class="switch"><input type="checkbox" id="o_prop" checked><span class="slider"></span></label></div>
-    </div>
-
-    <div class="cs">
-      <div class="ct">🔢 Numbers</div>
-      <div class="tr"><label class="tl">Hex Numbers<small>97 → 0x61</small></label><label class="switch"><input type="checkbox" id="o_hexn" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">Number Splitting<small>0x61 → 0x3*0x20+0x1</small></label><label class="switch"><input type="checkbox" id="o_nsplit" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">Math Wrappers<small>n → Math.floor(n+0x0)</small></label><label class="switch"><input type="checkbox" id="o_math" checked><span class="slider"></span></label></div>
-    </div>
-
-    <div class="cs">
-      <div class="ct">🔀 Control Flow</div>
-      <div class="tr"><label class="tl">CFF Switch Dispatch<small>shuffled while/switch</small></label><label class="switch"><input type="checkbox" id="o_cff" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">Dead Code Injection<small>opaque fake branches</small></label><label class="switch"><input type="checkbox" id="o_dead" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">IIFE Wrap<small>(function(){...})()</small></label><label class="switch"><input type="checkbox" id="o_iife" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">Comma Obfuscation<small>void(a=1,b=2,fn())</small></label><label class="switch"><input type="checkbox" id="o_comma" checked><span class="slider"></span></label></div>
-    </div>
-
-    <div class="cs">
-      <div class="ct">🖥 Bytecode VM</div>
-      <div class="tr"><label class="tl">Bytecode Encoding<small>source → int[] program ✓fixed</small></label><label class="switch"><input type="checkbox" id="o_bc" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">Opcode Rotator<small>shift opcode values</small></label><label class="switch"><input type="checkbox" id="o_oprot" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">Chunk Splitting<small>split int array into parts</small></label><label class="switch"><input type="checkbox" id="o_chunk" checked><span class="slider"></span></label></div>
-      <div class="warn">Bytecode wraps the final output — works with any JS.</div>
-    </div>
-
-    <div class="cs">
-      <div class="ct">🛡 Anti-Analysis</div>
-      <div class="tr"><label class="tl">Self-Defending<small>breaks on reformat/beautify</small></label><label class="switch"><input type="checkbox" id="o_self" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">Debug Protection<small>devtools freeze loop</small></label><label class="switch"><input type="checkbox" id="o_dbg" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">Tamper Detection<small>toString fingerprint check</small></label><label class="switch"><input type="checkbox" id="o_tamp" checked><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">Console Disable<small>nulls console.log etc.</small></label><label class="switch"><input type="checkbox" id="o_con"><span class="slider"></span></label></div>
-      <div class="tr"><label class="tl">Domain Lock<small>browser-only hostname check</small></label><label class="switch"><input type="checkbox" id="o_dom"><span class="slider"></span></label></div>
-      <input id="o_domval" type="text" placeholder="domain e.g. example.com"
-        style="width:100%;margin-top:4px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:4px 7px;font-family:inherit;font-size:.68rem;border-radius:3px;outline:none;">
-    </div>
-
-    <div class="cs">
-      <div class="ct">⚠ Incompatible Combos</div>
-      <div class="incompat">
-        ✗ Debug Protect + Node.js (no devtools)<br>
-        ✗ Console Disable + scripts that log<br>
-        ✗ Domain Lock + Node.js / console<br>
-        ✗ Self-Defend + auto-formatters/minifiers<br>
-        ✗ XOR or RC4 without String Array ON<br>
-        ✗ CFF + labeled loop breaks (may break)<br>
-        ✗ Charcode Arrays + String Array (redundant)
+      <!-- STRINGS -->
+      <div class="sec">
+        <div class="sec-hdr open" onclick="toggleSec(this)">🔤 STRING ENCRYPTION <span class="arr">▶</span></div>
+        <div class="sec-body open">
+          <div class="row"><label class="row-label">Escape Encoding<span>\x61\u0067 hex/unicode</span></label><label class="tog"><input type="checkbox" id="o_senc" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">String Array<span>extract → indexed pool</span></label><label class="tog"><input type="checkbox" id="o_sarr" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">Array Rotation<span>shift + self-correct</span></label><label class="tog"><input type="checkbox" id="o_srot" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">Array Shuffle<span>Fisher-Yates randomise</span></label><label class="tog"><input type="checkbox" id="o_sshuf" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">RC4 + Base64<span>key-encrypted strings</span></label><label class="tog"><input type="checkbox" id="o_rc4" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">XOR Layer<span>secondary XOR pass</span></label><label class="tog"><input type="checkbox" id="o_xor" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">String Splitting<span>"ab"+"cd" concat</span></label><label class="tog"><input type="checkbox" id="o_ssplit" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">Charcode Arrays<span>"hi"→fromCharCode(…)</span></label><label class="tog"><input type="checkbox" id="o_charcode"><span class="tog-track"></span></label></div>
+        </div>
       </div>
+
+      <!-- IDENTIFIERS -->
+      <div class="sec">
+        <div class="sec-hdr open" onclick="toggleSec(this)">🏷 IDENTIFIERS <span class="arr">▶</span></div>
+        <div class="sec-body open">
+          <div class="row"><label class="row-label">Rename Variables<span>_0x1a2b hex style</span></label><label class="tog"><input type="checkbox" id="o_ren" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">Bracket Access<span>obj.foo → obj['foo']</span></label><label class="tog"><input type="checkbox" id="o_prop" checked><span class="tog-track"></span></label></div>
+        </div>
+      </div>
+
+      <!-- NUMBERS -->
+      <div class="sec">
+        <div class="sec-hdr open" onclick="toggleSec(this)">🔢 NUMBERS <span class="arr">▶</span></div>
+        <div class="sec-body open">
+          <div class="row"><label class="row-label">Hex Numbers<span>97 → 0x61</span></label><label class="tog"><input type="checkbox" id="o_hexn" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">Number Splitting<span>0x61 → 0x3*0x20+0x1</span></label><label class="tog"><input type="checkbox" id="o_nsplit" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">Math Wrappers<span>n → Math.floor(n+0x0)</span></label><label class="tog"><input type="checkbox" id="o_math" checked><span class="tog-track"></span></label></div>
+        </div>
+      </div>
+
+      <!-- CONTROL FLOW -->
+      <div class="sec">
+        <div class="sec-hdr open" onclick="toggleSec(this)">🔀 CONTROL FLOW <span class="arr">▶</span></div>
+        <div class="sec-body open">
+          <div class="row"><label class="row-label">CFF Switch Dispatch<span>shuffled while/switch loop</span></label><label class="tog"><input type="checkbox" id="o_cff" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">Dead Code Injection<span>opaque fake branches</span></label><label class="tog"><input type="checkbox" id="o_dead" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">IIFE Wrap<span>(function(){…})()</span></label><label class="tog"><input type="checkbox" id="o_iife" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">Comma Obfuscation<span>void(a=1,b=2,fn())</span></label><label class="tog"><input type="checkbox" id="o_comma" checked><span class="tog-track"></span></label></div>
+        </div>
+      </div>
+
+      <!-- BYTECODE VM -->
+      <div class="sec">
+        <div class="sec-hdr open" onclick="toggleSec(this)">🖥 BYTECODE VM <span class="arr">▶</span></div>
+        <div class="sec-body open">
+          <div class="row"><label class="row-label">Bytecode Encoding<span>source → int[] program</span></label><label class="tog"><input type="checkbox" id="o_bc" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">Opcode Rotator<span>shift opcode values</span></label><label class="tog"><input type="checkbox" id="o_oprot" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">Chunk Splitting<span>split int array 300/part</span></label><label class="tog"><input type="checkbox" id="o_chunk" checked><span class="tog-track"></span></label></div>
+          <div class="warn-box">Bytecode wraps outermost — works with any valid JS.</div>
+        </div>
+      </div>
+
+      <!-- ANTI-ANALYSIS -->
+      <div class="sec">
+        <div class="sec-hdr open" onclick="toggleSec(this)">🛡 ANTI-ANALYSIS <span class="arr">▶</span></div>
+        <div class="sec-body open">
+          <div class="row"><label class="row-label">Self-Defending<span>breaks on reformat/beautify</span></label><label class="tog"><input type="checkbox" id="o_self" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">Debug Protection<span>devtools freeze loop</span></label><label class="tog"><input type="checkbox" id="o_dbg" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">Tamper Detection<span>runtime sentinel check</span></label><label class="tog"><input type="checkbox" id="o_tamp" checked><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">Console Disable<span>nulls console.log etc.</span></label><label class="tog"><input type="checkbox" id="o_con"><span class="tog-track"></span></label></div>
+          <div class="row"><label class="row-label">Domain Lock<span>browser hostname check</span></label><label class="tog"><input type="checkbox" id="o_dom"><span class="tog-track"></span></label></div>
+          <input id="o_domval" class="domain-input" type="text" placeholder="e.g. example.com">
+        </div>
+      </div>
+
+      <!-- INCOMPATIBLE -->
+      <div class="sec">
+        <div class="sec-hdr" onclick="toggleSec(this)">⚠ INCOMPATIBLE COMBOS <span class="arr">▶</span></div>
+        <div class="sec-body">
+          <div class="incompat">
+            ✗ Debug Protect + Node.js<br>
+            ✗ Console Disable + logging scripts<br>
+            ✗ Domain Lock + Node.js/console<br>
+            ✗ Self-Defend + auto-formatters<br>
+            ✗ RC4/XOR without String Array ON<br>
+            ✗ CFF + labeled loop breaks<br>
+            ✗ Charcode + String Array (redundant)
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end panel-scroll -->
+
+    <!-- STICKY FOOTER -->
+    <div id="panel-footer">
+      <div class="stats-row">
+        <div>IN <b id="si">0</b></div>
+        <div>OUT <b id="so">0</b></div>
+        <div>RATIO <b id="sr">—</b></div>
+        <div>STRS <b id="ss">0</b></div>
+        <div>BC <b id="sb">0</b></div>
+      </div>
+      <button id="btn-run" onclick="runObfuscate()">▶ OBFUSCATE</button>
+      <button id="btn-copy" onclick="copyOut()">⧉ COPY OUTPUT</button>
     </div>
 
-    <div class="stats">
-      INPUT <span id="si">0</span> chars &nbsp;
-      OUTPUT <span id="so">0</span> chars<br>
-      RATIO <span id="sr">—</span> &nbsp;
-      STRINGS <span id="ss">0</span><br>
-      BYTECODES <span id="sb">0</span>
-    </div>
-
-    <button class="btn-run" onclick="runObfuscate()">▶ OBFUSCATE</button>
-    <button class="btn-cp" onclick="copyOut()">⧉ COPY OUTPUT</button>
-  </div>
-</div>
+  </div><!-- end panel -->
+</div><!-- end app -->
 
 <script>
 // ================================================================
-//  OBSCURA — Production JS Obfuscator Engine v2
-//  All passes tested and working. RC4 + XOR + Bytecode fully fixed.
+//  OBSCURA — JS Obfuscator Engine v3
 // ================================================================
 
-// ─── Deterministic seeded RNG ────────────────────────────────────
+function toggleSec(hdr) {
+  hdr.classList.toggle('open');
+  hdr.nextElementSibling.classList.toggle('open');
+}
+
+// ─── RNG ─────────────────────────────────────────────────────────
 const RNG = (() => {
-  let seed = Date.now() ^ (Math.random() * 0xffffffff | 0);
+  let s = Date.now() ^ (Math.random() * 0xffffffff | 0);
   return {
-    next() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 0x100000000; },
-    int(n) { return Math.floor(this.next() * n); },
-    hex(n) { let s = ''; for (let i = 0; i < n; i++) s += (this.next() * 16 | 0).toString(16); return s; }
+    next()  { s = (s * 1664525 + 1013904223) >>> 0; return s / 0x100000000; },
+    int(n)  { return Math.floor(this.next() * n); },
+    hex(n)  { let r=''; for(let i=0;i<n;i++) r+=(this.next()*16|0).toString(16); return r; }
   };
 })();
 
-let idCounter = 0;
-function freshId() { return '_0x' + (idCounter++).toString(16).padStart(4, '0') + RNG.hex(2); }
-function resetIds() { idCounter = 0; }
-
+let idC = 0;
+function freshId() { return '_0x'+(idC++).toString(16).padStart(4,'0')+RNG.hex(2); }
+function resetIds() { idC = 0; }
 function hexInt(n) {
-  if (!Number.isInteger(n)) return String(n);
-  if (n < 0) return '-0x' + (-n).toString(16);
-  return '0x' + n.toString(16);
+  if(!Number.isInteger(n)) return String(n);
+  return n < 0 ? '-0x'+(-n).toString(16) : '0x'+n.toString(16);
 }
 
-// ─── RC4 ─────────────────────────────────────────────────────────
-// Operates on byte arrays, returns byte array
+// ─── RC4 (byte-accurate) ─────────────────────────────────────────
 function rc4Bytes(keyStr, dataBytes) {
   const S = new Uint8Array(256);
-  for (let i = 0; i < 256; i++) S[i] = i;
-  let j = 0;
-  for (let i = 0; i < 256; i++) {
-    j = (j + S[i] + keyStr.charCodeAt(i % keyStr.length)) & 0xff;
-    let t = S[i]; S[i] = S[j]; S[j] = t;
+  for(let i=0;i<256;i++) S[i]=i;
+  let j=0;
+  for(let i=0;i<256;i++){
+    j=(j+S[i]+keyStr.charCodeAt(i%keyStr.length))&0xff;
+    let t=S[i];S[i]=S[j];S[j]=t;
   }
-  let i = 0; j = 0;
-  const out = new Uint8Array(dataBytes.length);
-  for (let k = 0; k < dataBytes.length; k++) {
-    i = (i + 1) & 0xff; j = (j + S[i]) & 0xff;
-    let t = S[i]; S[i] = S[j]; S[j] = t;
-    out[k] = dataBytes[k] ^ S[(S[i] + S[j]) & 0xff];
+  let ri=0,rj=0;
+  const out=new Uint8Array(dataBytes.length);
+  for(let k=0;k<dataBytes.length;k++){
+    ri=(ri+1)&0xff; rj=(rj+S[ri])&0xff;
+    let t=S[ri];S[ri]=S[rj];S[rj]=t;
+    out[k]=dataBytes[k]^S[(S[ri]+S[rj])&0xff];
   }
   return out;
 }
-
-// Encode string → UTF-8 bytes → Uint8Array
-function strToBytes(s) {
-  const enc = new TextEncoder();
-  return enc.encode(s);
-}
-
-// Uint8Array → latin1 string for btoa
-function bytesToLatin1(bytes) {
-  let s = '';
-  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
-  return s;
-}
-
-// XOR bytes with key bytes
 function xorBytes(bytes, keyStr) {
-  const out = new Uint8Array(bytes.length);
-  for (let i = 0; i < bytes.length; i++)
-    out[i] = bytes[i] ^ keyStr.charCodeAt(i % keyStr.length);
+  const out=new Uint8Array(bytes.length);
+  for(let i=0;i<bytes.length;i++) out[i]=bytes[i]^keyStr.charCodeAt(i%keyStr.length);
   return out;
 }
-
-// Encode string value for storage in array
-// Returns { encoded: base64string, rc4Key, xorKey }
-function encodeStringValue(raw, opts, rc4Key, xorKey) {
-  let bytes = strToBytes(raw);
-  if (opts.xor)  bytes = xorBytes(bytes, xorKey);
-  if (opts.rc4)  bytes = rc4Bytes(rc4Key, bytes);
-  return btoa(bytesToLatin1(bytes));
+function strToBytes(s) { return new TextEncoder().encode(s); }
+function bytesToLatin1(b) { let s=''; for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return s; }
+function encodeVal(raw, opts, rc4Key, xorKey) {
+  let b = strToBytes(raw);
+  if(opts.xor) b = xorBytes(b, xorKey);
+  if(opts.rc4) b = rc4Bytes(rc4Key, b);
+  return btoa(bytesToLatin1(b));
 }
 
-// Runtime decoder JS (as string to embed in output)
-function buildDecoderRuntime(arrName, decoderName, opts, rc4Key, xorKey, rotAmt) {
+// ─── Decoder runtime builder ──────────────────────────────────────
+function buildDecoder(arrName, decoderName, opts, rc4Key, xorKey, rotAmt) {
   let code = '';
-
-  // RC4 runtime function
-  if (opts.rc4) {
-    const fn = freshId();
-    code += `function ${fn}(k,d){`
-      + `var S=new Uint8Array(256),j=0,t,i;`
-      + `for(i=0;i<256;i++)S[i]=i;`
-      + `for(i=0;i<256;i++){j=(j+S[i]+k.charCodeAt(i%k.length))&255;t=S[i];S[i]=S[j];S[j]=t;}`
-      + `var ri=0,rj=0,out=new Uint8Array(d.length);`
-      + `for(i=0;i<d.length;i++){`
-      + `ri=(ri+1)&255;rj=(rj+S[ri])&255;`
-      + `t=S[ri];S[ri]=S[rj];S[rj]=t;`
-      + `out[i]=d[i]^S[(S[ri]+S[rj])&255];}`
-      + `return out;}\n`;
-    // store fn name for use in decoder
-    code._rc4fn = fn;
-    // hack: attach as property
-    var rc4FnName = fn;
-
-    // XOR runtime
-    var xorFnName = null;
-    if (opts.xor) {
-      const xfn = freshId();
-      code += `function ${xfn}(b,k){`
-        + `var o=new Uint8Array(b.length);`
-        + `for(var i=0;i<b.length;i++)o[i]=b[i]^k.charCodeAt(i%k.length);`
-        + `return o;}\n`;
-      xorFnName = xfn;
-    }
-
-    // Rotation correction
-    if (opts.srot && rotAmt > 0) {
-      code += `(function(){for(var i=0;i<${hexInt(rotAmt)};i++)${arrName}.unshift(${arrName}.pop());})();\n`;
-    }
-
-    // Decoder: base64 → latin1 bytes → Uint8Array → rc4/xor → TextDecoder
-    code += `function ${decoderName}(i){`
-      + `var b64=${arrName}[i];`
-      + `var bin=atob(b64);`
-      + `var bytes=new Uint8Array(bin.length);`
-      + `for(var j=0;j<bin.length;j++)bytes[j]=bin.charCodeAt(j);`
-      + (opts.rc4 ? `bytes=${rc4FnName}(${JSON.stringify(rc4Key)},bytes);` : '')
-      + (opts.xor ? `bytes=${xorFnName}(bytes,${JSON.stringify(xorKey)});` : '')
-      + `return new TextDecoder().decode(bytes);}\n`;
-
-  } else {
-    // No encryption — just base64 decode
-    if (opts.srot && rotAmt > 0) {
-      code += `(function(){for(var i=0;i<${hexInt(rotAmt)};i++)${arrName}.unshift(${arrName}.pop());})();\n`;
-    }
-    code += `function ${decoderName}(i){`
-      + `var b64=${arrName}[i];`
-      + `var bin=atob(b64);`
-      + `var bytes=new Uint8Array(bin.length);`
-      + `for(var j=0;j<bin.length;j++)bytes[j]=bin.charCodeAt(j);`
-      + `return new TextDecoder().decode(bytes);}\n`;
+  let rc4Fn='', xorFn='';
+  if(opts.rc4) {
+    rc4Fn = freshId();
+    code += `function ${rc4Fn}(k,d){`
+      +`var S=new Uint8Array(256),j=0,t;`
+      +`for(var i=0;i<256;i++)S[i]=i;`
+      +`for(var i=0;i<256;i++){j=(j+S[i]+k.charCodeAt(i%k.length))&255;t=S[i];S[i]=S[j];S[j]=t;}`
+      +`var ri=0,rj=0,o=new Uint8Array(d.length);`
+      +`for(var i=0;i<d.length;i++){ri=(ri+1)&255;rj=(rj+S[ri])&255;t=S[ri];S[ri]=S[rj];S[rj]=t;`
+      +`o[i]=d[i]^S[(S[ri]+S[rj])&255];}return o;}\n`;
   }
+  if(opts.xor) {
+    xorFn = freshId();
+    code += `function ${xorFn}(b,k){`
+      +`var o=new Uint8Array(b.length);`
+      +`for(var i=0;i<b.length;i++)o[i]=b[i]^k.charCodeAt(i%k.length);`
+      +`return o;}\n`;
+  }
+  if(rotAmt>0)
+    code += `(function(){for(var i=0;i<${hexInt(rotAmt)};i++)${arrName}.unshift(${arrName}.pop());})();\n`;
 
+  code += `function ${decoderName}(i){`
+    +`var b64=${arrName}[i];`
+    +`var bin=atob(b64);`
+    +`var bytes=new Uint8Array(bin.length);`
+    +`for(var j=0;j<bin.length;j++)bytes[j]=bin.charCodeAt(j);`
+    +(opts.rc4?`bytes=${rc4Fn}(${JSON.stringify(rc4Key)},bytes);`:'')
+    +(opts.xor?`bytes=${xorFn}(bytes,${JSON.stringify(xorKey)});`:'')
+    +`return new TextDecoder().decode(bytes);}\n`;
   return code;
 }
 
 // ─── Tokenizer ────────────────────────────────────────────────────
 function tokenize(src) {
-  const tokens = [];
-  // Handles: line/block comments, template literals, strings, hex nums, floats, idents, single chars
-  const re = /\/\/[^\n]*|\/\*[\s\S]*?\*\/|`(?:[^`\\]|\\.|\$\{(?:[^{}]|\{[^{}]*\})*\})*`|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|0[xX][0-9a-fA-F]+|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|[a-zA-Z_$][a-zA-Z0-9_$]*|[^\s]/g;
-  let m, last = 0;
-  while ((m = re.exec(src)) !== null) {
-    if (m.index > last) tokens.push({ t: 'ws', v: src.slice(last, m.index) });
-    const v = m[0];
-    let type = 'op';
-    if (v[0] === '/' && (v[1] === '/' || v[1] === '*')) type = 'comment';
-    else if (v[0] === '"' || v[0] === "'" || v[0] === '`') type = 'str';
-    else if (/^[0-9]/.test(v) || /^0[xX]/.test(v)) type = 'num';
-    else if (/^[a-zA-Z_$]/.test(v)) type = 'id';
-    tokens.push({ t: type, v });
-    last = m.index + v.length;
+  const toks=[];
+  const re=/\/\/[^\n]*|\/\*[\s\S]*?\*\/|`(?:[^`\\]|\\.|\$\{(?:[^{}]|\{[^{}]*\})*\})*`|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|0[xX][0-9a-fA-F]+|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|[a-zA-Z_$][a-zA-Z0-9_$]*|[^\s]/g;
+  let m,last=0;
+  while((m=re.exec(src))!==null){
+    if(m.index>last) toks.push({t:'ws',v:src.slice(last,m.index)});
+    const v=m[0];
+    let t='op';
+    if(v[0]==='/'&&(v[1]==='/'||v[1]==='*')) t='comment';
+    else if(v[0]==='"'||v[0]==="'"||v[0]==='`') t='str';
+    else if(/^[0-9]/.test(v)||/^0[xX]/.test(v)) t='num';
+    else if(/^[a-zA-Z_$]/.test(v)) t='id';
+    toks.push({t,v});
+    last=m.index+v.length;
   }
-  if (last < src.length) tokens.push({ t: 'ws', v: src.slice(last) });
-  return tokens;
+  if(last<src.length) toks.push({t:'ws',v:src.slice(last)});
+  return toks;
 }
 
 // ─── Pass: String Array ───────────────────────────────────────────
-function passStringArray(tokens, opts, st) {
-  const arr = [];
-  const rc4Key = RNG.hex(14);
-  const xorKey = RNG.hex(10);
-  const arrName = freshId();
-  const decoderName = freshId();
-
-  const newTokens = tokens.map(tok => {
-    if (tok.t !== 'str') return tok;
-    // Parse raw string value
-    let raw = '';
+function passStringArray(toks, opts, st) {
+  const arr=[], rc4Key=RNG.hex(14), xorKey=RNG.hex(10);
+  const arrName=freshId(), decoderName=freshId();
+  const newToks=toks.map(tok=>{
+    if(tok.t!=='str') return tok;
+    let raw='';
     try {
-      if (tok.v[0] === '`') {
-        raw = tok.v.slice(1, -1); // template — keep raw
-      } else {
-        raw = JSON.parse(tok.v[0] === '"' ? tok.v : '"' + tok.v.slice(1, -1).replace(/(?<!\\)"/g, '\\"') + '"');
-      }
-    } catch (e) {
-      try { raw = eval(tok.v); } catch(e2) { raw = tok.v.slice(1, -1); }
-    }
-    if (raw.length === 0) return tok;
-
-    const encoded = encodeStringValue(raw, opts, rc4Key, xorKey);
-    const idx = arr.length;
+      if(tok.v[0]==='`') raw=tok.v.slice(1,-1);
+      else raw=JSON.parse(tok.v[0]==='"'?tok.v:'"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"');
+    } catch(e){ try{raw=eval(tok.v);}catch(e2){raw=tok.v.slice(1,-1);} }
+    if(!raw||raw.length===0) return tok;
+    const encoded=encodeVal(raw,opts,rc4Key,xorKey);
+    const idx=arr.length;
     arr.push(JSON.stringify(encoded));
     st.strings++;
-    return { t: 'ref', v: `${decoderName}(${hexInt(idx)})` };
+    return {t:'ref',v:`${decoderName}(${hexInt(idx)})`};
   });
-
-  if (arr.length === 0) return { tokens, preamble: '' };
-
-  // Shuffle
-  if (opts.sshuf) {
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = RNG.int(i + 1);
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-  }
-
-  // Rotate
-  const rotAmt = opts.srot ? (1 + RNG.int(Math.max(arr.length - 1, 1))) : 0;
-  if (opts.srot) {
-    for (let i = 0; i < rotAmt; i++) arr.push(arr.shift());
-  }
-
-  let pre = `var ${arrName}=[${arr.join(',')}];\n`;
-  pre += buildDecoderRuntime(arrName, decoderName, opts, rc4Key, xorKey, rotAmt);
-
-  return { tokens: newTokens, preamble: pre };
+  if(arr.length===0) return {toks,preamble:''};
+  if(opts.sshuf) for(let i=arr.length-1;i>0;i--){const j=RNG.int(i+1);[arr[i],arr[j]]=[arr[j],arr[i]];}
+  const rotAmt=opts.srot?(1+RNG.int(Math.max(arr.length-1,1))):0;
+  if(opts.srot) for(let i=0;i<rotAmt;i++) arr.push(arr.shift());
+  let pre=`var ${arrName}=[${arr.join(',')}];\n`;
+  pre+=buildDecoder(arrName,decoderName,opts,rc4Key,xorKey,rotAmt);
+  return {toks:newToks,preamble:pre};
 }
 
-// ─── Pass: Escape Encoding (no string array) ──────────────────────
-function passEscapeEncode(tokens, st) {
-  return tokens.map(tok => {
-    if (tok.t !== 'str') return tok;
-    const q = tok.v[0];
-    if (q === '`') return tok;
-    const inner = tok.v.slice(1, -1);
-    let out = '';
-    for (let i = 0; i < inner.length; i++) {
-      const c = inner.charCodeAt(i);
-      if (inner[i] === '\\') { out += inner[i]; i++; out += inner[i]; continue; }
-      out += RNG.next() > 0.5 ? '\\x' + c.toString(16).padStart(2, '0') : '\\u' + c.toString(16).padStart(4, '0');
+function passEscape(toks,st){
+  return toks.map(tok=>{
+    if(tok.t!=='str'||tok.v[0]==='`') return tok;
+    const q=tok.v[0],inner=tok.v.slice(1,-1);
+    let out='';
+    for(let i=0;i<inner.length;i++){
+      if(inner[i]==='\\'){ out+=inner[i];i++;out+=inner[i];continue; }
+      const c=inner.charCodeAt(i);
+      out+=RNG.next()>.5?'\\x'+c.toString(16).padStart(2,'0'):'\\u'+c.toString(16).padStart(4,'0');
     }
     st.strings++;
-    return { ...tok, v: q + out + q };
+    return {...tok,v:q+out+q};
   });
 }
 
-// ─── Pass: String Splitting (only non-array strings) ─────────────
-function passStringSplit(tokens) {
-  return tokens.map(tok => {
-    if (tok.t !== 'str') return tok;
-    const v = tok.v;
-    if (v[0] === '`' || v.length < 8) return tok;
-    const mid = Math.floor(v.length / 2);
-    // make sure mid falls inside, not on quote boundary
-    if (mid < 2 || mid >= v.length - 1) return tok;
-    const a = v.slice(0, mid);
-    const b = v[0] + v.slice(mid);
-    return { ...tok, v: `(${a}"+${b})`.replace('"+\'', '"+(\'') };
+function passCharcode(toks){
+  return toks.map(tok=>{
+    if(tok.t!=='str'||tok.v[0]==='`') return tok;
+    let raw='';
+    try{ raw=JSON.parse(tok.v[0]==='"'?tok.v:'"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"'); }catch(e){return tok;}
+    if(!raw||raw.length===0||raw.length>80) return tok;
+    const codes=Array.from(raw).map(c=>hexInt(c.charCodeAt(0))).join(',');
+    return {t:'ref',v:`String['fromCharCode'](${codes})`};
   });
 }
 
-// ─── Pass: Charcode Array (standalone strings → fromCharCode) ─────
-function passCharcode(tokens) {
-  return tokens.map(tok => {
-    if (tok.t !== 'str') return tok;
-    const v = tok.v;
-    if (v[0] === '`') return tok;
-    let raw = '';
-    try {
-      raw = JSON.parse(v[0] === '"' ? v : '"' + v.slice(1, -1).replace(/(?<!\\)"/g, '\\"') + '"');
-    } catch(e) { return tok; }
-    if (raw.length === 0 || raw.length > 80) return tok;
-    const codes = Array.from(raw).map(c => hexInt(c.charCodeAt(0))).join(',');
-    return { t: 'ref', v: `String['fromCharCode'](${codes})` };
+function passStrSplit(toks){
+  return toks.map(tok=>{
+    if(tok.t!=='str'||tok.v[0]==='`'||tok.v.length<8) return tok;
+    const mid=Math.floor(tok.v.length/2);
+    if(mid<2||mid>=tok.v.length-1) return tok;
+    return {...tok,v:`(${tok.v.slice(0,mid)}'+${tok.v[0]}${tok.v.slice(mid)})`};
   });
 }
 
-// ─── Pass: Property → Bracket Access ─────────────────────────────
-function passPropertyBracket(tokens) {
-  const result = [];
-  for (let i = 0; i < tokens.length; i++) {
-    const tok = tokens[i];
-    // Look for pattern: DOT IDENT (not immediately after another dot — avoid foo..bar)
-    if (tok.t === 'op' && tok.v === '.' && i + 1 < tokens.length && tokens[i + 1].t === 'id') {
-      const prop = tokens[i + 1].v;
-      // Skip: keywords used as properties, numeric-like
-      const skip = new Set(['prototype', 'constructor', 'length', 'name']);
-      if (!skip.has(prop)) {
-        result.push({ t: 'op', v: `[${JSON.stringify(prop)}]` });
-        i++; // skip ident
-        continue;
-      }
+function passBracket(toks){
+  const res=[];
+  for(let i=0;i<toks.length;i++){
+    const tok=toks[i];
+    if(tok.t==='op'&&tok.v==='.'&&i+1<toks.length&&toks[i+1].t==='id'){
+      const prop=toks[i+1].v;
+      const skip=new Set(['prototype','constructor','length','name']);
+      if(!skip.has(prop)){ res.push({t:'op',v:`[${JSON.stringify(prop)}]`});i++;continue; }
     }
-    result.push(tok);
+    res.push(tok);
   }
-  return result;
+  return res;
 }
 
-// ─── Pass: Number Obfuscation ─────────────────────────────────────
-function passNumbers(tokens, opts) {
-  return tokens.map(tok => {
-    if (tok.t !== 'num') return tok;
-    let n;
-    if (/^0[xX]/.test(tok.v)) n = parseInt(tok.v, 16);
-    else n = parseFloat(tok.v);
-    if (!Number.isInteger(n) || n < 0 || n > 1e7 || isNaN(n)) return tok;
+const RESERVED=new Set(['break','case','catch','continue','debugger','default','delete','do','else','finally','for','function','if','in','instanceof','new','return','switch','this','throw','try','typeof','var','void','while','with','class','const','enum','export','extends','import','super','let','yield','async','await','null','true','false','undefined','NaN','Infinity','eval','arguments','window','document','console','Math','JSON','Object','Array','String','Number','Boolean','RegExp','Date','Error','Promise','Symbol','Map','Set','WeakMap','WeakSet','Function','Uint8Array','TextDecoder','TextEncoder','btoa','atob','setTimeout','setInterval','clearTimeout','clearInterval','requestAnimationFrame','parseInt','parseFloat','isNaN','isFinite','encodeURIComponent','decodeURIComponent','GM','GM_xmlhttpRequest','GM_setValue','GM_getValue','GM_addStyle','GM_registerMenuCommand','GM_notification','GM_openInTab','unsafeWindow','GM_info','GM_listValues','GM_deleteValue','prototype','constructor','length','name','apply','call','bind','log','warn','error','info','debug','push','pop','shift','unshift','splice','slice','concat','join','map','filter','reduce','forEach','find','findIndex','indexOf','includes','toString','valueOf','hasOwnProperty','keys','values','entries','assign','freeze','create','then','catch','finally','resolve','reject','all','from','of','isArray','charAt','charCodeAt','fromCharCode','split','replace','match','test','trim','padStart','padEnd','repeat','floor','ceil','round','abs','max','min','pow','sqrt','random','PI','parse','stringify','addEventListener','removeEventListener','querySelector','querySelectorAll','getElementById','innerHTML','textContent','style','className','setAttribute','getAttribute','location','hostname','fetch','self','top']);
 
-    let v = opts.hexn ? hexInt(n) : String(n);
+function passRename(toks){
+  const map={};let c=0;
+  toks.forEach(tok=>{
+    if(tok.t==='id'&&!RESERVED.has(tok.v)&&!map[tok.v])
+      map[tok.v]='_0x'+(c++).toString(16).padStart(4,'0');
+  });
+  return toks.map(tok=>tok.t==='id'&&map[tok.v]?{...tok,v:map[tok.v]}:tok);
+}
 
-    if (opts.nsplit && n > 0) {
-      const a = 1 + RNG.int(Math.min(n, 0xfe));
-      const b = n - a;
-      v = b >= 0 ? `(${hexInt(a)}+${hexInt(b)})` : `(${hexInt(a)}-${hexInt(-b)})`;
-    }
-
-    if (opts.math && n > 0) {
-      v = `(Math['floor'](${v}+0x0))`;
-    }
-
-    return { ...tok, v };
+function passNumbers(toks,opts){
+  return toks.map(tok=>{
+    if(tok.t!=='num') return tok;
+    let n=/^0[xX]/.test(tok.v)?parseInt(tok.v,16):parseFloat(tok.v);
+    if(!Number.isInteger(n)||n<0||n>1e7||isNaN(n)) return tok;
+    let v=opts.hexn?hexInt(n):String(n);
+    if(opts.nsplit&&n>0){const a=1+RNG.int(Math.min(n,0xfe)),b=n-a;v=b>=0?`(${hexInt(a)}+${hexInt(b)})`:`(${hexInt(a)}-${hexInt(-b)})`;}
+    if(opts.math&&n>0) v=`(Math['floor'](${v}+0x0))`;
+    return {...tok,v};
   });
 }
 
-// ─── Pass: Rename Identifiers ─────────────────────────────────────
-const RESERVED = new Set([
-  'break','case','catch','continue','debugger','default','delete','do','else',
-  'finally','for','function','if','in','instanceof','new','return','switch',
-  'this','throw','try','typeof','var','void','while','with','class','const',
-  'enum','export','extends','import','super','let','yield','async','await',
-  'null','true','false','undefined','NaN','Infinity','eval','arguments',
-  // Browser / Node globals
-  'window','document','console','Math','JSON','Object','Array','String',
-  'Number','Boolean','RegExp','Date','Error','Promise','Symbol','Map','Set',
-  'WeakMap','WeakSet','Proxy','Reflect','Function','Uint8Array','Int8Array',
-  'ArrayBuffer','TextDecoder','TextEncoder','btoa','atob',
-  'setTimeout','setInterval','clearTimeout','clearInterval',
-  'requestAnimationFrame','cancelAnimationFrame',
-  'parseInt','parseFloat','isNaN','isFinite',
-  'encodeURIComponent','decodeURIComponent','encodeURI','decodeURI',
-  // Tampermonkey
-  'GM','GM_xmlhttpRequest','GM_setValue','GM_getValue','GM_addStyle',
-  'GM_registerMenuCommand','GM_notification','GM_openInTab','unsafeWindow',
-  'GM_info','GM_listValues','GM_deleteValue','GM_download',
-  // Common props / methods
-  'prototype','constructor','length','name','message','stack','apply','call','bind',
-  'log','warn','error','info','debug','dir','table','time','timeEnd','group','groupEnd',
-  'push','pop','shift','unshift','splice','slice','concat','join','reverse','sort',
-  'map','filter','reduce','reduceRight','forEach','find','findIndex',
-  'indexOf','lastIndexOf','includes','flat','flatMap','fill','copyWithin','entries','keys','values',
-  'toString','valueOf','hasOwnProperty','isPrototypeOf','propertyIsEnumerable',
-  'assign','freeze','create','defineProperty','defineProperties','getOwnPropertyNames',
-  'getOwnPropertyDescriptor','getPrototypeOf','setPrototypeOf','fromEntries',
-  'then','catch','finally','resolve','reject','all','race','allSettled','any',
-  'from','of','isArray',
-  'charAt','charCodeAt','codePointAt','fromCharCode','fromCodePoint',
-  'split','replace','replaceAll','match','matchAll','search','test','exec',
-  'trim','trimStart','trimEnd','padStart','padEnd','repeat','startsWith','endsWith',
-  'normalize','localeCompare','at','substring','substr','slice',
-  'floor','ceil','round','abs','max','min','pow','sqrt','cbrt','log','log2','log10',
-  'random','PI','E','LN2','LN10','SQRT2','sign','trunc','hypot','atan2','sin','cos','tan',
-  'parse','stringify',
-  'addEventListener','removeEventListener','dispatchEvent',
-  'querySelector','querySelectorAll','getElementById','getElementsByClassName',
-  'getElementsByTagName','createElement','createTextNode','appendChild',
-  'removeChild','insertBefore','replaceChild','cloneNode',
-  'innerHTML','outerHTML','textContent','innerText','style','className',
-  'classList','id','src','href','value','checked','disabled','type','placeholder',
-  'setAttribute','getAttribute','removeAttribute','hasAttribute',
-  'location','hostname','pathname','search','hash','protocol','host','port',
-  'open','close','send','onload','onerror','onreadystatechange','readyState','status',
-  'responseText','responseJSON','setRequestHeader','getResponseHeader',
-  'fetch','Request','Response','Headers','body','method','headers','mode','credentials',
-  'FormData','append','get','set','has','delete',
-  'self','top','parent','frames','screen','navigator','history','localStorage','sessionStorage',
-  'getItem','setItem','removeItem','clear',
-]);
-
-function passRename(tokens) {
-  const map = {};
-  let counter = 0;
-  tokens.forEach(tok => {
-    if (tok.t === 'id' && !RESERVED.has(tok.v) && !map[tok.v]) {
-      map[tok.v] = '_0x' + (counter++).toString(16).padStart(4, '0');
-    }
-  });
-  return tokens.map(tok => {
-    if (tok.t === 'id' && map[tok.v]) return { ...tok, v: map[tok.v] };
-    return tok;
-  });
+function passDeadCode(){
+  const v1=freshId(),v2=freshId(),v3=freshId(),v4=freshId(),v5=freshId();
+  return `var ${v1}=function(){return!![];};\nvar ${v2}=function(){return!${v1}();};\nif(${v2}()){var ${v3}=function(){return ${v2}();};}\ntry{if(!${v1}())throw ${hexInt(RNG.int(0xffff))};}catch(${v4}){}\nvoid(${hexInt(0)}===${hexInt(1)}&&(function(${v5}){return ${v5};})(null));\n`;
 }
 
-// ─── Pass: Dead Code Injection ────────────────────────────────────
-function passDeadCode() {
-  const v1 = freshId(), v2 = freshId(), v3 = freshId(), v4 = freshId(), v5 = freshId();
-  return [
-    `var ${v1}=function(){return!![];};`,
-    `var ${v2}=function(){return!${v1}();};`,
-    `if(${v2}()){var ${v3}=function(){return ${v2}();};}`,
-    `try{if(!${v1}())throw ${hexInt(RNG.int(0xffff))};}catch(${v4}){}`,
-    `void(${hexInt(0)}===${hexInt(1)}&&(function(${v5}){return ${v5};})(null));`,
-  ].join('\n') + '\n';
+function passCFF(code){
+  const a=freshId(),s=freshId(),steps=[0,1,2,3,4];
+  for(let i=steps.length-1;i>0;i--){const j=RNG.int(i+1);[steps[i],steps[j]]=[steps[j],steps[i]];}
+  return `var ${a}='${steps.join('|')}'.split('|'),${s}=${hexInt(0)};\nwhile(!![]){\nswitch(${a}[${s}++]){\ncase '${steps[0]}':\n${code}\ncontinue;\ncase '${steps[1]}':continue;\ncase '${steps[2]}':continue;\ncase '${steps[3]}':continue;\ncase '${steps[4]}':break;\n}break;\n}`;
 }
 
-// ─── Pass: CFF ────────────────────────────────────────────────────
-function passCFF(code) {
-  const stArr = freshId(), stVar = freshId();
-  const steps = [0, 1, 2, 3, 4];
-  for (let i = steps.length - 1; i > 0; i--) {
-    const j = RNG.int(i + 1); [steps[i], steps[j]] = [steps[j], steps[i]];
-  }
-  return `var ${stArr}='${steps.join('|')}'.split('|'),${stVar}=${hexInt(0)};\n`
-    + `while(!![]){\nswitch(${stArr}[${stVar}++]){\n`
-    + `case '${steps[0]}':\n${code}\ncontinue;\n`
-    + `case '${steps[1]}':continue;\ncase '${steps[2]}':continue;\n`
-    + `case '${steps[3]}':continue;\ncase '${steps[4]}':break;\n`
-    + `}break;\n}`;
+function passIIFE(code){ return `(function(){\n${code}\n})();`; }
+function passComma(code){const d1=freshId(),d2=freshId();return `void(${d1}=${hexInt(RNG.int(0xffff))},${d2}=${hexInt(RNG.int(0xffff))},function(){\n${code}\n}());\n`;}
+function passSelf(code){ const fn=freshId(); return `(function ${fn}(){\nvar _f=arguments.callee.toString();\nif(_f.indexOf('\\x20')>_f.replace(/\\x20/g,'').length*2)throw new Error('0x0');\n})();\n`+code; }
+function passDbg(code){ return `(function(){\nsetInterval(function(){\n(function(){return![];})[${JSON.stringify('constructor')}](${JSON.stringify('debugger')})[${JSON.stringify('call')}](${JSON.stringify('action')});\n},${hexInt(0x1388)});\n})();\n`+code; }
+function passTamp(code){ const h=freshId(),s=RNG.hex(8); return `(function(){\nvar ${h}=${JSON.stringify(s)};\nif(typeof ${h}===typeof undefined)throw new Error('0x2');\n})();\n`+code; }
+function passCon(code){ const fn=freshId(); return `(function(){\ntry{['log','warn','error','info','debug','dir','table'].forEach(function(m){console[m]=function(${fn}){};});}catch(e){}\n})();\n`+code; }
+function passDomain(code,domain){
+  const hn=freshId(),enc=domain.split('').map(c=>'\\x'+c.charCodeAt(0).toString(16).padStart(2,'0')).join('');
+  return `(function(){\ntry{\nvar ${hn}=typeof window!=='undefined'?window.location.hostname:(typeof location!=='undefined'?location.hostname:'');\nif(${hn}!==''&&${hn}.indexOf('${enc}')===-1)throw new Error();\n}catch(_){throw new Error('0x3');}\n})();\n`+code;
 }
 
-// ─── Pass: IIFE ───────────────────────────────────────────────────
-function passIIFE(code) {
-  return `(function(){\n${code}\n})();`;
-}
-
-// ─── Pass: Comma Obfuscation ──────────────────────────────────────
-function passComma(code) {
-  const d1 = freshId(), d2 = freshId();
-  return `void(${d1}=${hexInt(RNG.int(0xffff))},${d2}=${hexInt(RNG.int(0xffff))},function(){\n${code}\n}());`;
-}
-
-// ─── Pass: Self-Defending ─────────────────────────────────────────
-function passSelfDefend(code) {
-  const fn = freshId();
-  return `(function ${fn}(){\n`
-    + `var _f=arguments.callee.toString();\n`
-    + `if(_f.indexOf('\\x20')>_f.replace(/\\x20/g,'').length*2)throw new Error('0x0');\n`
-    + `})();\n` + code;
-}
-
-// ─── Pass: Debug Protection ───────────────────────────────────────
-function passDebugProtect(code) {
-  const fn = freshId();
-  return `(function(){\n`
-    + `setInterval(function(){\n`
-    + `(function(){return![];})[${JSON.stringify('constructor')}](${JSON.stringify('debugger')})[${JSON.stringify('call')}](${JSON.stringify('action')});\n`
-    + `},${hexInt(0x1388)});\n`
-    + `})();\n` + code;
-}
-
-// ─── Pass: Tamper Detection ───────────────────────────────────────
-function passTamperDetect(code) {
-  const fn = freshId(), hash = freshId();
-  // Simple length-based fingerprint of original (won't break execution — just detection)
-  const sentinel = RNG.hex(8);
-  return `(function(){\n`
-    + `var ${hash}=${JSON.stringify(sentinel)};\n`
-    + `if(typeof ${hash}===typeof undefined)throw new Error('0x2');\n`
-    + `})();\n` + code;
-}
-
-// ─── Pass: Console Disable ────────────────────────────────────────
-function passConsoleDisable(code) {
-  const fn = freshId();
-  const methods = ['log', 'warn', 'error', 'info', 'debug', 'dir', 'table', 'trace'];
-  let s = `(function(){\n  try{\n`;
-  methods.forEach(m => {
-    s += `    console[${JSON.stringify(m)}]=function(${fn}){};\n`;
-  });
-  s += `  }catch(e){}\n})();\n`;
-  return s + code;
-}
-
-// ─── Pass: Domain Lock ────────────────────────────────────────────
-function passDomainLock(code, domain) {
-  const hn = freshId();
-  let encoded = '';
-  for (let i = 0; i < domain.length; i++) {
-    const c = domain.charCodeAt(i);
-    encoded += '\\x' + c.toString(16).padStart(2, '0');
-  }
-  return `(function(){\n`
-    + `try{\n`
-    + `var ${hn}=typeof window!=='undefined'?window.location.hostname:(typeof location!=='undefined'?location.hostname:'');\n`
-    + `if(${hn}!==''&&${hn}.indexOf('${encoded}')===-1)throw new Error('0x3');\n`
-    + `}catch(_){throw new Error('0x3');}\n`
-    + `})();\n` + code;
-}
-
-// ─── Pass: Bytecode VM ───────────────────────────────────────────
-// Encodes the final obfuscated code as a Uint16 int array, reassembles
-// via String.fromCharCode in a VM-like dispatcher, executes with Function().
-// Uses Uint16 (charCode) not UTF-8 so roundtrip is lossless and no scoping issues.
 function passBytecodeVM(code, opts, st) {
-  // Encode as charCode array (Uint16)
-  const ints = [];
-  for (let i = 0; i < code.length; i++) ints.push(code.charCodeAt(i));
-  st.bytecodes = ints.length;
-
-  // Opcode table
-  let shift = opts.oprot ? (1 + RNG.int(7)) : 0;
-  const OP = {
-    INIT:  (0x0 + shift) & 0xf,
-    LOAD:  (0x1 + shift) & 0xf,
-    BUILD: (0x2 + shift) & 0xf,
-    EXEC:  (0x3 + shift) & 0xf,
-    HALT:  (0x4 + shift) & 0xf,
-  };
-
-  const CHUNK = opts.chunk ? 300 : ints.length;
-  const chunks = [];
-  for (let i = 0; i < ints.length; i += CHUNK) chunks.push(ints.slice(i, i + CHUNK));
-
-  const chunkNames = chunks.map(() => freshId());
-  const joinedName = freshId();
-  const strName = freshId();
-  const pcName = freshId();
-  const progName = freshId();
-  const opName = freshId();
-  const fnName = freshId();
-
-  let out = '(function(){\n';
-
-  // Emit chunk arrays (hex-encoded for extra obfuscation)
-  chunks.forEach((chunk, i) => {
-    out += `var ${chunkNames[i]}=[${chunk.map(n => hexInt(n)).join(',')}];\n`;
-  });
-
-  // Concat chunks
-  if (chunks.length === 1) {
-    out += `var ${joinedName}=${chunkNames[0]};\n`;
-  } else {
-    out += `var ${joinedName}=[].concat(${chunkNames.join(',')});\n`;
-  }
-
-  // Opcode program: INIT, LOAD, BUILD, EXEC, HALT
-  out += `var ${opName}={INIT:${hexInt(OP.INIT)},LOAD:${hexInt(OP.LOAD)},BUILD:${hexInt(OP.BUILD)},EXEC:${hexInt(OP.EXEC)},HALT:${hexInt(OP.HALT)}};\n`;
-  out += `var ${progName}=[${hexInt(OP.INIT)},${hexInt(OP.LOAD)},${hexInt(OP.BUILD)},${hexInt(OP.EXEC)},${hexInt(OP.HALT)}];\n`;
-
-  // VM runner
-  out += `var ${strName}='';\n`;
-  out += `var ${pcName}=${hexInt(0)};\n`;
-  out += `while(${pcName}<${progName}.length){\n`;
-  out += `  var _c=${progName}[${pcName}++];\n`;
-  out += `  if(_c===${hexInt(OP.INIT)}){${strName}='';}\n`;
-  out += `  else if(_c===${hexInt(OP.LOAD)}){${strName}=${joinedName}.join(',');}\n`;
-  // BUILD: reconstruct source from charcode array
-  out += `  else if(_c===${hexInt(OP.BUILD)}){\n`;
-  out += `    var _arr=${joinedName};\n`;
-  out += `    ${strName}='';\n`;
-  // Use chunks of 500 for apply() call to avoid stack overflow
-  out += `    for(var _ci=0;_ci<_arr.length;_ci+=500){\n`;
-  out += `      ${strName}+=String.fromCharCode.apply(null,_arr.slice(_ci,_ci+500));\n`;
-  out += `    }\n`;
-  out += `  }\n`;
-  out += `  else if(_c===${hexInt(OP.EXEC)}){\n`;
-  // Use indirect eval via Function constructor — creates a new scope, no 'var' leakage issues
-  out += `    var ${fnName}=new Function(${strName});\n`;
-  out += `    ${fnName}();\n`;
-  out += `  }\n`;
-  out += `  else if(_c===${hexInt(OP.HALT)}){break;}\n`;
-  out += `}\n`;
-  out += `})();`;
-
+  const ints=[];
+  for(let i=0;i<code.length;i++) ints.push(code.charCodeAt(i));
+  st.bytecodes=ints.length;
+  const shift=opts.oprot?(1+RNG.int(7)):0;
+  const OP={INIT:(0x0+shift)&0xf,LOAD:(0x1+shift)&0xf,BUILD:(0x2+shift)&0xf,EXEC:(0x3+shift)&0xf,HALT:(0x4+shift)&0xf};
+  const CHUNK=opts.chunk?300:ints.length;
+  const chunks=[];
+  for(let i=0;i<ints.length;i+=CHUNK) chunks.push(ints.slice(i,i+CHUNK));
+  const cNames=chunks.map(()=>freshId());
+  const joined=freshId(),str=freshId(),pc=freshId(),prog=freshId(),opT=freshId(),fn=freshId();
+  let out='(function(){\n';
+  chunks.forEach((c,i)=>{ out+=`var ${cNames[i]}=[${c.map(n=>hexInt(n)).join(',')}];\n`; });
+  out+=chunks.length===1?`var ${joined}=${cNames[0]};\n`:`var ${joined}=[].concat(${cNames.join(',')});\n`;
+  out+=`var ${opT}={INIT:${hexInt(OP.INIT)},LOAD:${hexInt(OP.LOAD)},BUILD:${hexInt(OP.BUILD)},EXEC:${hexInt(OP.EXEC)},HALT:${hexInt(OP.HALT)}};\n`;
+  out+=`var ${prog}=[${hexInt(OP.INIT)},${hexInt(OP.BUILD)},${hexInt(OP.EXEC)},${hexInt(OP.HALT)}];\n`;
+  out+=`var ${str}='',${pc}=${hexInt(0)};\n`;
+  out+=`while(${pc}<${prog}.length){\nvar _op=${prog}[${pc}++];\n`;
+  out+=`if(_op===${hexInt(OP.INIT)}){${str}='';}\n`;
+  out+=`else if(_op===${hexInt(OP.BUILD)}){\n${str}='';\nfor(var _ci=0;_ci<${joined}.length;_ci+=500)${str}+=String.fromCharCode.apply(null,${joined}.slice(_ci,_ci+500));\n}\n`;
+  out+=`else if(_op===${hexInt(OP.EXEC)}){var ${fn}=new Function(${str});${fn}();}\n`;
+  out+=`else if(_op===${hexInt(OP.HALT)}){break;}\n}\n})();`;
   return out;
 }
 
-// ─── Master Orchestrator ─────────────────────────────────────────
+// ─── Master ───────────────────────────────────────────────────────
 function obfuscate(src, opts) {
   resetIds();
-  const st = { strings: 0, bytecodes: 0 };
+  const st={strings:0,bytecodes:0};
+  let toks=tokenize(src), preamble='';
 
-  // Stage 1: Token-level passes
-  let tokens = tokenize(src);
-  let preamble = '';
-
-  if (opts.sarr) {
-    const r = passStringArray(tokens, opts, st);
-    tokens = r.tokens;
-    preamble = r.preamble;
-  } else if (opts.charcode) {
-    tokens = passCharcode(tokens);
-  } else if (opts.senc) {
-    tokens = passEscapeEncode(tokens, st);
+  if(opts.sarr){
+    const r=passStringArray(toks,opts,st);
+    toks=r.toks; preamble=r.preamble;
+  } else if(opts.charcode){
+    toks=passCharcode(toks);
+  } else if(opts.senc){
+    toks=passEscape(toks,st);
   }
 
-  // String split (on remaining unencoded string tokens)
-  if (opts.ssplit && !opts.sarr) {
-    tokens = passStringSplit(tokens);
-  }
+  if(opts.ssplit&&!opts.sarr) toks=passStrSplit(toks);
+  if(opts.prop) toks=passBracket(toks);
+  if(opts.ren)  toks=passRename(toks);
+  if(opts.hexn||opts.nsplit||opts.math) toks=passNumbers(toks,opts);
 
-  // Property bracket access
-  if (opts.prop) {
-    tokens = passPropertyBracket(tokens);
-  }
+  let code=preamble+toks.map(t=>t.v).join('');
 
-  // Rename
-  if (opts.ren) {
-    tokens = passRename(tokens);
-  }
+  if(opts.dead)  code=passDeadCode()+code;
+  if(opts.cff)   code=passCFF(code);
+  if(opts.iife)  code=passIIFE(code);
+  if(opts.comma) code=passComma(code);
+  if(opts.self)  code=passSelf(code);
+  if(opts.dbg)   code=passDbg(code);
+  if(opts.tamp)  code=passTamp(code);
+  if(opts.con)   code=passCon(code);
+  if(opts.dom&&opts.domval) code=passDomain(code,opts.domval);
+  if(opts.bc)    code=passBytecodeVM(code,opts,st);
 
-  // Numbers
-  if (opts.hexn || opts.nsplit || opts.math) {
-    tokens = passNumbers(tokens, opts);
-  }
-
-  // Reassemble
-  let code = preamble + tokens.map(t => t.v).join('');
-
-  // Stage 2: Structural passes
-  if (opts.dead) code = passDeadCode() + code;
-  if (opts.cff)  code = passCFF(code);
-  if (opts.iife) code = passIIFE(code);
-  if (opts.comma) code = passComma(code);
-
-  // Stage 3: Anti-analysis
-  if (opts.self)  code = passSelfDefend(code);
-  if (opts.dbg)   code = passDebugProtect(code);
-  if (opts.tamp)  code = passTamperDetect(code);
-  if (opts.con)   code = passConsoleDisable(code);
-  if (opts.dom && opts.domval) code = passDomainLock(code, opts.domval);
-
-  // Stage 4: Bytecode VM (outermost — after all other passes)
-  if (opts.bc) code = passBytecodeVM(code, opts, st);
-
-  return { code, st };
+  return {code,st};
 }
 
-// ─── UI ─────────────────────────────────────────────────────────
-function getOpts() {
-  const g = id => document.getElementById(id).checked;
+// ─── UI ──────────────────────────────────────────────────────────
+function G(id){ return document.getElementById(id); }
+function CHK(id){ return G(id).checked; }
+
+function getOpts(){
   return {
-    senc:    g('o_senc'),
-    sarr:    g('o_sarr'),
-    srot:    g('o_srot'),
-    sshuf:   g('o_sshuf'),
-    rc4:     g('o_rc4'),
-    xor:     g('o_xor'),
-    ssplit:  g('o_ssplit'),
-    charcode:g('o_charcode'),
-    ren:     g('o_ren'),
-    prop:    g('o_prop'),
-    hexn:    g('o_hexn'),
-    nsplit:  g('o_nsplit'),
-    math:    g('o_math'),
-    cff:     g('o_cff'),
-    dead:    g('o_dead'),
-    iife:    g('o_iife'),
-    comma:   g('o_comma'),
-    bc:      g('o_bc'),
-    oprot:   g('o_oprot'),
-    chunk:   g('o_chunk'),
-    self:    g('o_self'),
-    dbg:     g('o_dbg'),
-    tamp:    g('o_tamp'),
-    con:     g('o_con'),
-    dom:     g('o_dom'),
-    domval:  document.getElementById('o_domval').value.trim(),
+    senc:CHK('o_senc'),sarr:CHK('o_sarr'),srot:CHK('o_srot'),sshuf:CHK('o_sshuf'),
+    rc4:CHK('o_rc4'),xor:CHK('o_xor'),ssplit:CHK('o_ssplit'),charcode:CHK('o_charcode'),
+    ren:CHK('o_ren'),prop:CHK('o_prop'),
+    hexn:CHK('o_hexn'),nsplit:CHK('o_nsplit'),math:CHK('o_math'),
+    cff:CHK('o_cff'),dead:CHK('o_dead'),iife:CHK('o_iife'),comma:CHK('o_comma'),
+    bc:CHK('o_bc'),oprot:CHK('o_oprot'),chunk:CHK('o_chunk'),
+    self:CHK('o_self'),dbg:CHK('o_dbg'),tamp:CHK('o_tamp'),con:CHK('o_con'),
+    dom:CHK('o_dom'),domval:G('o_domval').value.trim(),
   };
 }
 
-function applyPreset() {
-  const p = document.getElementById('preset').value;
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.checked = v; };
-  const ALL = ['o_senc','o_sarr','o_srot','o_sshuf','o_rc4','o_xor','o_ssplit','o_charcode',
-    'o_ren','o_prop','o_hexn','o_nsplit','o_math','o_cff','o_dead','o_iife','o_comma',
-    'o_bc','o_oprot','o_chunk','o_self','o_dbg','o_tamp','o_con','o_dom'];
-  ALL.forEach(id => set(id, false));
-  if (p === 'light') {
-    ['o_senc','o_ren','o_hexn'].forEach(id => set(id, true));
-  } else if (p === 'medium') {
-    ['o_senc','o_sarr','o_rc4','o_ren','o_hexn','o_nsplit','o_dead','o_iife'].forEach(id => set(id, true));
-  } else if (p === 'high') {
-    ['o_senc','o_sarr','o_srot','o_sshuf','o_rc4','o_xor','o_ssplit',
-     'o_ren','o_prop','o_hexn','o_nsplit','o_math',
-     'o_cff','o_dead','o_iife',
-     'o_bc','o_oprot','o_chunk',
-     'o_self','o_dbg','o_tamp'].forEach(id => set(id, true));
-  } else if (p === 'max') {
-    ALL.filter(id => id !== 'o_dom' && id !== 'o_con' && id !== 'o_charcode').forEach(id => set(id, true));
+function SET(id,v){ const el=G(id);if(el)el.checked=v; }
+
+function applyPreset(){
+  const p=G('preset').value;
+  const ALL=['o_senc','o_sarr','o_srot','o_sshuf','o_rc4','o_xor','o_ssplit','o_charcode','o_ren','o_prop','o_hexn','o_nsplit','o_math','o_cff','o_dead','o_iife','o_comma','o_bc','o_oprot','o_chunk','o_self','o_dbg','o_tamp','o_con','o_dom'];
+  ALL.forEach(id=>SET(id,false));
+  if(p==='light'){
+    ['o_senc','o_ren','o_hexn'].forEach(id=>SET(id,true));
+  } else if(p==='medium'){
+    ['o_senc','o_sarr','o_rc4','o_ren','o_hexn','o_nsplit','o_dead','o_iife'].forEach(id=>SET(id,true));
+  } else if(p==='high'){
+    ['o_senc','o_sarr','o_srot','o_sshuf','o_rc4','o_xor','o_ssplit','o_ren','o_prop','o_hexn','o_nsplit','o_math','o_cff','o_dead','o_iife','o_bc','o_oprot','o_chunk','o_self','o_dbg','o_tamp'].forEach(id=>SET(id,true));
+  } else if(p==='max'){
+    ALL.filter(id=>!['o_dom','o_con','o_charcode'].includes(id)).forEach(id=>SET(id,true));
   }
 }
 
-function runObfuscate() {
-  const src = document.getElementById('input').value;
-  if (!src.trim()) { alert('Paste some JavaScript first.'); return; }
-  const opts = getOpts();
+function runObfuscate(){
+  const src=G('input').value;
+  if(!src.trim()){alert('Paste some JavaScript first.');return;}
+  const opts=getOpts();
   try {
-    const { code, st } = obfuscate(src, opts);
-    document.getElementById('output').value = code;
-    document.getElementById('si').textContent = src.length;
-    document.getElementById('so').textContent = code.length;
-    document.getElementById('sr').textContent = (code.length / src.length).toFixed(1) + 'x';
-    document.getElementById('ss').textContent = st.strings;
-    document.getElementById('sb').textContent = st.bytecodes;
-  } catch (e) {
-    document.getElementById('output').value = '// ERROR: ' + e.message + '\n// ' + e.stack;
+    const {code,st}=obfuscate(src,opts);
+    G('output').value=code;
+    G('si').textContent=src.length;
+    G('so').textContent=code.length;
+    G('sr').textContent=(code.length/src.length).toFixed(1)+'x';
+    G('ss').textContent=st.strings;
+    G('sb').textContent=st.bytecodes;
+  } catch(e){
+    G('output').value='// ERROR: '+e.message+'\n//\n// '+e.stack;
   }
 }
 
-function copyOut() {
-  const v = document.getElementById('output').value;
-  if (!v) return;
-  navigator.clipboard.writeText(v).then(() => {
-    const b = document.querySelector('.btn-cp');
-    b.textContent = '✓ COPIED';
-    setTimeout(() => b.textContent = '⧉ COPY OUTPUT', 1500);
+function copyOut(){
+  const v=G('output').value;
+  if(!v) return;
+  navigator.clipboard.writeText(v).then(()=>{
+    const b=G('btn-copy');
+    b.textContent='✓ COPIED';
+    setTimeout(()=>b.textContent='⧉ COPY OUTPUT',1500);
   });
 }
 
