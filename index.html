@@ -3,394 +3,874 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OBSCURA — JS Obfuscator</title>
+<title>Obscura — JS Obfuscator</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.css">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Orbitron:wght@600;900&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
 :root{
-  --bg:#06090f;--surface:#0c1220;--surface2:#111928;
-  --border:#1c2e47;--border2:#243650;
-  --cyan:#00d4ff;--cyan-dim:rgba(0,212,255,0.12);
-  --red:#ff4466;--green:#00ffaa;--purple:#a855f7;
-  --text:#b8cfe0;--text-dim:#4a6070;--text-bright:#deeeff;
+  --bg:#F5F3F0;
+  --bg2:#EDE9E3;
+  --sf:#FFFFFF;
+  --bd:#E0DBD5;
+  --bd2:#C8C1B8;
+  --tx:#1A1714;
+  --tx2:#7A7068;
+  --tx3:#B0A89E;
+  --grn:#15803D;
+  --red:#C0392B;
+  --blu:#2563EB;
+  --vio:#6D28D9;
+  --amb:#B45309;
+  --r:6px;
+  --rs:3px;
   --mono:'JetBrains Mono',monospace;
+  --sans:system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
 }
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--mono);}
 
-/* TOP BAR */
-#topbar{height:46px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;}
-.logo{font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:900;color:var(--cyan);letter-spacing:4px;text-shadow:0 0 20px rgba(0,212,255,.5);}
-.ver{font-size:.6rem;background:var(--red);color:#fff;padding:2px 7px;border-radius:2px;letter-spacing:2px;font-weight:600;}
-.sub{margin-left:auto;font-size:.62rem;color:var(--text-dim);letter-spacing:1px;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;}
 
-/* LAYOUT */
-#app{display:flex;height:calc(100vh - 46px);overflow:hidden;}
-.col{flex:1;display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--border);}
-.col-hdr{height:32px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:8px;font-size:.65rem;letter-spacing:2px;color:var(--cyan);flex-shrink:0;}
-.pulse{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan);animation:pulse 2s ease-in-out infinite;}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
-textarea{flex:1;background:var(--bg);color:var(--text-bright);border:none;outline:none;padding:14px;font-family:var(--mono);font-size:.76rem;line-height:1.7;resize:none;}
-#output{color:#5fb8d4;}
+/* ── APP ────────────────────────────────────────────── */
+#app{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 
-/* PANEL */
-#panel{width:308px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);overflow:hidden;}
-#ptop{padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
-#ptop .lbl,label.lbl{font-size:.59rem;color:var(--text-dim);letter-spacing:2px;display:block;margin-bottom:4px;}
-select{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border2);padding:5px 8px;font-family:var(--mono);font-size:.69rem;border-radius:3px;outline:none;cursor:pointer;}
-#pscroll{flex:1;overflow-y:auto;overflow-x:hidden;}
-#pscroll::-webkit-scrollbar{width:3px;}
-#pscroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+/* ── HEADER ─────────────────────────────────────────── */
+#hdr{
+  height:48px;background:var(--sf);border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;padding:0 14px;gap:0;flex-shrink:0;
+  position:relative;z-index:20;
+}
+.logo{display:flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px;letter-spacing:-.02em;color:var(--tx);flex-shrink:0;}
+.logo-mark{width:7px;height:7px;background:var(--tx);border-radius:50%;}
+.logo-ver{font-size:10px;font-family:var(--mono);background:var(--bg2);border:1px solid var(--bd);padding:1px 5px;border-radius:2px;color:var(--tx3);}
 
-/* SECTIONS */
-.sec{border-bottom:1px solid var(--border);}
-.shdr{padding:7px 12px;font-size:.59rem;letter-spacing:2px;color:var(--text-dim);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none;}
-.shdr:hover{color:var(--text);}
-.shdr .arr{font-size:.54rem;transition:transform .2s;}
-.shdr.open .arr{transform:rotate(90deg);}
-.sbody{display:none;padding:6px 12px 10px;}
+.hd{width:1px;height:18px;background:var(--bd);margin:0 12px;flex-shrink:0;}
+
+.h-preset-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.h-label{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;}
+#preset{background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--sans);font-size:12px;padding:4px 8px;border-radius:var(--rs);outline:none;cursor:pointer;transition:border-color .12s;}
+#preset:focus{border-color:var(--bd2);}
+
+.tp-group{display:flex;gap:2px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--rs);padding:2px;flex-shrink:0;}
+.tp{padding:3px 11px;background:none;border:none;color:var(--tx2);font-family:var(--sans);font-size:11.5px;font-weight:500;cursor:pointer;border-radius:2px;transition:all .12s;white-space:nowrap;}
+.tp:hover{color:var(--tx);background:rgba(255,255,255,.7);}
+.tp.active{background:var(--sf);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.09),0 0 0 .5px var(--bd);}
+
+.h-gap{flex:1;}
+
+.btn-ghost{
+  padding:5px 11px;background:none;border:1px solid var(--bd);color:var(--tx2);
+  font-family:var(--sans);font-size:12px;font-weight:500;border-radius:var(--rs);
+  cursor:pointer;transition:all .12s;white-space:nowrap;
+}
+.btn-ghost:hover{color:var(--tx);border-color:var(--bd2);background:var(--bg);}
+.btn-ghost:disabled{opacity:.35;cursor:not-allowed;}
+
+#btn-run{
+  padding:5px 16px;background:var(--tx);border:1px solid var(--tx);color:#fff;
+  font-family:var(--sans);font-size:12px;font-weight:600;border-radius:var(--rs);
+  cursor:pointer;transition:opacity .12s;white-space:nowrap;margin-left:4px;
+}
+#btn-run:hover{opacity:.82;}
+#btn-run:active{transform:scale(.98);}
+
+/* ── MAIN ────────────────────────────────────────────── */
+#main{flex:1;display:grid;grid-template-columns:1fr 300px 1fr;overflow:hidden;min-height:0;}
+
+/* ── EDITOR PANELS ───────────────────────────────────── */
+.epanel{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--bd);}
+#out-panel{border-right:none;}
+.ehdr{
+  height:36px;background:var(--sf);border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;padding:0 14px;gap:8px;flex-shrink:0;
+}
+.etitle{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--tx2);}
+.egap{flex:1;}
+.eact{
+  background:none;border:none;color:var(--tx3);font-family:var(--sans);
+  font-size:11px;cursor:pointer;padding:2px 6px;border-radius:3px;transition:all .1s;
+}
+.eact:hover{color:var(--tx);background:var(--bg);}
+.ebody{flex:1;overflow:hidden;position:relative;}
+.ebody .CodeMirror{height:100%;font-family:var(--mono);font-size:12.5px;line-height:1.72;background:var(--sf);color:var(--tx);border:none;border-radius:0;}
+.ebody .CodeMirror-scroll{height:100%;}
+
+/* CodeMirror gutters */
+.CodeMirror-gutters{background:var(--bg) !important;border-right:1px solid var(--bd) !important;}
+.CodeMirror-linenumber{color:var(--tx3) !important;font-size:11px;padding:0 8px 0 4px !important;}
+.CodeMirror-foldgutter-open,.CodeMirror-foldgutter-folded{color:var(--tx3);cursor:pointer;}
+.CodeMirror-foldgutter-open::after{content:'▾';}
+.CodeMirror-foldgutter-folded::after{content:'▸';}
+.CodeMirror-cursor{border-left:1.5px solid var(--tx) !important;}
+.CodeMirror-selected{background:#E8E3DC !important;}
+.CodeMirror-focused .CodeMirror-selected{background:#D5E8F5 !important;}
+
+/* JS syntax colors */
+.cm-keyword{color:var(--vio) !important;font-weight:500;}
+.cm-def{color:var(--amb) !important;}
+.cm-variable{color:var(--tx) !important;}
+.cm-variable-2{color:#0C5BAB !important;}
+.cm-string{color:var(--grn) !important;}
+.cm-string-2{color:var(--grn) !important;}
+.cm-number{color:var(--blu) !important;}
+.cm-comment{color:var(--tx3) !important;font-style:italic;}
+.cm-operator{color:var(--tx2) !important;}
+.cm-property{color:var(--tx) !important;}
+.cm-atom{color:var(--blu) !important;}
+.cm-builtin{color:var(--amb) !important;}
+.cm-bracket{color:var(--tx2) !important;}
+#out-panel .CodeMirror{background:#FAFAF8;}
+#out-panel .cm-keyword{color:#9562C7 !important;}
+#out-panel .cm-string{color:#1D8A55 !important;}
+
+/* ── SETTINGS PANEL ──────────────────────────────────── */
+#settings{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--bd);background:var(--bg);}
+#s-scroll{flex:1;overflow-y:auto;overflow-x:hidden;}
+#s-scroll::-webkit-scrollbar{width:3px;}
+#s-scroll::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+
+/* ── SECTIONS ────────────────────────────────────────── */
+.section{border-bottom:1px solid var(--bd);}
+.shdr{
+  display:flex;align-items:center;padding:9px 12px 9px 11px;gap:7px;
+  cursor:pointer;user-select:none;transition:background .1s;
+}
+.shdr:hover{background:var(--bg2);}
+.sicon{font-size:13px;width:16px;text-align:center;flex-shrink:0;line-height:1;}
+.sname{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.065em;color:var(--tx2);flex:1;}
+.shdr.open .sname{color:var(--tx);}
+.sarr{font-size:10px;color:var(--tx3);transition:transform .18s;line-height:1;}
+.shdr.open .sarr{transform:rotate(90deg);}
+.sbody{display:none;padding:4px 11px 10px;}
 .sbody.open{display:block;}
 
-/* ROWS */
-.row{display:flex;align-items:center;justify-content:space-between;padding:3px 0;gap:8px;}
-.rl{font-size:.67rem;color:var(--text);line-height:1.3;flex:1;}
-.rl span{display:block;font-size:.56rem;color:var(--text-dim);margin-top:1px;}
-.row.off{opacity:.3;pointer-events:none;}
+/* ── ROWS ────────────────────────────────────────────── */
+.row{display:flex;align-items:center;justify-content:space-between;padding:4.5px 0;gap:8px;}
+.row.dim{opacity:.3;pointer-events:none;}
+.rl{font-size:12px;color:var(--tx);line-height:1.35;flex:1;}
+.rl small{display:block;font-size:10.5px;color:var(--tx3);margin-top:1px;}
 
-/* TOGGLE */
-.tog{position:relative;width:30px;height:16px;flex-shrink:0;}
+/* ── TOGGLE ──────────────────────────────────────────── */
+.tog{position:relative;width:32px;height:18px;flex-shrink:0;cursor:pointer;}
 .tog input{display:none;}
-.tk{position:absolute;inset:0;background:var(--bg);border:1px solid var(--border2);border-radius:16px;cursor:pointer;transition:.15s;}
-.tk::before{content:'';position:absolute;width:10px;height:10px;left:2px;top:2px;background:var(--text-dim);border-radius:50%;transition:.15s;}
-.tog input:checked~.tk{background:var(--cyan-dim);border-color:var(--cyan);}
-.tog input:checked~.tk::before{transform:translateX(14px);background:var(--cyan);box-shadow:0 0 5px var(--cyan);}
+.tk{position:absolute;inset:0;background:var(--bd);border-radius:18px;cursor:pointer;transition:background .15s;}
+.tk::before{content:'';position:absolute;width:12px;height:12px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.15);}
+.tog input:checked~.tk{background:var(--tx);}
+.tog input:checked~.tk::before{transform:translateX(14px);}
 
-/* INPUTS */
-.sub{margin-top:3px;}
-.sub .lbl{font-size:.56rem;color:var(--text-dim);letter-spacing:1px;display:block;margin:5px 0 2px;}
-.fi{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:4px 7px;font-family:var(--mono);font-size:.65rem;border-radius:3px;outline:none;}
-.fi:focus{border-color:var(--cyan);}
-.sub input[type=range]{width:100%;accent-color:var(--cyan);margin:3px 0;cursor:pointer;}
-.rr{display:flex;align-items:center;gap:6px;}
-.rv{font-size:.64rem;color:var(--cyan);min-width:36px;text-align:right;}
+/* ── SLIDER ──────────────────────────────────────────── */
+.srow{display:flex;align-items:center;gap:7px;margin-top:3px;margin-bottom:1px;}
+.srow input[type=range]{flex:1;height:3px;accent-color:var(--tx);cursor:pointer;vertical-align:middle;}
+.sv{font-family:var(--mono);font-size:11px;color:var(--tx2);min-width:34px;text-align:right;}
 
-/* TAG INPUT */
-.ta{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;padding:4px 6px;background:var(--bg);border:1px solid var(--border2);border-radius:3px;min-height:30px;cursor:text;}
-.ta:focus-within{border-color:var(--border2);}
-.tg{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);color:var(--cyan);font-size:.57rem;padding:1px 6px;border-radius:2px;display:flex;align-items:center;gap:3px;}
-.tg .tx{cursor:pointer;opacity:.55;font-size:.6rem;line-height:1;}
-.tg .tx:hover{opacity:1;color:var(--red);}
-.ti{background:none;border:none;outline:none;color:var(--text);font-family:var(--mono);font-size:.62rem;min-width:70px;flex:1;padding:1px 2px;}
+/* ── FIELD / INPUT ───────────────────────────────────── */
+.field{margin-top:6px;}
+.fl{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px;}
+.fi{width:100%;background:var(--sf);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:11.5px;padding:5px 8px;border-radius:var(--rs);outline:none;transition:border-color .1s;}
+.fi:focus{border-color:var(--bd2);}
+.fsel{width:100%;background:var(--sf);border:1px solid var(--bd);color:var(--tx);font-family:var(--sans);font-size:11.5px;padding:5px 8px;border-radius:var(--rs);outline:none;cursor:pointer;transition:border-color .1s;}
+.fsel:focus{border-color:var(--bd2);}
 
-/* DOMAIN */
+/* ── MULTI-SELECT ────────────────────────────────────── */
+.msw{position:relative;}
+.ms-btn{
+  width:100%;display:flex;align-items:center;justify-content:space-between;
+  background:var(--sf);border:1px solid var(--bd);color:var(--tx);
+  font-family:var(--sans);font-size:11.5px;padding:5px 8px;border-radius:var(--rs);
+  cursor:pointer;text-align:left;transition:border-color .1s;gap:4px;
+}
+.ms-btn:hover{border-color:var(--bd2);}
+.ms-btn.open{border-color:var(--bd2);border-bottom-left-radius:0;border-bottom-right-radius:0;}
+.ms-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx);}
+.ms-arrow{font-size:10px;color:var(--tx3);transition:transform .15s;flex-shrink:0;}
+.ms-btn.open .ms-arrow{transform:rotate(180deg);}
+.ms-panel{
+  display:none;position:absolute;top:100%;left:0;right:0;
+  background:var(--sf);border:1px solid var(--bd2);border-top:none;
+  border-bottom-left-radius:var(--rs);border-bottom-right-radius:var(--rs);
+  z-index:200;box-shadow:0 6px 16px rgba(0,0,0,.09);overflow:hidden;
+}
+.ms-panel.open{display:block;}
+.ms-item{
+  display:flex;align-items:center;gap:9px;padding:7px 10px;cursor:pointer;
+  font-size:12px;color:var(--tx);transition:background .08s;border:none;background:none;
+}
+.ms-item:hover{background:var(--bg);}
+.ms-item input{display:none;}
+.ms-ck{
+  width:14px;height:14px;border:1.5px solid var(--bd2);border-radius:2px;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .1s;
+}
+.ms-item input:checked~.ms-ck{background:var(--tx);border-color:var(--tx);}
+.ms-item input:checked~.ms-ck::after{content:'';display:block;width:8px;height:5px;border-left:1.5px solid #fff;border-bottom:1.5px solid #fff;transform:rotate(-45deg) translateY(-1px);}
+.ms-lbl{line-height:1.3;}
+.ms-desc{font-size:10.5px;color:var(--tx3);display:block;}
+
+/* ── TAG INPUT ───────────────────────────────────────── */
+.tagw{
+  display:flex;flex-wrap:wrap;gap:4px;padding:4px 6px;background:var(--sf);
+  border:1px solid var(--bd);border-radius:var(--rs);min-height:30px;cursor:text;
+  margin-top:3px;transition:border-color .1s;
+}
+.tagw:focus-within{border-color:var(--bd2);}
+.tg{
+  display:flex;align-items:center;gap:3px;background:var(--bg2);border:1px solid var(--bd);
+  border-radius:2px;padding:1px 6px;font-size:11px;color:var(--tx);font-family:var(--mono);
+}
+.tx-btn{background:none;border:none;color:var(--tx3);cursor:pointer;padding:0;font-size:12px;line-height:1;display:flex;}
+.tx-btn:hover{color:var(--red);}
+.ti{background:none;border:none;outline:none;font-family:var(--mono);font-size:11.5px;color:var(--tx);min-width:70px;flex:1;padding:1px 2px;}
+
+/* ── DOMAIN LIST ─────────────────────────────────────── */
 .drow{display:flex;gap:4px;margin-top:4px;}
-.drow input{flex:1;}
-.drow button,.xbtn{background:var(--bg);border:1px solid var(--border2);color:var(--text-dim);font-family:var(--mono);font-size:.64rem;padding:3px 8px;border-radius:3px;cursor:pointer;}
-.drow button:hover,.xbtn:hover{color:var(--cyan);border-color:var(--cyan);}
+.drow .fi{flex:1;}
+.btn-add{
+  padding:5px 9px;background:var(--bg);border:1px solid var(--bd);color:var(--tx2);
+  font-family:var(--sans);font-size:11px;border-radius:var(--rs);cursor:pointer;
+  transition:all .1s;white-space:nowrap;flex-shrink:0;
+}
+.btn-add:hover{color:var(--tx);border-color:var(--bd2);}
 .dlist{margin-top:4px;display:flex;flex-direction:column;gap:2px;}
-.di{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border2);border-radius:3px;padding:2px 7px;font-size:.62rem;color:var(--text);}
-.di .dx{cursor:pointer;color:var(--text-dim);font-size:.68rem;}
-.di .dx:hover{color:var(--red);}
+.di{
+  display:flex;align-items:center;justify-content:space-between;background:var(--bg);
+  border:1px solid var(--bd);border-radius:var(--rs);padding:3px 8px;
+  font-size:11.5px;font-family:var(--mono);color:var(--tx);
+}
+.dx{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px;line-height:1;}
+.dx:hover{color:var(--red);}
 
-/* BOXES */
-.wbox{margin-top:5px;padding:4px 7px;background:rgba(255,68,102,.07);border:1px solid rgba(255,68,102,.2);border-radius:3px;font-size:.57rem;color:var(--red);line-height:1.5;}
-.ibox{margin-top:4px;padding:4px 7px;background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.1);border-radius:3px;font-size:.56rem;color:var(--text-dim);line-height:1.5;}
+/* ── NOTICES ─────────────────────────────────────────── */
+.warn-box{margin-top:5px;padding:6px 8px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:var(--rs);font-size:11px;color:#92400E;line-height:1.45;}
+.info-box{margin-top:5px;padding:6px 8px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--rs);font-size:11px;color:#1E40AF;line-height:1.45;}
+.sub-sep{height:1px;background:var(--bd);margin:7px 0;}
 
-/* TARGET PILLS */
-.tpills{display:flex;gap:4px;margin-top:5px;}
-.tp{flex:1;padding:4px 0;background:var(--bg);border:1px solid var(--border2);color:var(--text-dim);font-family:var(--mono);font-size:.54rem;letter-spacing:1px;border-radius:3px;cursor:pointer;text-align:center;transition:all .15s;user-select:none;}
-.tp:hover{color:var(--text);border-color:var(--text-dim);}
-.tp.active{background:rgba(0,212,255,.09);border-color:var(--cyan);color:var(--cyan);}
+/* ── SEED ROW ────────────────────────────────────────── */
+.seed-row{display:flex;gap:5px;margin-top:3px;}
+.seed-row .fi{flex:1;font-family:var(--mono);}
+.btn-rng{
+  padding:5px 9px;background:var(--bg);border:1px solid var(--bd);color:var(--tx2);
+  font-family:var(--sans);font-size:12px;border-radius:var(--rs);cursor:pointer;
+  transition:all .1s;flex-shrink:0;
+}
+.btn-rng:hover{color:var(--tx);border-color:var(--bd2);}
 
-/* INCOMPAT */
-.ci{font-size:.57rem;color:var(--red);line-height:1.85;}
-.ci::before{content:'✗ ';}
-.cok{font-size:.59rem;color:var(--text-dim);padding:4px 0;}
+/* ── CONFLICTS ───────────────────────────────────────── */
+#s-conflicts{flex-shrink:0;border-top:1px solid var(--bd);}
+.conf-hdr{padding:6px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);}
+.ci-item{padding:5px 11px;font-size:11px;color:var(--red);line-height:1.4;display:flex;gap:6px;}
+.ci-item::before{content:'!';flex-shrink:0;font-weight:700;}
+.ci-ok{padding:6px 11px;font-size:11px;color:var(--grn);}
 
-/* FOOTER */
-#pfooter{flex-shrink:0;border-top:2px solid var(--border2);background:var(--surface);padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
-.srow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px 6px;font-size:.56rem;color:var(--text-dim);}
-.srow b{color:var(--green);font-weight:600;}
-#btn-run{width:100%;padding:10px;background:transparent;border:1px solid var(--cyan);color:var(--cyan);font-family:'Orbitron',sans-serif;font-size:.75rem;font-weight:600;letter-spacing:3px;cursor:pointer;border-radius:3px;transition:all .15s;}
-#btn-run:hover{background:var(--cyan-dim);box-shadow:0 0 14px rgba(0,212,255,.3);}
-#btn-run:active{transform:scale(.98);}
-.br{display:flex;gap:5px;}
-.sb2{flex:1;padding:7px;background:transparent;border:1px solid var(--border2);color:var(--text-dim);font-family:var(--mono);font-size:.62rem;letter-spacing:1px;cursor:pointer;border-radius:3px;transition:all .15s;}
-.sb2:hover{color:var(--green);border-color:var(--green);}
-#btn-map:hover{color:var(--purple);border-color:var(--purple);}
-#btn-map:disabled{opacity:.3;cursor:not-allowed;}
+/* ── STATUS BAR ──────────────────────────────────────── */
+#statusbar{
+  height:27px;background:var(--sf);border-top:1px solid var(--bd);
+  display:flex;align-items:center;padding:0 14px;gap:18px;flex-shrink:0;
+}
+.st{font-size:11px;color:var(--tx3);}
+.st b{color:var(--tx2);font-weight:600;}
 
-/* SEED */
-.srow2{display:flex;gap:4px;margin-top:4px;}
-.srow2 input{flex:1;}
-.srow2 button{background:var(--bg);border:1px solid var(--border2);color:var(--text-dim);font-family:var(--mono);font-size:.64rem;padding:4px 8px;border-radius:3px;cursor:pointer;white-space:nowrap;}
-.srow2 button:hover{color:var(--cyan);border-color:var(--cyan);}
+/* ── DARK THEME ──────────────────────────────────────── */
+[data-theme=dark]{
+  --bg:#1C1A18;
+  --bg2:#242220;
+  --sf:#201E1B;
+  --bd:#2E2A27;
+  --bd2:#3E3A35;
+  --tx:#E8E2DA;
+  --tx2:#9C9288;
+  --tx3:#5A5450;
+  --grn:#34D399;
+  --red:#F87171;
+  --blu:#60A5FA;
+  --vio:#C084FC;
+  --amb:#FCD34D;
+}
+[data-theme=dark] .CodeMirror{background:#201E1B !important;color:#E8E2DA !important;}
+[data-theme=dark] .CodeMirror-gutters{background:#1C1A18 !important;border-right-color:#2E2A27 !important;}
+[data-theme=dark] .CodeMirror-linenumber{color:#5A5450 !important;}
+[data-theme=dark] .CodeMirror-selected{background:#3E3A35 !important;}
+[data-theme=dark] .CodeMirror-focused .CodeMirror-selected{background:#1E3A5A !important;}
+[data-theme=dark] .CodeMirror-cursor{border-left-color:#E8E2DA !important;}
+[data-theme=dark] .cm-variable,.cm-variable-2{color:#E8E2DA !important;}
+[data-theme=dark] .cm-operator{color:#9C9288 !important;}
+[data-theme=dark] .cm-comment{color:#5A5450 !important;}
+[data-theme=dark] #out-panel .CodeMirror{background:#1C1A18 !important;}
+[data-theme=dark] #out-panel .cm-keyword{color:#A855F7 !important;}
+[data-theme=dark] #out-panel .cm-string{color:#22C55E !important;}
+[data-theme=dark] .warn-box{background:#422006;border-color:#7C3010;color:#FDE68A;}
+[data-theme=dark] .info-box{background:#0B2A40;border-color:#1B4F72;color:#93C5FD;}
+[data-theme=dark] #btn-run{background:#E8E2DA;border-color:#E8E2DA;color:#1C1A18;}
+[data-theme=dark] #btn-run:hover{opacity:.85;}
+[data-theme=dark] .tog input:checked~.tk{background:#E8E2DA;}
+[data-theme=dark] .ms-item input:checked~.ms-ck{background:#E8E2DA;border-color:#E8E2DA;}
+[data-theme=dark] .ms-item input:checked~.ms-ck::after{border-color:#1C1A18;}
+[data-theme=dark] .logo-mark{background:#E8E2DA;}
+[data-theme=dark] #preset{color:var(--tx);background:var(--bg);}
+[data-theme=dark] .fsel{color:var(--tx);background:var(--sf);}
+
+/* theme toggle button */
+#btn-theme{
+  padding:5px 9px;background:none;border:1px solid var(--bd);color:var(--tx2);
+  font-size:13px;border-radius:var(--rs);cursor:pointer;transition:all .12s;
+  line-height:1;flex-shrink:0;
+}
+#btn-theme:hover{color:var(--tx);border-color:var(--bd2);}
 </style>
 </head>
 <body>
-<div id="topbar">
-  <span class="logo">OBSCURA</span>
-  <span class="ver">VM 8.1</span>
-  <span class="sub" id="tgt-label">TARGET: BROWSER</span>
-</div>
-
 <div id="app">
-  <div class="col">
-    <div class="col-hdr"><span class="pulse"></span> INPUT SOURCE</div>
-    <textarea id="input" spellcheck="false" placeholder="// Paste your JavaScript here&#10;&#10;console.log('hello');"></textarea>
-  </div>
-  <div class="col" style="border-right:none;">
-    <div class="col-hdr"><span class="pulse"></span> OBFUSCATED OUTPUT</div>
-    <textarea id="output" readonly spellcheck="false" placeholder="// Output appears here..."></textarea>
+
+<!-- ── HEADER ──────────────────────────────────────────── -->
+<header id="hdr">
+  <div class="logo">
+    <div class="logo-mark"></div>
+    Obscura
+    <span class="logo-ver">8.1</span>
   </div>
 
-  <div id="panel">
-    <div id="ptop">
-      <label class="lbl">⚙ PRESET</label>
-      <select id="preset" onchange="applyPreset()">
-        <option value="light">☀ Light — Safe</option>
-        <option value="medium">⚡ Medium</option>
-        <option value="high" selected>🔥 High — VM 8.1</option>
-        <option value="max">☠ Maximum</option>
-        <option value="custom">✎ Custom</option>
-      </select>
-      <label class="lbl" style="margin-top:8px;">◎ TARGET</label>
-      <div class="tpills">
-        <div class="tp active" data-t="browser" onclick="setTarget('browser')">BROWSER</div>
-        <div class="tp" data-t="browser-no-eval" onclick="setTarget('browser-no-eval')">NO EVAL</div>
-        <div class="tp" data-t="node" onclick="setTarget('node')">NODE.JS</div>
-      </div>
-      <label class="lbl" style="margin-top:8px;">⊕ SEED (blank = random each run)</label>
-      <div class="srow2">
-        <input class="fi" id="seed-val" type="text" placeholder="e.g. deadbeef">
-        <button onclick="doRandomSeed()">⟳ RNG</button>
-      </div>
+  <span class="hd"></span>
+
+  <div class="h-preset-wrap">
+    <span class="h-label">Preset</span>
+    <select id="preset" onchange="applyPreset()">
+      <option value="light">Light — Safe</option>
+      <option value="medium">Medium</option>
+      <option value="high" selected>High</option>
+      <option value="max">Maximum</option>
+      <option value="custom">Custom</option>
+    </select>
+  </div>
+
+  <span class="hd"></span>
+
+  <div class="tp-group">
+    <button class="tp active" data-t="browser" onclick="setTarget('browser')">Browser</button>
+    <button class="tp" data-t="browser-no-eval" onclick="setTarget('browser-no-eval')">No Eval</button>
+    <button class="tp" data-t="node" onclick="setTarget('node')">Node.js</button>
+  </div>
+
+  <div class="h-gap"></div>
+
+  <button id="btn-theme" onclick="toggleTheme()" title="Toggle dark mode">☾</button>
+  <button class="btn-ghost" onclick="copyOut()" style="margin-left:4px;">Copy</button>
+  <button class="btn-ghost" id="btn-map" onclick="dlMap()" disabled style="margin-left:4px;">↓ .map</button>
+  <button id="btn-run" onclick="runObfuscate()">▶ Run</button>
+</header>
+
+<!-- ── MAIN ────────────────────────────────────────────── -->
+<div id="main">
+
+  <!-- Input Editor -->
+  <div class="epanel" id="in-panel">
+    <div class="ehdr">
+      <span class="etitle">Input</span>
+      <span class="egap"></span>
+      <button class="eact" onclick="clearInput()">Clear</button>
     </div>
+    <div class="ebody" id="in-editor"></div>
+  </div>
 
-    <div id="pscroll">
+  <!-- Settings -->
+  <div id="settings">
+    <div id="s-scroll">
 
-      <!-- BASIC OPTIONS -->
-      <div class="sec">
-        <div class="shdr open" onclick="toggleSec(this)">⚡ BASIC OPTIONS <span class="arr">▶</span></div>
-        <div class="sbody open">
-          <div class="row"><label class="rl">Parse HTML<span>obfuscate &lt;script&gt; tags in HTML input</span></label><label class="tog"><input type="checkbox" id="o_html"><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Strict Mode<span>prepend "use strict" to output</span></label><label class="tog"><input type="checkbox" id="o_strict"><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Compact Output<span>remove whitespace, single line</span></label><label class="tog"><input type="checkbox" id="o_mini" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Collapse Semicolons<span>merge consecutive var declarations</span></label><label class="tog"><input type="checkbox" id="o_semi" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Simplify<span>fold constant binary expressions</span></label><label class="tog"><input type="checkbox" id="o_simplify"><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Ignore Imports<span>keep import/require lines untouched</span></label><label class="tog"><input type="checkbox" id="o_ignimport"><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Disable Console<span>nulls console.log/warn/error etc.</span></label><label class="tog"><input type="checkbox" id="o_con"><span class="tk"></span></label></div>
+      <!-- GENERAL -->
+      <div class="section">
+        <div class="shdr open" onclick="toggleSec(this)">
+          <span class="sicon">⚙</span>
+          <span class="sname">General</span>
+          <span class="sarr">›</span>
         </div>
-      </div>
-
-      <!-- PROTECTION -->
-      <div class="sec">
-        <div class="shdr open" onclick="toggleSec(this)">🛡 PROTECTION <span class="arr">▶</span></div>
         <div class="sbody open">
-          <div class="row"><label class="rl">Self-Defending<span>infinite loop if code is reformatted</span></label><label class="tog"><input type="checkbox" id="o_self" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Anti-Beautifier<span>whitespace-ratio + length trap</span></label><label class="tog"><input type="checkbox" id="o_antib" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Native Fn Check<span>detects hooked/wrapped native fns</span></label><label class="tog"><input type="checkbox" id="o_native" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Tamper Detection<span>runtime sentinel variable guard</span></label><label class="tog"><input type="checkbox" id="o_tamp" checked><span class="tk"></span></label></div>
-
-          <div class="row" style="margin-top:3px;"><label class="rl">Debug Protection<span>DevTools freeze via setInterval</span></label><label class="tog"><input type="checkbox" id="o_dbg" checked onchange="showHide('dbgi',this.checked)"><span class="tk"></span></label></div>
-          <div id="dbgi" class="sub">
-            <label class="lbl">DEBUG INTERVAL (ms)</label>
-            <div class="rr"><input type="range" id="o_dbgint" min="0" max="5000" step="100" value="2000" oninput="G('dbgi-v').textContent=this.value"><span class="rv" id="dbgi-v">2000</span></div>
-          </div>
-
-          <div class="row" style="margin-top:5px;"><label class="rl">Domain Lock<span>restrict to specific hostnames</span></label><label class="tog"><input type="checkbox" id="o_dom" onchange="showHide('dom-sub',this.checked);liveCheck()"><span class="tk"></span></label></div>
-          <div id="dom-sub" class="sub" style="display:none;">
-            <label class="lbl">DOMAINS</label>
-            <div class="drow"><input class="fi" id="dom-inp" type="text" placeholder="example.com" onkeydown="if(event.key==='Enter')addDomain()"><button onclick="addDomain()">+ ADD</button></div>
-            <div class="dlist" id="dom-list"></div>
-            <label class="lbl" style="margin-top:5px;">REDIRECT URL (on violation, optional)</label>
-            <input class="fi" id="o_domredir" type="text" placeholder="https://example.com/blocked">
+          <div class="field">
+            <div class="fl">Seed <span style="text-transform:none;letter-spacing:0;color:var(--tx3);font-size:10px;">(blank = random per run)</span></div>
+            <div class="seed-row">
+              <input class="fi" id="seed-val" type="text" placeholder="e.g. deadbeef">
+              <button class="btn-rng" onclick="doRandomSeed()" title="Generate random seed">↺</button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- SOURCE MAP -->
-      <div class="sec">
-        <div class="shdr" onclick="toggleSec(this)">🗺 SOURCE MAP <span class="arr">▶</span></div>
-        <div class="sbody">
-          <div class="row"><label class="rl">Generate Source Map<span>maps obfuscated ↔ original positions</span></label><label class="tog"><input type="checkbox" id="o_srcmap" onchange="showHide('smap-sub',this.checked);G('btn-map').disabled=!this.checked"><span class="tk"></span></label></div>
-          <div id="smap-sub" class="sub" style="display:none;">
-            <label class="lbl">MODE</label>
-            <select id="o_smap_mode">
-              <option value="inline">Inline (embedded dataURL comment)</option>
-              <option value="separate">Separate — adds sourceMappingURL comment</option>
-            </select>
-            <label class="lbl">MAP FILE URL</label>
-            <input class="fi" id="o_smap_url" type="text" placeholder="output.js.map" style="margin-top:3px;">
-            <label class="lbl">SOURCE ROOT</label>
-            <input class="fi" id="o_smap_root" type="text" placeholder="/" style="margin-top:3px;">
-            <div class="ibox">Keep .map files private — they expose original source code.</div>
+      <!-- STRING ARRAY -->
+      <div class="section">
+        <div class="shdr open" onclick="toggleSec(this)">
+          <span class="sicon">[]</span>
+          <span class="sname">String Array</span>
+          <span class="sarr">›</span>
+        </div>
+        <div class="sbody open">
+          <div class="row">
+            <label class="rl">Enable String Array<small>Extract all strings into encrypted pool</small></label>
+            <label class="tog"><input type="checkbox" id="o_sarr" checked onchange="showSub('sarr-sub',this.checked);liveCheck()"><span class="tk"></span></label>
+          </div>
+          <div id="sarr-sub">
+            <div class="sub-sep"></div>
+            <div class="field">
+              <div class="fl">Encoding</div>
+              <div class="msw" id="msw-enc">
+                <button class="ms-btn" type="button" onclick="msToggle('enc')">
+                  <span class="ms-text" id="ms-enc-text">RC4 + XOR</span>
+                  <span class="ms-arrow">▾</span>
+                </button>
+                <div class="ms-panel" id="ms-panel-enc">
+                  <label class="ms-item">
+                    <input type="checkbox" id="enc-rc4" checked onchange="msSync('enc');liveCheck()">
+                    <span class="ms-ck"></span>
+                    <span class="ms-lbl">RC4 cipher<span class="ms-desc">Stream cipher layer</span></span>
+                  </label>
+                  <label class="ms-item">
+                    <input type="checkbox" id="enc-xor" checked onchange="msSync('enc');liveCheck()">
+                    <span class="ms-ck"></span>
+                    <span class="ms-lbl">XOR cipher<span class="ms-desc">XOR byte-mask layer</span></span>
+                  </label>
+                  <label class="ms-item">
+                    <input type="checkbox" id="enc-none" onchange="msSync('enc');liveCheck()">
+                    <span class="ms-ck"></span>
+                    <span class="ms-lbl">No encoding<span class="ms-desc">Plain strings in array</span></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <div class="fl">Index Type</div>
+              <div class="msw" id="msw-idx">
+                <button class="ms-btn" type="button" onclick="msToggle('idx')">
+                  <span class="ms-text" id="ms-idx-text">Hex Integer</span>
+                  <span class="ms-arrow">▾</span>
+                </button>
+                <div class="ms-panel" id="ms-panel-idx">
+                  <label class="ms-item">
+                    <input type="checkbox" id="idx-hex" checked onchange="msSync('idx');liveCheck()">
+                    <span class="ms-ck"></span>
+                    <span class="ms-lbl">Hex integer<span class="ms-desc">0x1a2b literal</span></span>
+                  </label>
+                  <label class="ms-item">
+                    <input type="checkbox" id="idx-computed" onchange="msSync('idx');liveCheck()">
+                    <span class="ms-ck"></span>
+                    <span class="ms-lbl">XOR computed<span class="ms-desc">(0xab ^ 0x11) mask</span></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <div class="fl">Extraction Threshold</div>
+              <div class="srow"><input type="range" id="o_thresh" min="0" max="1" step=".05" value="1" oninput="SETD('v-thresh',parseFloat(this.value).toFixed(2))"><span class="sv" id="v-thresh">1.00</span></div>
+            </div>
+            <div class="field">
+              <div class="fl">Index Shift</div>
+              <div class="srow"><input type="range" id="o_idxshift" min="0" max="200" step="1" value="0" oninput="SETD('v-idxsh',this.value)"><span class="sv" id="v-idxsh">0</span></div>
+            </div>
+            <div class="sub-sep"></div>
+            <div class="row">
+              <label class="rl">Rotate Array<small>Shift + self-correcting decoder</small></label>
+              <label class="tog"><input type="checkbox" id="o_srot" checked><span class="tk"></span></label>
+            </div>
+            <div class="row">
+              <label class="rl">Shuffle Array<small>Fisher-Yates randomize order</small></label>
+              <label class="tog"><input type="checkbox" id="o_sshuf" checked><span class="tk"></span></label>
+            </div>
+            <div class="row">
+              <label class="rl">Calls Transform<small>Wrap decoder calls in proxy fns</small></label>
+              <label class="tog"><input type="checkbox" id="o_calltrans" checked onchange="showSub('ct-sub',this.checked)"><span class="tk"></span></label>
+            </div>
+            <div id="ct-sub">
+              <div class="field">
+                <div class="fl">Wrappers Count</div>
+                <div class="srow"><input type="range" id="o_wcount" min="1" max="5" step="1" value="2" oninput="SETD('v-wc',this.value)"><span class="sv" id="v-wc">2</span></div>
+              </div>
+              <div class="field">
+                <div class="fl">Wrapper Params</div>
+                <div class="srow"><input type="range" id="o_wparams" min="1" max="5" step="1" value="2" oninput="SETD('v-wp',this.value)"><span class="sv" id="v-wp">2</span></div>
+              </div>
+              <div class="row">
+                <label class="rl">Chained Calls<small>decoder(decoder(i)) nesting</small></label>
+                <label class="tog"><input type="checkbox" id="o_wchain"><span class="tk"></span></label>
+              </div>
+            </div>
+            <div class="sub-sep"></div>
+            <div class="field">
+              <div class="fl">Force Extract (regex patterns)</div>
+              <div class="tagw" id="ta-force" onclick="G('ti-force').focus()">
+                <input class="ti" id="ti-force" placeholder="pattern, Enter…" onkeydown="tagKey(event,'ta-force','ti-force')">
+              </div>
+            </div>
+            <div class="field">
+              <div class="fl">Never Extract (regex patterns)</div>
+              <div class="tagw" id="ta-resstr" onclick="G('ti-resstr').focus()">
+                <input class="ti" id="ti-resstr" placeholder="pattern, Enter…" onkeydown="tagKey(event,'ta-resstr','ti-resstr')">
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- STRINGS -->
-      <div class="sec">
-        <div class="shdr open" onclick="toggleSec(this)">🔤 STRINGS <span class="arr">▶</span></div>
+      <!-- STRING ENCODING -->
+      <div class="section">
+        <div class="shdr open" onclick="toggleSec(this)">
+          <span class="sicon">🔤</span>
+          <span class="sname">String Encoding</span>
+          <span class="sarr">›</span>
+        </div>
         <div class="sbody open">
-
-          <div class="row"><label class="rl">String Array<span>extract all strings → encrypted pool</span></label><label class="tog"><input type="checkbox" id="o_sarr" checked onchange="showHide('sarr-sub',this.checked);liveCheck()"><span class="tk"></span></label></div>
-          <div id="sarr-sub" class="sub">
-            <label class="lbl">ENCODING</label>
-            <select id="o_sarr_enc">
-              <option value="rc4xor">RC4 + XOR + Base64 (max)</option>
-              <option value="rc4">RC4 + Base64</option>
-              <option value="xor">XOR + Base64</option>
-              <option value="base64">Base64 only</option>
-              <option value="none">None (plain strings in array)</option>
-            </select>
-            <label class="lbl">INDEXES TYPE</label>
-            <select id="o_sarr_idx">
-              <option value="hex">Hex-encoded index literals</option>
-              <option value="computed">Computed (index XOR mask)</option>
-            </select>
-            <label class="lbl">EXTRACTION THRESHOLD (0=none, 1=all)</label>
-            <div class="rr"><input type="range" id="o_thresh" min="0" max="1" step="0.05" value="1" oninput="G('thresh-v').textContent=parseFloat(this.value).toFixed(2)"><span class="rv" id="thresh-v">1.00</span></div>
-            <label class="lbl">INDEX SHIFT (adds constant to all call indexes)</label>
-            <div class="rr"><input type="range" id="o_idxshift" min="0" max="200" step="1" value="0" oninput="G('idxsh-v').textContent=this.value"><span class="rv" id="idxsh-v">0</span></div>
-            <div style="height:4px;"></div>
-            <div class="row"><label class="rl">Rotate Array<span>shift + self-correcting decoder</span></label><label class="tog"><input type="checkbox" id="o_srot" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Shuffle Array<span>Fisher-Yates randomize order</span></label><label class="tog"><input type="checkbox" id="o_sshuf" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Calls Transform<span>wrap decoder calls in proxy fns</span></label><label class="tog"><input type="checkbox" id="o_calltrans" checked><span class="tk"></span></label></div>
-            <label class="lbl">WRAPPERS TYPE</label>
-            <select id="o_wtype">
-              <option value="function">Function wrappers</option>
-              <option value="variable">Variable aliases</option>
-            </select>
-            <label class="lbl">WRAPPERS COUNT</label>
-            <div class="rr"><input type="range" id="o_wcount" min="1" max="5" step="1" value="1" oninput="G('wc-v').textContent=this.value"><span class="rv" id="wc-v">1</span></div>
-            <label class="lbl">WRAPPERS MAX PARAMS</label>
-            <div class="rr"><input type="range" id="o_wparams" min="1" max="5" step="1" value="2" oninput="G('wp-v').textContent=this.value"><span class="rv" id="wp-v">2</span></div>
-            <div class="row" style="margin-top:3px;"><label class="rl">Wrappers Chained Calls<span>decoder(decoder(i)) nesting</span></label><label class="tog"><input type="checkbox" id="o_wchain"><span class="tk"></span></label></div>
-            <label class="lbl">FORCE TRANSFORM STRINGS (regex — always extract)</label>
-            <div class="ta" id="ta-force" onclick="G('ti-force').focus()"><input class="ti" id="ti-force" placeholder="pattern, Enter to add…" onkeydown="tagKey(event,'ta-force','ti-force')"></div>
-            <label class="lbl">RESERVED STRINGS (regex — never extract)</label>
-            <div class="ta" id="ta-resstr" onclick="G('ti-resstr').focus()"><input class="ti" id="ti-resstr" placeholder="pattern, Enter to add…" onkeydown="tagKey(event,'ta-resstr','ti-resstr')"></div>
-            <label class="lbl">SPLIT STRINGS CHUNK LENGTH (chars)</label>
-            <div class="rr"><input type="range" id="o_sschunk" min="3" max="60" step="1" value="10" oninput="G('ssc-v').textContent=this.value"><span class="rv" id="ssc-v">10</span></div>
+          <div class="row">
+            <label class="rl">Escape Encoding<small>\x61\u0062 hex/unicode</small></label>
+            <label class="tog"><input type="checkbox" id="o_senc" checked><span class="tk"></span></label>
           </div>
-
-          <div style="height:5px;"></div>
-          <div class="row"><label class="rl">Escape Encoding<span>\x61\u0067 hex/unicode on all strings</span></label><label class="tog"><input type="checkbox" id="o_senc" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Charcode Arrays<span>"hi" → String.fromCharCode(104,105)</span></label><label class="tog"><input type="checkbox" id="o_charcode"><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Inline atob Encoding<span>str → atob(base64) + TextDecoder</span></label><label class="tog"><input type="checkbox" id="o_atob" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Template Obfuscation<span>str → fromCharCode(…) concat expr</span></label><label class="tog"><input type="checkbox" id="o_tmpl" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Split Strings<span>"hello" → "hel"+"lo" concat</span></label><label class="tog"><input type="checkbox" id="o_ssplit" checked><span class="tk"></span></label></div>
+          <div class="row">
+            <label class="rl">Charcode Arrays<small>"hi" → fromCharCode(104,105)</small></label>
+            <label class="tog"><input type="checkbox" id="o_charcode"><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Inline atob<small>str → atob(base64) + TextDecoder</small></label>
+            <label class="tog"><input type="checkbox" id="o_atob" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Template Obfuscation<small>str → fromCharCode concat</small></label>
+            <label class="tog"><input type="checkbox" id="o_tmpl" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Split Strings<small>"hello" → "hel"+"lo"</small></label>
+            <label class="tog"><input type="checkbox" id="o_ssplit" checked onchange="showSub('ssplit-sub',this.checked)"><span class="tk"></span></label>
+          </div>
+          <div id="ssplit-sub">
+            <div class="field">
+              <div class="fl">Split Chunk Length</div>
+              <div class="srow"><input type="range" id="o_sschunk" min="3" max="60" step="1" value="10" oninput="SETD('v-ssc',this.value)"><span class="sv" id="v-ssc">10</span></div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- IDENTIFIERS -->
-      <div class="sec">
-        <div class="shdr open" onclick="toggleSec(this)">🏷 IDENTIFIERS <span class="arr">▶</span></div>
+      <div class="section">
+        <div class="shdr open" onclick="toggleSec(this)">
+          <span class="sicon">🏷</span>
+          <span class="sname">Identifiers</span>
+          <span class="sarr">›</span>
+        </div>
         <div class="sbody open">
-          <div class="row"><label class="rl">Rename Variables<span>replace all local identifier names</span></label><label class="tog"><input type="checkbox" id="o_ren" checked><span class="tk"></span></label></div>
-          <div class="sub">
-            <label class="lbl">NAMES GENERATOR</label>
-            <select id="o_namegen" onchange="showHide('dict-sub',this.value==='dictionary')">
-              <option value="hexadecimal">Hexadecimal (_0x1a2b…)</option>
-              <option value="mangled">Mangled (a, b, c, aa, ab…)</option>
-              <option value="dictionary">Dictionary (custom word list)</option>
-            </select>
-            <label class="lbl">IDENTIFIERS PREFIX (optional)</label>
-            <input class="fi" id="o_idpfx" type="text" placeholder="e.g. _x" style="margin-top:3px;">
+          <div class="row">
+            <label class="rl">Rename Variables<small>Replace all local identifier names</small></label>
+            <label class="tog"><input type="checkbox" id="o_ren" checked onchange="showSub('ren-sub',this.checked)"><span class="tk"></span></label>
+          </div>
+          <div id="ren-sub">
+            <div class="field">
+              <div class="fl">Name Generator</div>
+              <select class="fsel" id="o_namegen" onchange="showSub('dict-sub',this.value==='dictionary')">
+                <option value="hexadecimal">Hexadecimal (_0x1a2b…)</option>
+                <option value="mangled">Mangled (a, b, c, aa…)</option>
+                <option value="dictionary">Dictionary (custom list)</option>
+              </select>
+            </div>
+            <div class="field">
+              <div class="fl">Identifier Prefix</div>
+              <input class="fi" id="o_idpfx" type="text" placeholder="e.g. _x (optional)">
+            </div>
             <div id="dict-sub" style="display:none;">
-              <label class="lbl">DICTIONARY WORDS</label>
-              <div class="ta" id="ta-dict" onclick="G('ti-dict').focus()"><input class="ti" id="ti-dict" placeholder="word, Enter to add…" onkeydown="tagKey(event,'ta-dict','ti-dict')"></div>
-              <div class="ibox">Cycles through words; appends numbers once exhausted.</div>
+              <div class="field">
+                <div class="fl">Dictionary Words</div>
+                <div class="tagw" id="ta-dict" onclick="G('ti-dict').focus()">
+                  <input class="ti" id="ti-dict" placeholder="word, Enter…" onkeydown="tagKey(event,'ta-dict','ti-dict')">
+                </div>
+              </div>
             </div>
           </div>
-          <div class="row" style="margin-top:4px;"><label class="rl">Bracket Access<span>obj.foo → obj['foo']</span></label><label class="tog"><input type="checkbox" id="o_prop" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Rename Globals<span>rename top-level var/function names</span></label><label class="tog"><input type="checkbox" id="o_renglobal"><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Rename Properties<span>rename object property keys</span></label><label class="tog"><input type="checkbox" id="o_renprop" onchange="G('renprop-w').style.display=this.checked?'block':'none';liveCheck()"><span class="tk"></span></label></div>
-          <div class="wbox" id="renprop-w" style="display:none;">⚠ Can break code using dynamic property access or external APIs.</div>
-          <div class="sub" style="margin-top:5px;">
-            <label class="lbl">RESERVED NAMES (never renamed)</label>
-            <div class="ta" id="ta-resname" onclick="G('ti-resname').focus()"><input class="ti" id="ti-resname" placeholder="identifier, Enter to add…" onkeydown="tagKey(event,'ta-resname','ti-resname')"></div>
+          <div class="row" style="margin-top:3px;">
+            <label class="rl">Bracket Access<small>obj.foo → obj['foo']</small></label>
+            <label class="tog"><input type="checkbox" id="o_prop" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Rename Globals<small>Rename top-level identifiers</small></label>
+            <label class="tog"><input type="checkbox" id="o_renglobal"><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Rename Properties<small>Rename object property keys</small></label>
+            <label class="tog"><input type="checkbox" id="o_renprop" onchange="G('renprop-w').style.display=this.checked?'block':'none';liveCheck()"><span class="tk"></span></label>
+          </div>
+          <div class="warn-box" id="renprop-w" style="display:none;">⚠ Can break dynamic property access or external APIs.</div>
+          <div class="field" style="margin-top:6px;">
+            <div class="fl">Reserved Names (never renamed)</div>
+            <div class="tagw" id="ta-resname" onclick="G('ti-resname').focus()">
+              <input class="ti" id="ti-resname" placeholder="identifier, Enter…" onkeydown="tagKey(event,'ta-resname','ti-resname')">
+            </div>
           </div>
         </div>
       </div>
 
       <!-- NUMBERS -->
-      <div class="sec">
-        <div class="shdr open" onclick="toggleSec(this)">🔢 NUMBERS <span class="arr">▶</span></div>
+      <div class="section">
+        <div class="shdr open" onclick="toggleSec(this)">
+          <span class="sicon">🔢</span>
+          <span class="sname">Numbers</span>
+          <span class="sarr">›</span>
+        </div>
         <div class="sbody open">
-          <div class="row"><label class="rl">Hex Numbers<span>97 → 0x61</span></label><label class="tog"><input type="checkbox" id="o_hexn" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Number Splitting<span>0x61 → (0x21+0x40)</span></label><label class="tog"><input type="checkbox" id="o_nsplit" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Numbers To Expressions<span>n → Math['floor'](n+0x0)</span></label><label class="tog"><input type="checkbox" id="o_math" checked><span class="tk"></span></label></div>
+          <div class="row">
+            <label class="rl">Hex Literals<small>97 → 0x61</small></label>
+            <label class="tog"><input type="checkbox" id="o_hexn" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Number Splitting<small>0x61 → (0x21+0x40)</small></label>
+            <label class="tog"><input type="checkbox" id="o_nsplit" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Math Expressions<small>n → Math['floor'](n+0x0)</small></label>
+            <label class="tog"><input type="checkbox" id="o_math" checked><span class="tk"></span></label>
+          </div>
         </div>
       </div>
 
       <!-- CONTROL FLOW -->
-      <div class="sec">
-        <div class="shdr open" onclick="toggleSec(this)">🔀 CONTROL FLOW <span class="arr">▶</span></div>
+      <div class="section">
+        <div class="shdr open" onclick="toggleSec(this)">
+          <span class="sicon">🔀</span>
+          <span class="sname">Control Flow</span>
+          <span class="sarr">›</span>
+        </div>
         <div class="sbody open">
-          <div class="row"><label class="rl">Control Flow Flattening<span>shuffle into while/switch dispatch</span></label><label class="tog"><input type="checkbox" id="o_cff" checked><span class="tk"></span></label></div>
-          <div class="sub">
-            <label class="lbl">CFF THRESHOLD</label>
-            <div class="rr"><input type="range" id="o_cff_t" min="0" max="1" step="0.05" value="0.75" oninput="G('cff-v').textContent=parseFloat(this.value).toFixed(2)"><span class="rv" id="cff-v">0.75</span></div>
+          <div class="row">
+            <label class="rl">Control Flow Flattening<small>Shuffle into while/switch dispatch</small></label>
+            <label class="tog"><input type="checkbox" id="o_cff" checked onchange="showSub('cff-sub',this.checked)"><span class="tk"></span></label>
           </div>
-          <div class="row" style="margin-top:4px;"><label class="rl">Dead Code Injection<span>opaque fake branches and dead vars</span></label><label class="tog"><input type="checkbox" id="o_dead" checked><span class="tk"></span></label></div>
-          <div class="sub">
-            <label class="lbl">DEAD CODE THRESHOLD</label>
-            <div class="rr"><input type="range" id="o_dead_t" min="0" max="1" step="0.05" value="0.4" oninput="G('dead-v').textContent=parseFloat(this.value).toFixed(2)"><span class="rv" id="dead-v">0.40</span></div>
+          <div id="cff-sub">
+            <div class="field">
+              <div class="fl">CFF Threshold</div>
+              <div class="srow"><input type="range" id="o_cff_t" min="0" max="1" step=".05" value=".75" oninput="SETD('v-cff',parseFloat(this.value).toFixed(2))"><span class="sv" id="v-cff">0.75</span></div>
+            </div>
           </div>
-          <div class="row" style="margin-top:4px;"><label class="rl">IIFE Wrap<span>(function(){…})()</span></label><label class="tog"><input type="checkbox" id="o_iife" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Comma Obfuscation<span>void(a=…,b=…,fn())</span></label><label class="tog"><input type="checkbox" id="o_comma" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Transform Object Keys<span>{'key':v} → computed key exprs</span></label><label class="tog"><input type="checkbox" id="o_objkeys"><span class="tk"></span></label></div>
+          <div class="row" style="margin-top:2px;">
+            <label class="rl">Dead Code Injection<small>Opaque fake branches and dead vars</small></label>
+            <label class="tog"><input type="checkbox" id="o_dead" checked onchange="showSub('dead-sub',this.checked)"><span class="tk"></span></label>
+          </div>
+          <div id="dead-sub">
+            <div class="field">
+              <div class="fl">Dead Code Threshold</div>
+              <div class="srow"><input type="range" id="o_dead_t" min="0" max="1" step=".05" value=".4" oninput="SETD('v-dead',parseFloat(this.value).toFixed(2))"><span class="sv" id="v-dead">0.40</span></div>
+            </div>
+          </div>
+          <div class="row" style="margin-top:2px;">
+            <label class="rl">IIFE Wrap<small>(function(){…})()</small></label>
+            <label class="tog"><input type="checkbox" id="o_iife" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Comma Obfuscation<small>void(a=…,b=…,fn())</small></label>
+            <label class="tog"><input type="checkbox" id="o_comma" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Object Key Transform<small>{'key':v} → computed exprs</small></label>
+            <label class="tog"><input type="checkbox" id="o_objkeys"><span class="tk"></span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROTECTION -->
+      <div class="section">
+        <div class="shdr" onclick="toggleSec(this)">
+          <span class="sicon">🛡</span>
+          <span class="sname">Protection</span>
+          <span class="sarr">›</span>
+        </div>
+        <div class="sbody">
+          <div class="row">
+            <label class="rl">Self-Defending<small>Infinite loop if reformatted</small></label>
+            <label class="tog"><input type="checkbox" id="o_self" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Anti-Beautifier<small>Whitespace ratio + length trap</small></label>
+            <label class="tog"><input type="checkbox" id="o_antib" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Native Fn Check<small>Detects hooked/wrapped natives</small></label>
+            <label class="tog"><input type="checkbox" id="o_native" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Tamper Detection<small>Runtime sentinel variable guard</small></label>
+            <label class="tog"><input type="checkbox" id="o_tamp" checked><span class="tk"></span></label>
+          </div>
+          <div class="sub-sep"></div>
+          <div class="row">
+            <label class="rl">Debug Protection<small>DevTools freeze via setInterval</small></label>
+            <label class="tog"><input type="checkbox" id="o_dbg" checked onchange="showSub('dbg-sub',this.checked)"><span class="tk"></span></label>
+          </div>
+          <div id="dbg-sub">
+            <div class="field">
+              <div class="fl">Debug Interval (ms)</div>
+              <div class="srow"><input type="range" id="o_dbgint" min="0" max="5000" step="100" value="2000" oninput="SETD('v-dbg',this.value)"><span class="sv" id="v-dbg">2000</span></div>
+            </div>
+          </div>
+          <div class="sub-sep"></div>
+          <div class="row">
+            <label class="rl">Domain Lock<small>Restrict to specific hostnames</small></label>
+            <label class="tog"><input type="checkbox" id="o_dom" onchange="showSub('dom-sub',this.checked);liveCheck()"><span class="tk"></span></label>
+          </div>
+          <div id="dom-sub" style="display:none;">
+            <div class="drow">
+              <input class="fi" id="dom-inp" type="text" placeholder="example.com" onkeydown="if(event.key==='Enter')addDomain()">
+              <button class="btn-add" onclick="addDomain()">+ Add</button>
+            </div>
+            <div class="dlist" id="dom-list"></div>
+            <div class="field">
+              <div class="fl">Redirect URL (on violation)</div>
+              <input class="fi" id="o_domredir" type="text" placeholder="https://example.com/blocked">
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- BYTECODE VM -->
-      <div class="sec">
-        <div class="shdr open" onclick="toggleSec(this)">🖥 BYTECODE VM <span class="arr">▶</span></div>
-        <div class="sbody open">
-          <div class="row"><label class="rl">Bytecode Encoding<span>source → int[] + custom dispatcher</span></label><label class="tog"><input type="checkbox" id="o_bc" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Opcode Rotator<span>randomize opcode constant values</span></label><label class="tog"><input type="checkbox" id="o_oprot" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Chunk Splitting<span>split int[] into multiple sub-arrays</span></label><label class="tog"><input type="checkbox" id="o_chunk" checked><span class="tk"></span></label></div>
-          <div class="sub">
-            <label class="lbl">CHUNK SIZE (ints per part)</label>
-            <div class="rr"><input type="range" id="o_bcchunk" min="50" max="1000" step="50" value="300" oninput="G('bcc-v').textContent=this.value"><span class="rv" id="bcc-v">300</span></div>
+      <div class="section">
+        <div class="shdr" onclick="toggleSec(this)">
+          <span class="sicon">🖥</span>
+          <span class="sname">Bytecode VM</span>
+          <span class="sarr">›</span>
+        </div>
+        <div class="sbody">
+          <div class="row">
+            <label class="rl">Bytecode Encoding<small>Source → int[] + custom dispatcher</small></label>
+            <label class="tog"><input type="checkbox" id="o_bc" checked><span class="tk"></span></label>
           </div>
-          <div class="wbox" style="margin-top:6px;">VM wraps outermost layer via new Function(). Disabled automatically for No-Eval target.</div>
+          <div class="row">
+            <label class="rl">Opcode Rotator<small>Randomize opcode constant values</small></label>
+            <label class="tog"><input type="checkbox" id="o_oprot" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Chunk Splitting<small>Split int[] into sub-arrays</small></label>
+            <label class="tog"><input type="checkbox" id="o_chunk" checked onchange="showSub('chunk-sub',this.checked)"><span class="tk"></span></label>
+          </div>
+          <div id="chunk-sub">
+            <div class="field">
+              <div class="fl">Chunk Size (ints/part)</div>
+              <div class="srow"><input type="range" id="o_bcchunk" min="50" max="1000" step="50" value="300" oninput="SETD('v-bcc',this.value)"><span class="sv" id="v-bcc">300</span></div>
+            </div>
+          </div>
+          <div class="info-box">VM wraps output via new Function(). Auto-disabled for No-Eval target.</div>
         </div>
       </div>
 
-      <!-- CONFLICTS -->
-      <div class="sec">
-        <div class="shdr" onclick="toggleSec(this)">⚠ LIVE CONFLICT CHECKER <span class="arr">▶</span></div>
-        <div class="sbody" id="conflicts"></div>
+      <!-- OUTPUT OPTIONS -->
+      <div class="section">
+        <div class="shdr" onclick="toggleSec(this)">
+          <span class="sicon">📄</span>
+          <span class="sname">Output Options</span>
+          <span class="sarr">›</span>
+        </div>
+        <div class="sbody">
+          <div class="row">
+            <label class="rl">Compact Output<small>Remove whitespace, single line</small></label>
+            <label class="tog"><input type="checkbox" id="o_mini" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Collapse Semicolons<small>Merge consecutive var declarations</small></label>
+            <label class="tog"><input type="checkbox" id="o_semi" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Strict Mode<small>Prepend "use strict"</small></label>
+            <label class="tog"><input type="checkbox" id="o_strict"><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Simplify<small>Fold constant binary expressions</small></label>
+            <label class="tog"><input type="checkbox" id="o_simplify"><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Ignore Imports<small>Keep import/require lines untouched</small></label>
+            <label class="tog"><input type="checkbox" id="o_ignimport"><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Disable Console<small>Nulls console.log/warn/error</small></label>
+            <label class="tog"><input type="checkbox" id="o_con"><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Parse HTML Mode<small>Obfuscate &lt;script&gt; tags in HTML</small></label>
+            <label class="tog"><input type="checkbox" id="o_html"><span class="tk"></span></label>
+          </div>
+        </div>
       </div>
 
-    </div><!-- end pscroll -->
+      <!-- SOURCE MAP -->
+      <div class="section">
+        <div class="shdr" onclick="toggleSec(this)">
+          <span class="sicon">🗺</span>
+          <span class="sname">Source Map</span>
+          <span class="sarr">›</span>
+        </div>
+        <div class="sbody">
+          <div class="row">
+            <label class="rl">Generate Source Map<small>Maps obfuscated ↔ original</small></label>
+            <label class="tog"><input type="checkbox" id="o_srcmap" onchange="showSub('smap-sub',this.checked);G('btn-map').disabled=!this.checked"><span class="tk"></span></label>
+          </div>
+          <div id="smap-sub" style="display:none;">
+            <div class="field">
+              <div class="fl">Mode</div>
+              <select class="fsel" id="o_smap_mode">
+                <option value="inline">Inline (embedded dataURL)</option>
+                <option value="separate">Separate — sourceMappingURL</option>
+              </select>
+            </div>
+            <div class="field">
+              <div class="fl">Map File URL</div>
+              <input class="fi" id="o_smap_url" type="text" placeholder="output.js.map">
+            </div>
+            <div class="field">
+              <div class="fl">Source Root</div>
+              <input class="fi" id="o_smap_root" type="text" placeholder="/">
+            </div>
+            <div class="info-box">Keep .map files private — they expose original source.</div>
+          </div>
+        </div>
+      </div>
 
-    <div id="pfooter">
-      <div class="srow">
-        <div>IN <b id="si">—</b></div>
-        <div>OUT <b id="so">—</b></div>
-        <div>RATIO <b id="sr">—</b></div>
-        <div>STRS <b id="ss">—</b></div>
-        <div>BC <b id="sb">—</b></div>
-        <div>TIME <b id="st">—</b></div>
-      </div>
-      <button id="btn-run" onclick="runObfuscate()">▶ OBFUSCATE</button>
-      <div class="br">
-        <button class="sb2" onclick="copyOut()">⧉ COPY</button>
-        <button class="sb2" id="btn-map" onclick="dlMap()" disabled>⬇ .MAP</button>
-      </div>
+    </div><!-- end s-scroll -->
+
+    <!-- Conflicts -->
+    <div id="s-conflicts">
+      <div class="conf-hdr">Conflict Checker</div>
+      <div id="conflicts-inner"></div>
     </div>
-  </div><!-- end panel -->
+  </div><!-- end settings -->
+
+  <!-- Output Editor -->
+  <div class="epanel" id="out-panel">
+    <div class="ehdr">
+      <span class="etitle">Output</span>
+      <span class="egap"></span>
+      <span id="out-hint" style="font-size:11px;color:var(--tx3);">Run to see output</span>
+    </div>
+    <div class="ebody" id="out-editor"></div>
+  </div>
+
+</div><!-- end main -->
+
+<!-- Status Bar -->
+<div id="statusbar">
+  <span class="st">In <b id="s-in">—</b></span>
+  <span class="st">Out <b id="s-out">—</b></span>
+  <span class="st">Ratio <b id="s-ratio">—</b></span>
+  <span class="st">Strings <b id="s-str">—</b></span>
+  <span class="st">Bytecodes <b id="s-bc">—</b></span>
+  <span class="st">Time <b id="s-time">—</b></span>
 </div>
+
+</div><!-- end app -->
+
+<!-- CodeMirror -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/brace-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
 
 <script>
 // ================================================================
-//  OBSCURA — JS Obfuscator Engine v5  (fully fixed)
+//  OBSCURA — JS Obfuscator Engine + UI
 // ================================================================
 
-// ── Utilities ────────────────────────────────────────────────────
+// ── Utilities ────────────────────────────────────────────
 function G(id){return document.getElementById(id);}
 function CHK(id){const e=G(id);return e&&!e.disabled?e.checked:false;}
 function VAL(id){const e=G(id);return e?e.value:'';}
@@ -399,335 +879,333 @@ function INT(id,d){const v=parseInt(VAL(id));return isNaN(v)?d:v;}
 function SET(id,v){const e=G(id);if(e)e.checked=v;}
 function SETV(id,v){const e=G(id);if(e)e.value=v;}
 function SETD(id,v){const e=G(id);if(e)e.textContent=v;}
-function showHide(id,show){const e=G(id);if(e)e.style.display=show?'block':'none';}
-function toggleSec(h){h.classList.toggle('open');h.nextElementSibling.classList.toggle('open');}
+function showSub(id,show){const e=G(id);if(e)e.style.display=show?'block':'none';}
 
-// ── RNG ──────────────────────────────────────────────────────────
-let _s = Date.now() ^ (Math.random() * 0xffffffff | 0);
+function toggleSec(h){
+  h.classList.toggle('open');
+  h.nextElementSibling.classList.toggle('open');
+}
+
+// ── Multi-select ─────────────────────────────────────────
+function msToggle(id){
+  const btn = G('ms-panel-'+id).previousElementSibling;
+  const panel = G('ms-panel-'+id);
+  const isOpen = panel.classList.contains('open');
+  document.querySelectorAll('.ms-panel.open').forEach(p=>{
+    p.classList.remove('open');
+    p.previousElementSibling.classList.remove('open');
+  });
+  if(!isOpen){ panel.classList.add('open'); btn.classList.add('open'); }
+}
+function msSync(id){
+  const wrap = G('msw-'+id);
+  const checked = Array.from(wrap.querySelectorAll('input:checked'));
+  const labels = checked.map(i=>{
+    const lbl = i.closest('.ms-item').querySelector('.ms-lbl');
+    return lbl ? lbl.childNodes[0].textContent.trim() : '';
+  });
+  G('ms-'+id+'-text').textContent = labels.length ? labels.join(' + ') : 'None';
+  liveCheck();
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.msw')){
+    document.querySelectorAll('.ms-panel.open').forEach(p=>{
+      p.classList.remove('open');
+      p.previousElementSibling.classList.remove('open');
+    });
+  }
+});
+
+// ── RNG ──────────────────────────────────────────────────
+let _s = Date.now() ^ (Math.random()*0xffffffff|0);
 const RNG = {
-  seed(v){ _s = (v>>>0) || (Date.now() ^ (Math.random()*0xffffffff|0)); },
-  next(){ _s = (_s * 1664525 + 1013904223) >>> 0; return _s / 0x100000000; },
-  int(n){ return Math.floor(this.next() * n); },
-  hex(n){ let r=''; for(let i=0;i<n;i++) r += (this.next()*16|0).toString(16); return r; }
+  seed(v){ _s = (v>>>0)||(Date.now()^(Math.random()*0xffffffff|0)); },
+  next(){ _s = (_s*1664525+1013904223)>>>0; return _s/0x100000000; },
+  int(n){ return Math.floor(this.next()*n); },
+  hex(n){ let r=''; for(let i=0;i<n;i++) r+=(this.next()*16|0).toString(16); return r; }
 };
 function doRandomSeed(){
-  SETV('seed-val', (Math.random()*0xffffffff|0).toString(16).padStart(8,'0'));
+  SETV('seed-val',(Math.random()*0xffffffff|0).toString(16).padStart(8,'0'));
 }
 function getSeed(){
-  const v = VAL('seed-val').trim();
-  if(!v) return Date.now() ^ (Math.random()*0xffffffff|0);
-  let h=0; for(let i=0;i<v.length;i++) h = Math.imul(31,h) + v.charCodeAt(i) | 0;
-  return h >>> 0;
+  const v=VAL('seed-val').trim();
+  if(!v) return Date.now()^(Math.random()*0xffffffff|0);
+  let h=0; for(let i=0;i<v.length;i++) h=Math.imul(31,h)+v.charCodeAt(i)|0;
+  return h>>>0;
 }
 
-let _idc = 0;
-function freshId(){ return '_0x' + (_idc++).toString(16).padStart(4,'0') + RNG.hex(2); }
-function resetIds(){ _idc = 0; }
+let _idc=0;
+function freshId(){ return '_0x'+(_idc++).toString(16).padStart(4,'0')+RNG.hex(2); }
+function resetIds(){ _idc=0; }
 function hexInt(n){
   if(!Number.isInteger(n)) return String(n);
-  return n < 0 ? '-0x' + (-n).toString(16) : '0x' + n.toString(16);
+  return n<0?'-0x'+(-n).toString(16):'0x'+n.toString(16);
 }
 
-// ── Tag input helpers ─────────────────────────────────────────────
-function tagKey(e, aId, iId){
-  if(e.key === 'Enter' || e.key === ','){
+// ── Enc / Idx helpers ────────────────────────────────────
+function getEncType(){
+  if(CHK('enc-none')) return 'none';
+  const rc4=CHK('enc-rc4'), xor=CHK('enc-xor');
+  if(rc4&&xor) return 'rc4xor';
+  if(rc4) return 'rc4';
+  if(xor) return 'xor';
+  return 'base64';
+}
+function getIdxTypes(){
+  const t=[];
+  if(CHK('idx-hex')) t.push('hex');
+  if(CHK('idx-computed')) t.push('computed');
+  return t.length?t:['hex'];
+}
+
+// ── Tag inputs ───────────────────────────────────────────
+function tagKey(e,aId,iId){
+  if(e.key==='Enter'||e.key===','){
     e.preventDefault();
-    const inp = G(iId);
-    const v = inp.value.trim().replace(/,$/,'');
-    if(v) addTag(aId, iId, v);
-    inp.value = '';
-  } else if(e.key === 'Backspace' && !G(iId).value){
-    const tags = G(aId).querySelectorAll('.tg');
+    const inp=G(iId), v=inp.value.trim().replace(/,$/,'');
+    if(v) addTag(aId,iId,v);
+    inp.value='';
+  } else if(e.key==='Backspace'&&!G(iId).value){
+    const tags=G(aId).querySelectorAll('.tg');
     if(tags.length) tags[tags.length-1].remove();
   }
 }
-function addTag(aId, iId, val){
-  const area = G(aId), inp = G(iId);
-  const t = document.createElement('div');
-  t.className = 'tg'; t.dataset.val = val;
-  t.innerHTML = val + '<span class="tx" onclick="this.parentElement.remove();liveCheck()">×</span>';
-  area.insertBefore(t, inp);
+function addTag(aId,iId,val){
+  const area=G(aId),inp=G(iId);
+  const t=document.createElement('div');
+  t.className='tg'; t.dataset.val=val;
+  t.innerHTML=val+'<button class="tx-btn" onclick="this.parentElement.remove();liveCheck()">×</button>';
+  area.insertBefore(t,inp);
   liveCheck();
 }
 function getTags(aId){
   return Array.from(G(aId).querySelectorAll('.tg')).map(t=>t.dataset.val);
 }
 
-// ── Domain list ───────────────────────────────────────────────────
-let domains = [];
+// ── Domain list ──────────────────────────────────────────
+let domains=[];
 function addDomain(){
-  const inp = G('dom-inp'), v = inp.value.trim();
-  if(!v || domains.includes(v)){ inp.value=''; return; }
+  const inp=G('dom-inp'),v=inp.value.trim();
+  if(!v||domains.includes(v)){inp.value='';return;}
   domains.push(v); inp.value='';
   renderDomains(); liveCheck();
 }
-function removeDomain(d){ domains = domains.filter(x=>x!==d); renderDomains(); liveCheck(); }
+function removeDomain(d){ domains=domains.filter(x=>x!==d); renderDomains(); liveCheck(); }
 function renderDomains(){
-  G('dom-list').innerHTML = domains.map(d =>
-    `<div class="di"><span>${d}</span><span class="dx" onclick="removeDomain('${d.replace(/'/g,"\\'")}')">✕</span></div>`
+  G('dom-list').innerHTML=domains.map(d=>
+    `<div class="di"><span>${d}</span><button class="dx" onclick="removeDomain('${d.replace(/'/g,"\\'")}')">✕</button></div>`
   ).join('');
 }
 
-// ── RC4 / XOR crypto ─────────────────────────────────────────────
-function rc4(key, data){
-  const S = new Uint8Array(256); for(let i=0;i<256;i++) S[i]=i;
+// ── Crypto ───────────────────────────────────────────────
+function rc4(key,data){
+  const S=new Uint8Array(256); for(let i=0;i<256;i++) S[i]=i;
   for(let i=0,j=0;i<256;i++){j=(j+S[i]+key.charCodeAt(i%key.length))&255;[S[i],S[j]]=[S[j],S[i]];}
-  const out = new Uint8Array(data.length);
+  const out=new Uint8Array(data.length);
   for(let k=0,i=0,j=0;k<data.length;k++){i=(i+1)&255;j=(j+S[i])&255;[S[i],S[j]]=[S[j],S[i]];out[k]=data[k]^S[(S[i]+S[j])&255];}
   return out;
 }
-function xorEnc(data, key){
-  const out = new Uint8Array(data.length);
-  for(let i=0;i<data.length;i++) out[i] = data[i] ^ key.charCodeAt(i%key.length);
+function xorEnc(data,key){
+  const out=new Uint8Array(data.length);
+  for(let i=0;i<data.length;i++) out[i]=data[i]^key.charCodeAt(i%key.length);
   return out;
 }
-function encodeStr(raw, enc, rk, xk){
-  let b = new TextEncoder().encode(raw);
-  if(enc==='xor'||enc==='rc4xor') b = xorEnc(b, xk);
-  if(enc==='rc4'||enc==='rc4xor') b = rc4(rk, b);
+function encodeStr(raw,enc,rk,xk){
+  let b=new TextEncoder().encode(raw);
+  if(enc==='xor'||enc==='rc4xor') b=xorEnc(b,xk);
+  if(enc==='rc4'||enc==='rc4xor') b=rc4(rk,b);
   if(enc==='none') return raw;
-  let lat = ''; for(let i=0;i<b.length;i++) lat += String.fromCharCode(b[i]);
+  let lat=''; for(let i=0;i<b.length;i++) lat+=String.fromCharCode(b[i]);
   return btoa(lat);
 }
 
-// ── Build runtime decoder ─────────────────────────────────────────
-function buildDecoder(arrName, decName, enc, rk, xk, rotAmt, opts){
-  let code = '';
-
-  // RC4 helper
+// ── Build runtime decoder ─────────────────────────────────
+function buildDecoder(arrName,decName,enc,rk,xk,rotAmt,opts){
+  let code='';
   if(enc==='rc4'||enc==='rc4xor'){
-    const f = freshId();
-    code += `function ${f}(k,d){var S=new Uint8Array(256);for(var i=0;i<256;i++)S[i]=i;for(var i=0,j=0;i<256;i++){j=(j+S[i]+k.charCodeAt(i%k.length))&255;var t=S[i];S[i]=S[j];S[j]=t;}var o=new Uint8Array(d.length);for(var n=0,i=0,j=0;n<d.length;n++){i=(i+1)&255;j=(j+S[i])&255;var t=S[i];S[i]=S[j];S[j]=t;o[n]=d[n]^S[(S[i]+S[j])&255];}return o;}\n`;
-    opts._rc4fn = f;
+    const f=freshId();
+    code+=`function ${f}(k,d){var S=new Uint8Array(256);for(var i=0;i<256;i++)S[i]=i;for(var i=0,j=0;i<256;i++){j=(j+S[i]+k.charCodeAt(i%k.length))&255;var t=S[i];S[i]=S[j];S[j]=t;}var o=new Uint8Array(d.length);for(var n=0,i=0,j=0;n<d.length;n++){i=(i+1)&255;j=(j+S[i])&255;var t=S[i];S[i]=S[j];S[j]=t;o[n]=d[n]^S[(S[i]+S[j])&255];}return o;}\n`;
+    opts._rc4fn=f;
   }
-  // XOR helper
   if(enc==='xor'||enc==='rc4xor'){
-    const f = freshId();
-    code += `function ${f}(b,k){var o=new Uint8Array(b.length);for(var i=0;i<b.length;i++)o[i]=b[i]^k.charCodeAt(i%k.length);return o;}\n`;
-    opts._xorfn = f;
+    const f=freshId();
+    code+=`function ${f}(b,k){var o=new Uint8Array(b.length);for(var i=0;i<b.length;i++)o[i]=b[i]^k.charCodeAt(i%k.length);return o;}\n`;
+    opts._xorfn=f;
   }
-
-  // Rotation fix-up (array was rotated after indexing, decoder must unshift it back)
-  if(rotAmt > 0){
-    code += `(function(){for(var _r=0;_r<${hexInt(rotAmt)};_r++)${arrName}.unshift(${arrName}.pop());})();\n`;
+  if(rotAmt>0){
+    code+=`(function(){for(var _r=0;_r<${hexInt(rotAmt)};_r++)${arrName}.unshift(${arrName}.pop());})();\n`;
   }
-
-  const shift = opts.idxshift || 0;
-  code += `function ${decName}(_i){\n`;
-  if(shift > 0) code += `  _i -= ${hexInt(shift)};\n`;
-  code += `  var _e = ${arrName}[_i];\n`;
-  if(enc !== 'none'){
-    code += `  var _bin = atob(_e);\n`;
-    code += `  var _bytes = new Uint8Array(_bin.length);\n`;
-    code += `  for(var _j=0;_j<_bin.length;_j++) _bytes[_j]=_bin.charCodeAt(_j);\n`;
-    if(opts._rc4fn) code += `  _bytes = ${opts._rc4fn}(${JSON.stringify(rk)},_bytes);\n`;
-    if(opts._xorfn) code += `  _bytes = ${opts._xorfn}(_bytes,${JSON.stringify(xk)});\n`;
-    code += `  return new TextDecoder().decode(_bytes);\n`;
+  const shift=opts.idxshift||0;
+  code+=`function ${decName}(_i){\n`;
+  if(shift>0) code+=`  _i -= ${hexInt(shift)};\n`;
+  code+=`  var _e = ${arrName}[_i];\n`;
+  if(enc!=='none'){
+    code+=`  var _bin = atob(_e);\n`;
+    code+=`  var _bytes = new Uint8Array(_bin.length);\n`;
+    code+=`  for(var _j=0;_j<_bin.length;_j++) _bytes[_j]=_bin.charCodeAt(_j);\n`;
+    if(opts._rc4fn) code+=`  _bytes = ${opts._rc4fn}(${JSON.stringify(rk)},_bytes);\n`;
+    if(opts._xorfn) code+=`  _bytes = ${opts._xorfn}(_bytes,${JSON.stringify(xk)});\n`;
+    code+=`  return new TextDecoder().decode(_bytes);\n`;
   } else {
-    code += `  return _e;\n`;
+    code+=`  return _e;\n`;
   }
-  code += `}\n`;
-
-  // Call-transform: wrap decoder in proxy function(s) — uses actual runtime aliasing
+  code+=`}\n`;
   if(opts.calltrans){
-    const wcount = Math.max(1, Math.min(5, opts.wcount||1));
-    // Build a chain of wrapper functions, each calling the previous
-    let prev = decName;
-    for(let w = 0; w < wcount; w++){
-      const wn = freshId();
-      const paramCount = Math.max(1, opts.wparams||2);
-      // Extra dummy params to obscure the function signature
-      const extraParams = Array.from({length:paramCount-1}, ()=>freshId()).join(',');
-      const paramList = extraParams ? `_i,${extraParams}` : '_i';
-      code += `function ${wn}(${paramList}){return ${prev}(_i);}\n`;
-      prev = wn;
+    const wcount=Math.max(1,Math.min(5,opts.wcount||1));
+    let prev=decName;
+    for(let w=0;w<wcount;w++){
+      const wn=freshId();
+      const paramCount=Math.max(1,opts.wparams||2);
+      const extraParams=Array.from({length:paramCount-1},()=>freshId()).join(',');
+      const paramList=extraParams?`_i,${extraParams}`:'_i';
+      code+=`function ${wn}(${paramList}){return ${prev}(_i);}\n`;
+      prev=wn;
     }
-    // If chained, make final wrapper call first wrapper recursively — but just alias decName to outermost
-    opts._finalDecName = prev;
+    opts._finalDecName=prev;
   } else {
-    opts._finalDecName = decName;
+    opts._finalDecName=decName;
   }
-
   return code;
 }
 
-// ── Tokenizer ─────────────────────────────────────────────────────
+// ── Tokenizer ─────────────────────────────────────────────
 function tokenize(src){
-  const toks = [];
-  const re = /\/\/[^\n]*|\/\*[\s\S]*?\*\/|`(?:[^`\\]|\\.|\$\{(?:[^{}]|\{[^{}]*\})*\})*`|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|0[xX][0-9a-fA-F]+|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|[a-zA-Z_$][a-zA-Z0-9_$]*|[^\s]/g;
-  let m, last = 0;
-  while((m = re.exec(src)) !== null){
-    if(m.index > last) toks.push({t:'ws', v:src.slice(last, m.index)});
-    const v = m[0]; let t = 'op';
-    if(v[0]==='/'&&(v[1]==='/'||v[1]==='*')) t = 'comment';
-    else if(v[0]==='"'||v[0]==="'"||v[0]==='`') t = 'str';
-    else if(/^[0-9]/.test(v)||/^0[xX]/.test(v)) t = 'num';
-    else if(/^[a-zA-Z_$]/.test(v)) t = 'id';
-    toks.push({t, v}); last = m.index + v.length;
+  const toks=[];
+  const re=/\/\/[^\n]*|\/\*[\s\S]*?\*\/|`(?:[^`\\]|\\.|\$\{(?:[^{}]|\{[^{}]*\})*\})*`|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|0[xX][0-9a-fA-F]+|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|[a-zA-Z_$][a-zA-Z0-9_$]*|[^\s]/g;
+  let m,last=0;
+  while((m=re.exec(src))!==null){
+    if(m.index>last) toks.push({t:'ws',v:src.slice(last,m.index)});
+    const v=m[0]; let t='op';
+    if(v[0]==='/'&&(v[1]==='/'||v[1]==='*')) t='comment';
+    else if(v[0]==='"'||v[0]==="'"||v[0]==='`') t='str';
+    else if(/^[0-9]/.test(v)||/^0[xX]/.test(v)) t='num';
+    else if(/^[a-zA-Z_$]/.test(v)) t='id';
+    toks.push({t,v}); last=m.index+v.length;
   }
-  if(last < src.length) toks.push({t:'ws', v:src.slice(last)});
+  if(last<src.length) toks.push({t:'ws',v:src.slice(last)});
   return toks;
 }
 
-// ── Pass: String Array ────────────────────────────────────────────
-// FIX: Build the index map BEFORE shuffle/rotate so call-sites use correct positions.
-// Shuffle just reorders the array; the decoder must apply the inverse rotation.
-function passStringArray(toks, opts, st){
-  const enc  = opts.sarr_enc || 'rc4xor';
-  const rk   = RNG.hex(14), xk = RNG.hex(10);
-  const arrName = freshId(), decName = freshId();
-  const resPats  = getTags('ta-resstr').map(p=>{ try{return new RegExp(p);}catch(e){return null;} }).filter(Boolean);
-  const forcePats= getTags('ta-force').map(p=>{ try{return new RegExp(p);}catch(e){return null;} }).filter(Boolean);
-  const thresh   = NUM('o_thresh', 1.0);
-  const idxshift = INT('o_idxshift', 0);
-
-  // 1. Collect all string values that will be extracted, preserving insertion order
-  const pool = [];       // [{raw, encoded, originalIdx}]
-  const tokMap = [];     // parallel to toks: null or index into pool
-
-  toks.forEach((tok, ti) => {
-    if(tok.t !== 'str') { tokMap.push(null); return; }
-    let raw = '';
-    try {
-      if(tok.v[0] === '`') raw = tok.v.slice(1,-1);
-      else raw = JSON.parse(tok.v[0]==='"' ? tok.v : '"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"');
-    } catch(e){ try{ raw = eval(tok.v); }catch(e2){ raw = tok.v.slice(1,-1); } }
-    if(!raw || raw.length === 0){ tokMap.push(null); return; }
-    if(resPats.some(p => p.test(raw))){ tokMap.push(null); return; }
-    const forced = forcePats.some(p => p.test(raw));
-    if(!forced && RNG.next() > thresh){ tokMap.push(null); return; }
+// ── Pass: String Array ────────────────────────────────────
+function passStringArray(toks,opts,st){
+  const enc=opts.sarr_enc||'rc4xor';
+  const rk=RNG.hex(14),xk=RNG.hex(10);
+  const arrName=freshId(),decName=freshId();
+  const resPats=getTags('ta-resstr').map(p=>{try{return new RegExp(p);}catch(e){return null;}}).filter(Boolean);
+  const forcePats=getTags('ta-force').map(p=>{try{return new RegExp(p);}catch(e){return null;}}).filter(Boolean);
+  const thresh=NUM('o_thresh',1.0);
+  const idxshift=INT('o_idxshift',0);
+  const pool=[],tokMap=[];
+  toks.forEach((tok,ti)=>{
+    if(tok.t!=='str'){tokMap.push(null);return;}
+    let raw='';
+    try{
+      if(tok.v[0]==='`') raw=tok.v.slice(1,-1);
+      else raw=JSON.parse(tok.v[0]==='"'?tok.v:'"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"');
+    }catch(e){try{raw=eval(tok.v);}catch(e2){raw=tok.v.slice(1,-1);}}
+    if(!raw||raw.length===0){tokMap.push(null);return;}
+    if(resPats.some(p=>p.test(raw))){tokMap.push(null);return;}
+    const forced=forcePats.some(p=>p.test(raw));
+    if(!forced&&RNG.next()>thresh){tokMap.push(null);return;}
     tokMap.push(pool.length);
-    pool.push({ raw, encoded: encodeStr(raw, enc, rk, xk) });
+    pool.push({raw,encoded:encodeStr(raw,enc,rk,xk)});
     st.strings++;
   });
-
-  if(pool.length === 0) return { toks, preamble: '' };
-
-  // 2. Build the encoded array (pool order = final array order before rotate)
-  const arr = pool.map(p => JSON.stringify(p.encoded));
-
-  // 3. Shuffle: create a permutation mapping finalIdx -> poolIdx
-  //    After shuffle, arr[finalIdx] = pool[perm[finalIdx]].encoded
-  //    So to call decoder with finalIdx, we need: finalIdx = inverse_perm[poolIdx]
-  const perm = arr.map((_,i)=>i); // identity
+  if(pool.length===0) return {toks,preamble:''};
+  const arr=pool.map(p=>JSON.stringify(p.encoded));
+  const perm=arr.map((_,i)=>i);
   if(opts.sshuf){
     for(let i=perm.length-1;i>0;i--){
-      const j = RNG.int(i+1);
-      [perm[i],perm[j]] = [perm[j],perm[i]];
-      [arr[i], arr[j]]  = [arr[j],  arr[i]];
+      const j=RNG.int(i+1);
+      [perm[i],perm[j]]=[perm[j],perm[i]];
+      [arr[i],arr[j]]=[arr[j],arr[i]];
     }
   }
-  // Build inverse permutation: invPerm[poolIdx] = finalIdx
-  const invPerm = new Array(perm.length);
-  perm.forEach((poolIdx, finalIdx) => { invPerm[poolIdx] = finalIdx; });
-
-  // 4. Rotate: shift arr right by rotAmt (decoder undoes it)
-  const rotAmt = opts.srot ? (1 + RNG.int(Math.max(arr.length-1, 1))) : 0;
-  if(rotAmt > 0){
-    for(let i=0;i<rotAmt;i++) arr.unshift(arr.pop());
-    // After rotation, the element that was at finalIdx is now at (finalIdx+rotAmt)%len
-    // Decoder unshift loop puts it back, so from call-site perspective index is still invPerm[poolIdx]
-    // BUT the rotation shifts positions: arr[new_pos] = old arr[new_pos - rotAmt]
-    // So call index needs to account for rotation: callIdx = (invPerm[poolIdx] + rotAmt) % len
-    // Actually the decoder unshifts first, so by the time decoder runs array is back to post-shuffle order
-    // → call index = invPerm[poolIdx] (no adjustment needed for rotation since decoder fixes it first)
-  }
-
-  // 5. Build tokens with correct call indexes
-  const wrapOpts = { ...opts, idxshift, calltrans: opts.calltrans, wcount: opts.wcount, wparams: opts.wparams, _rc4fn:'', _xorfn:'' };
-  const decoderCode = buildDecoder(arrName, decName, enc, rk, xk, rotAmt, wrapOpts);
-  const finalDec = wrapOpts._finalDecName || decName;
-
-  const newToks = toks.map((tok, ti) => {
-    const poolIdx = tokMap[ti];
-    if(poolIdx === null) return tok;
-    const callIdx = invPerm[poolIdx] + idxshift;
-    const idxLit  = opts.sarr_idx === 'computed'
-      ? `(${hexInt(callIdx ^ 0xaa)} ^ ${hexInt(0xaa)})`
-      : hexInt(callIdx);
-    return { t:'ref', v:`${finalDec}(${idxLit})` };
+  const invPerm=new Array(perm.length);
+  perm.forEach((poolIdx,finalIdx)=>{invPerm[poolIdx]=finalIdx;});
+  const rotAmt=opts.srot?(1+RNG.int(Math.max(arr.length-1,1))):0;
+  if(rotAmt>0) for(let i=0;i<rotAmt;i++) arr.unshift(arr.pop());
+  const wrapOpts={...opts,idxshift,calltrans:opts.calltrans,wcount:opts.wcount,wparams:opts.wparams,_rc4fn:'',_xorfn:''};
+  const decoderCode=buildDecoder(arrName,decName,enc,rk,xk,rotAmt,wrapOpts);
+  const finalDec=wrapOpts._finalDecName||decName;
+  const idxTypes=opts.sarr_idx_types||['hex'];
+  const newToks=toks.map((tok,ti)=>{
+    const poolIdx=tokMap[ti];
+    if(poolIdx===null) return tok;
+    const callIdx=invPerm[poolIdx]+idxshift;
+    const idxType=idxTypes.length>1?idxTypes[RNG.int(idxTypes.length)]:idxTypes[0];
+    const idxLit=idxType==='computed'
+      ?`(${hexInt(callIdx^0xaa)} ^ ${hexInt(0xaa)})`
+      :hexInt(callIdx);
+    return {t:'ref',v:`${finalDec}(${idxLit})`};
   });
-
-  let pre = `var ${arrName} = [${arr.join(',')}];\n` + decoderCode;
-  return { toks: newToks, preamble: pre };
+  let pre=`var ${arrName} = [${arr.join(',')}];\n`+decoderCode;
+  return {toks:newToks,preamble:pre};
 }
 
-// ── Other string passes ───────────────────────────────────────────
-function passEscape(toks, st){
-  return toks.map(tok => {
-    if(tok.t !== 'str' || tok.v[0] === '`') return tok;
-    const q = tok.v[0], inner = tok.v.slice(1,-1); let out = '';
+// ── Other string passes ───────────────────────────────────
+function passEscape(toks,st){
+  return toks.map(tok=>{
+    if(tok.t!=='str'||tok.v[0]==='`') return tok;
+    const q=tok.v[0],inner=tok.v.slice(1,-1); let out='';
     for(let i=0;i<inner.length;i++){
       if(inner[i]==='\\'){out+=inner[i];i++;out+=inner[i];continue;}
-      const c = inner.charCodeAt(i);
-      out += RNG.next()>.5 ? '\\x'+c.toString(16).padStart(2,'0') : '\\u'+c.toString(16).padStart(4,'0');
+      const c=inner.charCodeAt(i);
+      out+=RNG.next()>.5?'\\x'+c.toString(16).padStart(2,'0'):'\\u'+c.toString(16).padStart(4,'0');
     }
-    st.strings++; return {...tok, v: q+out+q};
+    st.strings++; return {...tok,v:q+out+q};
   });
 }
-
 function passCharcode(toks){
-  return toks.map(tok => {
-    if(tok.t !== 'str' || tok.v[0] === '`') return tok;
-    let raw = '';
-    try{ raw = JSON.parse(tok.v[0]==='"' ? tok.v : '"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"'); }catch(e){ return tok; }
-    if(!raw || raw.length === 0 || raw.length > 80) return tok;
-    const codes = Array.from(raw).map(c => hexInt(c.charCodeAt(0))).join(',');
-    return {t:'ref', v:`String['fromCharCode'](${codes})`};
+  return toks.map(tok=>{
+    if(tok.t!=='str'||tok.v[0]==='`') return tok;
+    let raw='';
+    try{raw=JSON.parse(tok.v[0]==='"'?tok.v:'"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"');}catch(e){return tok;}
+    if(!raw||raw.length===0||raw.length>80) return tok;
+    const codes=Array.from(raw).map(c=>hexInt(c.charCodeAt(0))).join(',');
+    return {t:'ref',v:`String['fromCharCode'](${codes})`};
   });
 }
-
-function passAtob(toks, st){
-  return toks.map(tok => {
-    if(tok.t !== 'str' || tok.v[0] === '`') return tok;
-    let raw = '';
-    try{ raw = JSON.parse(tok.v[0]==='"' ? tok.v : '"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"'); }catch(e){ return tok; }
-    if(!raw || !raw.length) return tok;
-    const bytes = new TextEncoder().encode(raw);
-    let lat = ''; for(let i=0;i<bytes.length;i++) lat += String.fromCharCode(bytes[i]);
-    const b64 = btoa(lat); st.strings++;
-    return {t:'ref', v:`(function(){var _b=atob(${JSON.stringify(b64)});var _u=new Uint8Array(_b.length);for(var _i=0;_i<_b.length;_i++)_u[_i]=_b.charCodeAt(_i);return new TextDecoder().decode(_u);})()`};
+function passAtob(toks,st){
+  return toks.map(tok=>{
+    if(tok.t!=='str'||tok.v[0]==='`') return tok;
+    let raw='';
+    try{raw=JSON.parse(tok.v[0]==='"'?tok.v:'"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"');}catch(e){return tok;}
+    if(!raw||!raw.length) return tok;
+    const bytes=new TextEncoder().encode(raw);
+    let lat=''; for(let i=0;i<bytes.length;i++) lat+=String.fromCharCode(bytes[i]);
+    const b64=btoa(lat); st.strings++;
+    return {t:'ref',v:`(function(){var _b=atob(${JSON.stringify(b64)});var _u=new Uint8Array(_b.length);for(var _i=0;_i<_b.length;_i++)_u[_i]=_b.charCodeAt(_i);return new TextDecoder().decode(_u);})()`};
   });
 }
-
 function passTemplate(toks){
-  return toks.map(tok => {
-    if(tok.t !== 'str' || tok.v[0] === '`') return tok;
-    let raw = '';
-    try{ raw = JSON.parse(tok.v[0]==='"' ? tok.v : '"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"'); }catch(e){ return tok; }
-    if(!raw || !raw.length || raw.length > 60) return tok;
-    const mid = Math.ceil(raw.length/2);
-    const a = Array.from(raw.slice(0,mid)).map(c=>hexInt(c.charCodeAt(0))).join(',');
-    const b = Array.from(raw.slice(mid)).map(c=>hexInt(c.charCodeAt(0))).join(',');
-    return {t:'ref', v:`(String['fromCharCode'](${a})${b ? '+String[\'fromCharCode\']('+b+')' : ''})`};
+  return toks.map(tok=>{
+    if(tok.t!=='str'||tok.v[0]==='`') return tok;
+    let raw='';
+    try{raw=JSON.parse(tok.v[0]==='"'?tok.v:'"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"');}catch(e){return tok;}
+    if(!raw||!raw.length||raw.length>60) return tok;
+    const mid=Math.ceil(raw.length/2);
+    const a=Array.from(raw.slice(0,mid)).map(c=>hexInt(c.charCodeAt(0))).join(',');
+    const b=Array.from(raw.slice(mid)).map(c=>hexInt(c.charCodeAt(0))).join(',');
+    return {t:'ref',v:`(String['fromCharCode'](${a})${b?'+String[\'fromCharCode\']('+b+')':''})`};
+  });
+}
+function passStrSplit(toks,chunkLen){
+  const cl=chunkLen||10;
+  return toks.map(tok=>{
+    if(tok.t!=='str'||tok.v[0]==='`') return tok;
+    const q=tok.v[0],inner=tok.v.slice(1,-1);
+    if(inner.length<cl*2) return tok;
+    const mid=Math.floor(inner.length/2);
+    let splitAt=mid;
+    for(let i=mid;i>=1;i--){ if(inner[i-1]!=='\\'){splitAt=i;break;} }
+    if(splitAt<1||splitAt>=inner.length) return tok;
+    return {...tok,v:`(${q+inner.slice(0,splitAt)+q}+${q+inner.slice(splitAt)+q})`};
   });
 }
 
-// FIX: passStrSplit — only split string tokens that are actual quote-delimited strings
-// and produce valid JS. The split point must stay within quoted content.
-function passStrSplit(toks, chunkLen){
-  const cl = chunkLen || 10;
-  return toks.map(tok => {
-    if(tok.t !== 'str' || tok.v[0] === '`') return tok;
-    const q = tok.v[0];
-    const inner = tok.v.slice(1, -1);
-    if(inner.length < cl * 2) return tok;  // too short to bother
-    // Split at a safe boundary (not inside escape sequence)
-    const mid = Math.floor(inner.length / 2);
-    // Walk back from mid to find a non-escape position
-    let splitAt = mid;
-    for(let i=mid;i>=1;i--){
-      if(inner[i-1] !== '\\'){splitAt=i;break;}
-    }
-    if(splitAt < 1 || splitAt >= inner.length) return tok;
-    const part1 = q + inner.slice(0, splitAt) + q;
-    const part2 = q + inner.slice(splitAt) + q;
-    return {...tok, v:`(${part1}+${part2})`};
-  });
-}
-
-// ── Identifier rename ─────────────────────────────────────────────
-const RESERVED = new Set([
+// ── Identifier rename ─────────────────────────────────────
+const RESERVED=new Set([
   'break','case','catch','continue','debugger','default','delete','do','else','finally','for',
   'function','if','in','instanceof','new','return','switch','this','throw','try','typeof','var',
   'void','while','with','class','const','enum','export','extends','import','super','let','yield',
@@ -745,106 +1223,91 @@ const RESERVED = new Set([
   'valueOf','hasOwnProperty','keys','values','entries','assign','freeze','create','then','catch',
   'finally','resolve','reject','all','race','from','of','isArray','charAt','charCodeAt',
   'fromCharCode','split','replace','replaceAll','match','matchAll','test','trim','trimStart',
-  'trimEnd','padStart','padEnd','repeat','startsWith','endsWith','includes','floor','ceil',
+  'trimEnd','padStart','padEnd','repeat','startsWith','endsWith','floor','ceil',
   'round','abs','max','min','pow','sqrt','random','PI','parse','stringify','addEventListener',
-  'removeEventListener','querySelector','querySelectorAll','getElementById','getElementsBy',
+  'removeEventListener','querySelector','querySelectorAll','getElementById',
   'innerHTML','textContent','style','className','setAttribute','getAttribute','location',
   'hostname','fetch','self','top','require','module','exports','process','__dirname',
-  '__filename','Buffer','global','globalThis','performance','now','Date','getTime',
-  'Promise','resolve','reject','then','catch','finally','async','await',
+  '__filename','Buffer','global','globalThis','performance','now','getTime',
 ]);
-
-function passRename(toks, opts){
-  const extra   = new Set(getTags('ta-resname'));
-  const ng      = opts.namegen || 'hexadecimal';
-  const pfx     = VAL('o_idpfx').trim();
-  const dict    = getTags('ta-dict');
-  const map     = {};
-  let   c = 0, di = 0;
-
+function passRename(toks,opts){
+  const extra=new Set(getTags('ta-resname'));
+  const ng=opts.namegen||'hexadecimal';
+  const pfx=VAL('o_idpfx').trim();
+  const dict=getTags('ta-dict');
+  const map={};
+  let c=0,di=0;
   function make(){
-    if(ng === 'mangled'){
-      const alpha = 'abcdefghijklmnopqrstuvwxyz';
-      let n = c, s = ''; do{ s = alpha[n%26]+s; n = Math.floor(n/26)-1; }while(n>=0);
-      c++; return pfx + s;
+    if(ng==='mangled'){
+      const alpha='abcdefghijklmnopqrstuvwxyz';
+      let n=c,s=''; do{s=alpha[n%26]+s;n=Math.floor(n/26)-1;}while(n>=0);
+      c++; return pfx+s;
     }
-    if(ng === 'dictionary' && dict.length){
-      const word = dict[di % dict.length] + (di >= dict.length ? Math.floor(di/dict.length) : '');
-      di++; return pfx + word;
+    if(ng==='dictionary'&&dict.length){
+      const word=dict[di%dict.length]+(di>=dict.length?Math.floor(di/dict.length):'');
+      di++; return pfx+word;
     }
-    return pfx + '_0x' + (c++).toString(16).padStart(4,'0') + RNG.hex(2);
+    return pfx+'_0x'+(c++).toString(16).padStart(4,'0')+RNG.hex(2);
   }
-
-  // First pass: build rename map for identifiers that are NOT reserved
-  // FIX: skip identifiers that immediately follow a dot (they're property names already converted)
-  // We check by scanning token stream
   for(let i=0;i<toks.length;i++){
-    const tok = toks[i];
-    if(tok.t !== 'id') continue;
-    if(RESERVED.has(tok.v) || extra.has(tok.v)) continue;
+    const tok=toks[i];
+    if(tok.t!=='id') continue;
+    if(RESERVED.has(tok.v)||extra.has(tok.v)) continue;
     if(map[tok.v]) continue;
-    // Skip if this is a property name after bracket conversion (already a string literal) — no issue
-    // Skip if previous non-ws token is '.' — it's a property access
-    let prev = null;
-    for(let j=i-1;j>=0;j--){ if(toks[j].t!=='ws'&&toks[j].t!=='comment'){prev=toks[j];break;} }
-    // Don't rename if it's being used as an object key: id :
-    let next = null;
-    for(let j=i+1;j<toks.length;j++){ if(toks[j].t!=='ws'&&toks[j].t!=='comment'){next=toks[j];break;} }
-    if(prev && prev.v === '.') continue;  // property access e.g. foo.bar
-    if(next && next.v === ':') continue;  // object key e.g. {foo: ...}
-    map[tok.v] = make();
+    let prev=null;
+    for(let j=i-1;j>=0;j--){if(toks[j].t!=='ws'&&toks[j].t!=='comment'){prev=toks[j];break;}}
+    let next=null;
+    for(let j=i+1;j<toks.length;j++){if(toks[j].t!=='ws'&&toks[j].t!=='comment'){next=toks[j];break;}}
+    if(prev&&prev.v==='.') continue;
+    if(next&&next.v===':') continue;
+    map[tok.v]=make();
   }
-
-  return toks.map((tok,i) => {
-    if(tok.t !== 'id' || !map[tok.v]) return tok;
-    // Double check: don't rename after dot or before colon
-    let prev = null, next = null;
-    for(let j=i-1;j>=0;j--){ if(toks[j].t!=='ws'&&toks[j].t!=='comment'){prev=toks[j];break;} }
-    for(let j=i+1;j<toks.length;j++){ if(toks[j].t!=='ws'&&toks[j].t!=='comment'){next=toks[j];break;} }
-    if(prev && prev.v === '.') return tok;
-    if(next && next.v === ':') return tok;
-    return {...tok, v: map[tok.v]};
+  return toks.map((tok,i)=>{
+    if(tok.t!=='id'||!map[tok.v]) return tok;
+    let prev=null,next=null;
+    for(let j=i-1;j>=0;j--){if(toks[j].t!=='ws'&&toks[j].t!=='comment'){prev=toks[j];break;}}
+    for(let j=i+1;j<toks.length;j++){if(toks[j].t!=='ws'&&toks[j].t!=='comment'){next=toks[j];break;}}
+    if(prev&&prev.v==='.') return tok;
+    if(next&&next.v===':') return tok;
+    return {...tok,v:map[tok.v]};
   });
 }
-
 function passBracket(toks){
-  const res = []; const skip = new Set(['prototype','constructor','length','name']);
+  const res=[],skip=new Set(['prototype','constructor','length','name']);
   for(let i=0;i<toks.length;i++){
-    const tok = toks[i];
-    if(tok.t==='op' && tok.v==='.' && i+1<toks.length && toks[i+1].t==='id' && !skip.has(toks[i+1].v)){
-      res.push({t:'op', v:`[${JSON.stringify(toks[i+1].v)}]`}); i++; continue;
+    const tok=toks[i];
+    if(tok.t==='op'&&tok.v==='.'&&i+1<toks.length&&toks[i+1].t==='id'&&!skip.has(toks[i+1].v)){
+      res.push({t:'op',v:`[${JSON.stringify(toks[i+1].v)}]`}); i++; continue;
     }
     res.push(tok);
   }
   return res;
 }
-
-function passNumbers(toks, opts){
-  return toks.map(tok => {
-    if(tok.t !== 'num') return tok;
-    let n = /^0[xX]/.test(tok.v) ? parseInt(tok.v,16) : parseFloat(tok.v);
-    if(!Number.isInteger(n) || n<0 || n>1e7 || isNaN(n)) return tok;
-    let v = opts.hexn ? hexInt(n) : String(n);
-    if(opts.nsplit && n > 0){
-      const a = 1 + RNG.int(Math.min(n, 0xfe)), b = n - a;
-      v = b >= 0 ? `(${hexInt(a)}+${hexInt(b)})` : `(${hexInt(a)}-${hexInt(-b)})`;
+function passNumbers(toks,opts){
+  return toks.map(tok=>{
+    if(tok.t!=='num') return tok;
+    let n=/^0[xX]/.test(tok.v)?parseInt(tok.v,16):parseFloat(tok.v);
+    if(!Number.isInteger(n)||n<0||n>1e7||isNaN(n)) return tok;
+    let v=opts.hexn?hexInt(n):String(n);
+    if(opts.nsplit&&n>0){
+      const a=1+RNG.int(Math.min(n,0xfe)),b=n-a;
+      v=b>=0?`(${hexInt(a)}+${hexInt(b)})`:`(${hexInt(a)}-${hexInt(-b)})`;
     }
-    if(opts.math && n > 0) v = `(Math['floor'](${v}+0x0))`;
-    return {...tok, v};
+    if(opts.math&&n>0) v=`(Math['floor'](${v}+0x0))`;
+    return {...tok,v};
   });
 }
-
 function passSimplify(toks){
-  const res = []; let i = 0;
-  while(i < toks.length){
-    const a = toks[i];
-    if(i+2 < toks.length && a.t==='num'){
-      const op=toks[i+1], b=toks[i+2];
-      if(op.t==='op' && b.t==='num' && ['+','-','*'].includes(op.v)){
-        const na=parseFloat(a.v), nb=parseFloat(b.v);
+  const res=[]; let i=0;
+  while(i<toks.length){
+    const a=toks[i];
+    if(i+2<toks.length&&a.t==='num'){
+      const op=toks[i+1],b=toks[i+2];
+      if(op.t==='op'&&b.t==='num'&&['+','-','*'].includes(op.v)){
+        const na=parseFloat(a.v),nb=parseFloat(b.v);
         if(!isNaN(na)&&!isNaN(nb)&&Number.isInteger(na)&&Number.isInteger(nb)){
-          let r = op.v==='+'?na+nb:op.v==='-'?na-nb:na*nb;
-          if(Number.isInteger(r) && r>=0 && r<=1e8){ res.push({t:'num',v:hexInt(r)}); i+=3; continue; }
+          let r=op.v==='+'?na+nb:op.v==='-'?na-nb:na*nb;
+          if(Number.isInteger(r)&&r>=0&&r<=1e8){res.push({t:'num',v:hexInt(r)});i+=3;continue;}
         }
       }
     }
@@ -852,18 +1315,12 @@ function passSimplify(toks){
   }
   return res;
 }
-
-// FIX: passObjKeys — only transform strings that are ACTUAL object literal keys (followed by colon)
-// Not strings inside arrays, function arguments, or other contexts
 function passObjKeys(code){
-  // Match "key": or 'key': only when key is a plain identifier-like string
-  // Use regex that requires the colon to follow directly
-  return code.replace(/(["'])([a-zA-Z_$][a-zA-Z0-9_$]{0,49})\1(\s*):/g, (m, q, k, sp) => {
-    const codes = Array.from(k).map(c => hexInt(c.charCodeAt(0))).join(',');
+  return code.replace(/(["'])([a-zA-Z_$][a-zA-Z0-9_$]{0,49})\1(\s*):/g,(m,q,k,sp)=>{
+    const codes=Array.from(k).map(c=>hexInt(c.charCodeAt(0))).join(',');
     return `[String['fromCharCode'](${codes})]${sp}:`;
   });
 }
-
 function passDeadCode(){
   const v1=freshId(),v2=freshId(),v3=freshId(),v4=freshId(),v5=freshId();
   return `var ${v1}=function(){return!![];};\n`
@@ -872,14 +1329,11 @@ function passDeadCode(){
     +`try{if(!${v1}())throw ${hexInt(RNG.int(0xffff))};}catch(${v4}){}\n`
     +`void(${hexInt(0)}===${hexInt(1)}&&(function(${v5}){return ${v5};})(null));\n`;
 }
-
-// FIX: passCFF — wrap dead code INSIDE CFF rather than before it
-// CFF must wrap the actual user code. Dead code must be INSIDE the CFF case.
-function passCFF(userCode, deadCode){
-  const a=freshId(), s=freshId();
+function passCFF(userCode,deadCode){
+  const a=freshId(),s=freshId();
   const steps=[0,1,2,3,4];
-  for(let i=steps.length-1;i>0;i--){ const j=RNG.int(i+1); [steps[i],steps[j]]=[steps[j],steps[i]]; }
-  const inner = (deadCode||'') + userCode;
+  for(let i=steps.length-1;i>0;i--){const j=RNG.int(i+1);[steps[i],steps[j]]=[steps[j],steps[i]];}
+  const inner=(deadCode||'')+userCode;
   return `var ${a}='${steps.join('|')}'.split('|'),${s}=0;\n`
     +`while(true){\n`
     +`  switch(${a}[${s}++]){\n`
@@ -891,16 +1345,13 @@ function passCFF(userCode, deadCode){
     +`  }break;\n`
     +`}`;
 }
-
 function passIIFE(code){ return `(function(){\n${code}\n})();`; }
-
 function passComma(code){
-  const d1=freshId(), d2=freshId();
+  const d1=freshId(),d2=freshId();
   return `void(${d1}=${hexInt(RNG.int(0xffff))},${d2}=${hexInt(RNG.int(0xffff))},function(){\n${code}\n}());\n`;
 }
-
 function passSelf(code){
-  const outer=freshId(), inner=freshId(), src=freshId(), wsC=freshId(), nonws=freshId();
+  const outer=freshId(),inner=freshId(),src=freshId(),wsC=freshId(),nonws=freshId();
   return `var ${outer}=function ${inner}(){\n`
     +`  var ${src}=${inner}.toString();\n`
     +`  var ${wsC}=0;\n`
@@ -909,11 +1360,10 @@ function passSelf(code){
     +`  if(${wsC}/((${nonws})||1)>0.18){for(;;){}}\n`
     +`};\n${outer}();\n`+code;
 }
-
 function passAntiBeautifier(code){
-  const cf=freshId(), src=freshId(), wsC=freshId(), nonW=freshId(), l1=freshId(), l2=freshId(), ii=freshId(), ch=freshId();
-  const body = `function(){var a=0x1,b=0x2,c=a+b;return c;}`;
-  const thresh = body.length + 15;
+  const cf=freshId(),src=freshId(),wsC=freshId(),nonW=freshId(),l1=freshId(),l2=freshId(),ii=freshId(),ch=freshId();
+  const body=`function(){var a=0x1,b=0x2,c=a+b;return c;}`;
+  const thresh=body.length+15;
   return `var ${cf}=${body};\n`
     +`(function(){\n`
     +`  var ${src}=${cf}.toString();\n`
@@ -925,9 +1375,8 @@ function passAntiBeautifier(code){
     +`  if(${l1}||${l2}){for(;;){}}\n`
     +`})();\n`+code;
 }
-
 function passNativeCheck(code){
-  const chk=freshId(), tgt=freshId();
+  const chk=freshId(),tgt=freshId();
   return `(function(){\n`
     +`  var ${chk}=function(${tgt}){\n`
     +`    try{var _s=Function.prototype.toString.call(${tgt});`
@@ -937,36 +1386,28 @@ function passNativeCheck(code){
     +`  if(${chk}(setTimeout)){while(true){}}\n`
     +`})();\n`+code;
 }
-
-function passDbg(code, ms){
+function passDbg(code,ms){
   return `(function(){\n`
     +`  setInterval(function(){\n`
     +`    (function(){return![];})[${JSON.stringify('constructor')}](${JSON.stringify('debugger')})[${JSON.stringify('call')}](${JSON.stringify('action')});\n`
     +`  },${hexInt(ms||2000)});\n`
     +`})();\n`+code;
 }
-
 function passTamp(code){
-  const h=freshId(), sv=RNG.hex(8);
+  const h=freshId(),sv=RNG.hex(8);
   return `(function(){var ${h}=${JSON.stringify(sv)};if(typeof ${h}===typeof undefined)throw new Error('0x2');})();\n`+code;
 }
-
 function passCon(code){
   const fn=freshId();
   return `(function(){try{['log','warn','error','info','debug','dir','table'].forEach(function(m){console[m]=function(${fn}){};});}catch(e){}})();\n`+code;
 }
-
-// FIX: passDomain — fixed the action string concatenation bug
-function passDomain(code, doms, redir){
-  const hn = freshId();
-  const esc = d => d.split('').map(c=>'\\x'+c.charCodeAt(0).toString(16).padStart(2,'0')).join('');
-  const checks = doms.map(d => `${hn}.indexOf('${esc(d)}')===-1`).join('&&');
+function passDomain(code,doms,redir){
+  const hn=freshId();
+  const esc=d=>d.split('').map(c=>'\\x'+c.charCodeAt(0).toString(16).padStart(2,'0')).join('');
+  const checks=doms.map(d=>`${hn}.indexOf('${esc(d)}')===-1`).join('&&');
   let action;
-  if(redir){
-    action = `if(typeof window!=='undefined'){window.location.href=${JSON.stringify(redir)};}else{throw new Error('0x3');}`;
-  } else {
-    action = `throw new Error('0x3');`;
-  }
+  if(redir){ action=`if(typeof window!=='undefined'){window.location.href=${JSON.stringify(redir)};}else{throw new Error('0x3');}`; }
+  else { action=`throw new Error('0x3');`; }
   return `(function(){\n`
     +`  try{\n`
     +`    var ${hn}=typeof window!=='undefined'?window.location.hostname:(typeof location!=='undefined'?location.hostname:'');\n`
@@ -974,261 +1415,217 @@ function passDomain(code, doms, redir){
     +`  }catch(_e){if(_e instanceof Error&&_e.message==='0x3')throw _e;}\n`
     +`})();\n`+code;
 }
-
 function passIgnoreImports(src){
-  const lines = src.split('\n'), imp = [], rest = [];
+  const lines=src.split('\n'),imp=[],rest=[];
   for(const l of lines){
     if(/^\s*(import[\s{*]|export\s+(default\s+)?|const\s+\w+\s*=\s*require\()/.test(l)) imp.push(l);
     else rest.push(l);
   }
-  return { importLines: imp, rest: rest.join('\n') };
+  return {importLines:imp,rest:rest.join('\n')};
 }
-
-function passHtmlParse(html, obfFn){
-  return html.replace(/<script([^>]*)>([\s\S]*?)<\/script>/gi, (m, attrs, src) => {
-    if(attrs.includes('src=') || !src.trim()) return m;
-    try{ return '<script' + attrs + '>' + obfFn(src) + '<\/script>'; }catch(e){ return m; }
+function passHtmlParse(html,obfFn){
+  return html.replace(/<script([^>]*)>([\s\S]*?)<\/script>/gi,(m,attrs,src)=>{
+    if(attrs.includes('src=')||!src.trim()) return m;
+    try{ return '<script'+attrs+'>'+obfFn(src)+'<\/script>'; }catch(e){ return m; }
   });
 }
-
-function passBytecodeVM(code, opts, st){
-  const ints = []; for(let i=0;i<code.length;i++) ints.push(code.charCodeAt(i));
-  st.bytecodes = ints.length;
-  const shift = opts.oprot ? (1+RNG.int(7)) : 0;
-  const OP = {INIT:(0+shift)&0xf, BUILD:(1+shift)&0xf, EXEC:(2+shift)&0xf, HALT:(3+shift)&0xf};
-  const chunkSz = opts.chunk ? (opts.bcchunk||300) : ints.length;
-  const chunks = []; for(let i=0;i<ints.length;i+=chunkSz) chunks.push(ints.slice(i,i+chunkSz));
-  const cNames = chunks.map(()=>freshId());
-  const joined=freshId(), str=freshId(), pc=freshId(), prog=freshId(), fn=freshId();
-  let out = '(function(){\n';
-  chunks.forEach((c,i)=>{ out+=`var ${cNames[i]}=[${c.map(hexInt).join(',')}];\n`; });
-  out += chunks.length===1 ? `var ${joined}=${cNames[0]};\n` : `var ${joined}=[].concat(${cNames.join(',')});\n`;
-  out += `var ${prog}=[${hexInt(OP.INIT)},${hexInt(OP.BUILD)},${hexInt(OP.EXEC)},${hexInt(OP.HALT)}];\n`;
-  out += `var ${str}='',${pc}=0;\n`;
-  out += `while(${pc}<${prog}.length){var _op=${prog}[${pc}++];\n`;
-  out += `  if(_op===${hexInt(OP.INIT)}){${str}='';}\n`;
-  out += `  else if(_op===${hexInt(OP.BUILD)}){${str}='';for(var _ci=0;_ci<${joined}.length;_ci+=500)${str}+=String.fromCharCode.apply(null,${joined}.slice(_ci,_ci+500));}\n`;
-  out += `  else if(_op===${hexInt(OP.EXEC)}){var ${fn}=new Function(${str});${fn}();}\n`;
-  out += `  else if(_op===${hexInt(OP.HALT)}){break;}\n`;
-  out += `}\n})();`;
+function passBytecodeVM(code,opts,st){
+  const ints=[]; for(let i=0;i<code.length;i++) ints.push(code.charCodeAt(i));
+  st.bytecodes=ints.length;
+  const shift=opts.oprot?(1+RNG.int(7)):0;
+  const OP={INIT:(0+shift)&0xf,BUILD:(1+shift)&0xf,EXEC:(2+shift)&0xf,HALT:(3+shift)&0xf};
+  const chunkSz=opts.chunk?(opts.bcchunk||300):ints.length;
+  const chunks=[]; for(let i=0;i<ints.length;i+=chunkSz) chunks.push(ints.slice(i,i+chunkSz));
+  const cNames=chunks.map(()=>freshId());
+  const joined=freshId(),str=freshId(),pc=freshId(),prog=freshId(),fn=freshId();
+  let out='(function(){\n';
+  chunks.forEach((c,i)=>{out+=`var ${cNames[i]}=[${c.map(hexInt).join(',')}];\n`;});
+  out+=chunks.length===1?`var ${joined}=${cNames[0]};\n`:`var ${joined}=[].concat(${cNames.join(',')});\n`;
+  out+=`var ${prog}=[${hexInt(OP.INIT)},${hexInt(OP.BUILD)},${hexInt(OP.EXEC)},${hexInt(OP.HALT)}];\n`;
+  out+=`var ${str}='',${pc}=0;\n`;
+  out+=`while(${pc}<${prog}.length){var _op=${prog}[${pc}++];\n`;
+  out+=`  if(_op===${hexInt(OP.INIT)}){${str}='';}\n`;
+  out+=`  else if(_op===${hexInt(OP.BUILD)}){${str}='';for(var _ci=0;_ci<${joined}.length;_ci+=500)${str}+=String.fromCharCode.apply(null,${joined}.slice(_ci,_ci+500));}\n`;
+  out+=`  else if(_op===${hexInt(OP.EXEC)}){var ${fn}=new Function(${str});${fn}();}\n`;
+  out+=`  else if(_op===${hexInt(OP.HALT)}){break;}\n`;
+  out+=`}\n})();`;
   return out;
 }
-
-function minify(code, opts){
-  code = code.replace(/([^:])\/\/[^\n]*/g, '$1');
-  code = code.replace(/\/\*[\s\S]*?\*\//g, '');
-  code = code.replace(/[ \t\r\n]+/g, ' ');
-  code = code.replace(/ ?([\{\}\[\]\(\);,]) ?/g, '$1');
-  code = code.replace(/([\)\]\}0-9]) ([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:])/g, '$1$2');
-  code = code.replace(/([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:]) ([\(\[\{0-9_$])/g, '$1$2');
-  code = code.replace(/([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:]) ([\)\]\};,])/g, '$1$2');
-  code = code.replace(/([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:]) ([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:])/g, '$1$2');
+function minify(code,opts){
+  code=code.replace(/([^:])\/\/[^\n]*/g,'$1');
+  code=code.replace(/\/\*[\s\S]*?\*\//g,'');
+  code=code.replace(/[ \t\r\n]+/g,' ');
+  code=code.replace(/ ?([\{\}\[\]\(\);,]) ?/g,'$1');
+  code=code.replace(/([\)\]\}0-9]) ([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:])/g,'$1$2');
+  code=code.replace(/([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:]) ([\(\[\{0-9_$])/g,'$1$2');
+  // Use negative lookahead (?![a-zA-Z0-9_$]) so keywords like 'in' don't match
+  // inside longer words like 'indexOf' or 'instanceof'. Also exclude dot-preceded
+  // contexts (method calls) with negative lookbehind (?<!\.).
   ['return','typeof','instanceof','in','of','new','delete','void','throw','case','var','let',
    'const','function','class','extends','else','if','do','while','for','switch','try','catch',
-   'finally','async','await','yield','export','import'].forEach(k => {
-    code = code.replace(new RegExp('\\b('+k+')([a-zA-Z0-9_$`\'"])', 'g'), '$1 $2');
+   'finally','async','await','yield','export','import'].forEach(k=>{
+    code=code.replace(new RegExp('(?<!\\.)\\b('+k+')(?![a-zA-Z0-9_$])([a-zA-Z0-9_$`\'"])', 'g'),'$1 $2');
   });
-  if(opts.semi){ code = code.replace(/;var /g, ','); code = code.replace(/^,/, 'var '); }
+  if(opts.semi){code=code.replace(/;var /g,',');code=code.replace(/^,/,'var ');}
   return code.trim();
 }
 
-// ── Source map ────────────────────────────────────────────────────
-let _lastMap = null;
+// ── Source map ────────────────────────────────────────────
+let _lastMap=null;
 function buildSourceMap(orig){
   return JSON.stringify({
-    version: 3,
-    file: VAL('o_smap_url') || 'output.js',
-    sourceRoot: VAL('o_smap_root') || '',
-    sources: ['input.js'],
-    sourcesContent: [orig],
-    names: [],
-    mappings: 'AAAA'  // stub — correct VLQ mapping requires AST tracking
-  }, null, 2);
+    version:3,file:VAL('o_smap_url')||'output.js',
+    sourceRoot:VAL('o_smap_root')||'',sources:['input.js'],
+    sourcesContent:[orig],names:[],mappings:'AAAA'
+  },null,2);
 }
 
-// ── Master obfuscation pipeline ───────────────────────────────────
-function obfuscate(src, opts){
-  resetIds();
-  RNG.seed(getSeed());
-  const st = {strings:0, bytecodes:0};
-
-  // HTML mode: obfuscate each <script> block recursively
-  if(opts.html){
-    return { code: passHtmlParse(src, s => obfuscate(s, {...opts, html:false}).code), st };
-  }
-
-  // Ignore imports: extract and re-prepend
-  let importLines = [], workSrc = src;
-  if(opts.ignimport){
-    const r = passIgnoreImports(src);
-    importLines = r.importLines; workSrc = r.rest;
-  }
-
-  let toks = tokenize(workSrc), preamble = '';
-
-  // String obfuscation (mutually exclusive primary passes)
-  if(opts.sarr){
-    const r = passStringArray(toks, opts, st);
-    toks = r.toks; preamble = r.preamble;
-  } else if(opts.charcode){
-    toks = passCharcode(toks);
-  } else if(opts.atob){
-    toks = passAtob(toks, st);
-  } else if(opts.tmpl){
-    toks = passTemplate(toks);
-  } else if(opts.senc){
-    toks = passEscape(toks, st);
-  }
-
-  // String split (can combine with above if sarr is off)
-  if(opts.ssplit && !opts.sarr) toks = passStrSplit(toks, INT('o_sschunk', 10));
-
-  // Bracket access BEFORE rename so property names get renamed correctly
-  if(opts.prop) toks = passBracket(toks);
-
-  // Rename identifiers
-  if(opts.ren) toks = passRename(toks, opts);
-
-  // Numbers
-  if(opts.hexn || opts.nsplit || opts.math) toks = passNumbers(toks, opts);
-  if(opts.simplify) toks = passSimplify(toks);
-
-  let code = preamble + toks.map(t=>t.v).join('');
-
-  // Object key transformation (post-assembly, regex-based)
-  if(opts.objkeys) code = passObjKeys(code);
-
-  // FIX: CFF now takes dead code as second arg and wraps it together
-  // This avoids dead code's bare return/throw statements breaking switch
-  const deadSnippet = opts.dead ? passDeadCode() : '';
-  if(opts.cff){ code = passCFF(code, deadSnippet); }
-  else if(opts.dead){ code = deadSnippet + code; }
-
-  if(opts.iife)   code = passIIFE(code);
-  if(opts.comma)  code = passComma(code);
-  if(opts.self)   code = passSelf(code);
-  if(opts.antib)  code = passAntiBeautifier(code);
-  if(opts.native) code = passNativeCheck(code);
-  if(opts.dbg)    code = passDbg(code, INT('o_dbgint', 2000));
-  if(opts.tamp)   code = passTamp(code);
-  if(opts.con)    code = passCon(code);
-  if(opts.dom && domains.length) code = passDomain(code, domains, VAL('o_domredir').trim());
-  if(opts.bc)     code = passBytecodeVM(code, opts, st);
-  if(opts.mini)   code = minify(code, opts);
-  if(opts.strict) code = "'use strict';\n" + code;
-  if(importLines.length) code = importLines.join('\n') + '\n' + code;
-
-  return {code, st};
+// ── Master pipeline ───────────────────────────────────────
+function obfuscate(src,opts){
+  resetIds(); RNG.seed(getSeed());
+  const st={strings:0,bytecodes:0};
+  if(opts.html){ return {code:passHtmlParse(src,s=>obfuscate(s,{...opts,html:false}).code),st}; }
+  let importLines=[],workSrc=src;
+  if(opts.ignimport){const r=passIgnoreImports(src);importLines=r.importLines;workSrc=r.rest;}
+  let toks=tokenize(workSrc),preamble='';
+  if(opts.sarr){ const r=passStringArray(toks,opts,st); toks=r.toks; preamble=r.preamble; }
+  else if(opts.charcode){ toks=passCharcode(toks); }
+  else if(opts.atob){ toks=passAtob(toks,st); }
+  else if(opts.tmpl){ toks=passTemplate(toks); }
+  else if(opts.senc){ toks=passEscape(toks,st); }
+  if(opts.ssplit&&!opts.sarr) toks=passStrSplit(toks,INT('o_sschunk',10));
+  if(opts.prop) toks=passBracket(toks);
+  if(opts.ren) toks=passRename(toks,opts);
+  if(opts.hexn||opts.nsplit||opts.math) toks=passNumbers(toks,opts);
+  if(opts.simplify) toks=passSimplify(toks);
+  let code=preamble+toks.map(t=>t.v).join('');
+  if(opts.objkeys) code=passObjKeys(code);
+  const deadSnippet=opts.dead?passDeadCode():'';
+  if(opts.cff){ code=passCFF(code,deadSnippet); }
+  else if(opts.dead){ code=deadSnippet+code; }
+  if(opts.iife)   code=passIIFE(code);
+  if(opts.comma)  code=passComma(code);
+  if(opts.self)   code=passSelf(code);
+  if(opts.antib)  code=passAntiBeautifier(code);
+  if(opts.native) code=passNativeCheck(code);
+  if(opts.dbg)    code=passDbg(code,INT('o_dbgint',2000));
+  if(opts.tamp)   code=passTamp(code);
+  if(opts.con)    code=passCon(code);
+  if(opts.dom&&domains.length) code=passDomain(code,domains,VAL('o_domredir').trim());
+  if(opts.bc)     code=passBytecodeVM(code,opts,st);
+  if(opts.mini)   code=minify(code,opts);
+  if(opts.strict) code="'use strict';\n"+code;
+  if(importLines.length) code=importLines.join('\n')+'\n'+code;
+  return {code,st};
 }
 
-// ── TARGET SYSTEM ─────────────────────────────────────────────────
-let currentTarget = 'browser';
-const TARGET_OFF = {
-  'browser':          [],
-  'browser-no-eval':  ['o_bc','o_oprot','o_chunk'],
-  'node':             ['o_dom','o_dbg','o_native','o_atob','o_html']
+// ── Target system ─────────────────────────────────────────
+let currentTarget='browser';
+const TARGET_OFF={
+  'browser':[],
+  'browser-no-eval':['o_bc','o_oprot','o_chunk'],
+  'node':['o_dom','o_dbg','o_native','o_atob','o_html']
 };
-
 function setTarget(t){
-  currentTarget = t;
-  document.querySelectorAll('.tp').forEach(p => p.classList.toggle('active', p.dataset.t===t));
-  const lbl = {browser:'BROWSER','browser-no-eval':'BROWSER · NO EVAL',node:'NODE.JS'};
-  G('tgt-label').textContent = 'TARGET: ' + (lbl[t]||t.toUpperCase());
-  applyTargetConstraints();
-  liveCheck();
+  currentTarget=t;
+  document.querySelectorAll('.tp').forEach(p=>p.classList.toggle('active',p.dataset.t===t));
+  applyTargetConstraints(); liveCheck();
 }
-
 function applyTargetConstraints(){
-  // Re-enable all first
-  document.querySelectorAll('.sbody .row').forEach(row => {
-    row.classList.remove('off');
-    const chk = row.querySelector('input[type=checkbox]');
-    if(chk) chk.disabled = false;
+  document.querySelectorAll('.sbody .row').forEach(row=>{
+    row.classList.remove('dim');
+    const chk=row.querySelector('input[type=checkbox]');
+    if(chk) chk.disabled=false;
   });
-  // Disable target-specific
-  (TARGET_OFF[currentTarget]||[]).forEach(id => {
-    const el = G(id); if(!el) return;
-    el.checked = false; el.disabled = true;
-    const row = el.closest('.row'); if(row) row.classList.add('off');
+  (TARGET_OFF[currentTarget]||[]).forEach(id=>{
+    const el=G(id); if(!el) return;
+    el.checked=false; el.disabled=true;
+    const row=el.closest('.row'); if(row) row.classList.add('dim');
   });
 }
 
-// ── Live conflict checker ─────────────────────────────────────────
+// ── Live conflict checker ─────────────────────────────────
 function liveCheck(){
-  const body = G('conflicts'); if(!body) return;
-  const w = [];
-  if(currentTarget==='browser-no-eval') w.push('Bytecode VM disabled — uses new Function() (eval-equivalent)');
-  if(currentTarget==='node') w.push('Domain Lock, Debug Protection, Native Check, atob — disabled for Node.js');
-  if(CHK('o_charcode') && CHK('o_sarr')) w.push('Charcode + String Array both ON — String Array takes priority');
-  if(CHK('o_self') && CHK('o_antib')) w.push('Self-Defending + Anti-Beautifier overlap — one is sufficient');
-  if(CHK('o_renprop')) w.push('Rename Properties may break dynamic property access / external APIs');
-  if(CHK('o_dom') && domains.length===0) w.push('Domain Lock is ON but no domains have been added');
-  if(CHK('o_calltrans') && !CHK('o_sarr')) w.push('Calls Transform requires String Array to be ON');
-  if(CHK('o_wchain') && !CHK('o_sarr')) w.push('Chained Calls requires String Array to be ON');
-  if(CHK('o_html') && currentTarget==='node') w.push('Parse HTML not useful for Node.js target');
-  body.innerHTML = w.length
-    ? w.map(x=>`<div class="ci">${x}</div>`).join('')
-    : '<div class="cok">✓ No conflicts detected.</div>';
+  const body=G('conflicts-inner'); if(!body) return;
+  const w=[];
+  if(currentTarget==='browser-no-eval') w.push('Bytecode VM disabled — uses new Function()');
+  if(currentTarget==='node') w.push('Domain Lock, Debug Protection, Native Check, atob disabled for Node.js');
+  if(CHK('o_charcode')&&CHK('o_sarr')) w.push('Charcode + String Array both on — String Array takes priority');
+  if(CHK('o_self')&&CHK('o_antib')) w.push('Self-Defending + Anti-Beautifier overlap — one is sufficient');
+  if(CHK('o_renprop')) w.push('Rename Properties may break dynamic property access');
+  if(CHK('o_dom')&&domains.length===0) w.push('Domain Lock is on but no domains have been added');
+  if(CHK('o_calltrans')&&!CHK('o_sarr')) w.push('Calls Transform requires String Array to be on');
+  if(CHK('o_wchain')&&!CHK('o_sarr')) w.push('Chained Calls requires String Array to be on');
+  body.innerHTML=w.length
+    ?w.map(x=>`<div class="ci-item">${x}</div>`).join('')
+    :'<div class="ci-ok">✓ No conflicts</div>';
 }
 
-// ── Read all options ──────────────────────────────────────────────
+// ── Get options ───────────────────────────────────────────
 function getOpts(){
   return {
-    html:     CHK('o_html'),
-    strict:   CHK('o_strict'),
-    mini:     CHK('o_mini'),
-    semi:     CHK('o_semi'),
-    simplify: CHK('o_simplify'),
-    ignimport:CHK('o_ignimport'),
-    con:      CHK('o_con'),
-    self:     CHK('o_self'),
-    antib:    CHK('o_antib'),
-    native:   CHK('o_native'),
-    tamp:     CHK('o_tamp'),
-    dbg:      CHK('o_dbg'),
-    dom:      CHK('o_dom'),
-    srcmap:   CHK('o_srcmap'),
-    sarr:     CHK('o_sarr'),
-    sarr_enc: VAL('o_sarr_enc'),
-    sarr_idx: VAL('o_sarr_idx'),
-    srot:     CHK('o_srot'),
-    sshuf:    CHK('o_sshuf'),
-    calltrans:CHK('o_calltrans'),
-    wcount:   INT('o_wcount', 1),
-    wparams:  INT('o_wparams', 2),
-    wchain:   CHK('o_wchain'),
-    senc:     CHK('o_senc'),
-    charcode: CHK('o_charcode'),
-    atob:     CHK('o_atob'),
-    tmpl:     CHK('o_tmpl'),
-    ssplit:   CHK('o_ssplit'),
-    ren:      CHK('o_ren'),
-    namegen:  VAL('o_namegen'),
-    renglobal:CHK('o_renglobal'),
-    renprop:  CHK('o_renprop'),
-    prop:     CHK('o_prop'),
-    hexn:     CHK('o_hexn'),
-    nsplit:   CHK('o_nsplit'),
-    math:     CHK('o_math'),
-    cff:      CHK('o_cff'),
-    dead:     CHK('o_dead'),
-    iife:     CHK('o_iife'),
-    comma:    CHK('o_comma'),
-    objkeys:  CHK('o_objkeys'),
-    bc:       CHK('o_bc'),
-    oprot:    CHK('o_oprot'),
-    chunk:    CHK('o_chunk'),
-    bcchunk:  INT('o_bcchunk', 300),
-    target:   currentTarget,
+    html:      CHK('o_html'),
+    strict:    CHK('o_strict'),
+    mini:      CHK('o_mini'),
+    semi:      CHK('o_semi'),
+    simplify:  CHK('o_simplify'),
+    ignimport: CHK('o_ignimport'),
+    con:       CHK('o_con'),
+    self:      CHK('o_self'),
+    antib:     CHK('o_antib'),
+    native:    CHK('o_native'),
+    tamp:      CHK('o_tamp'),
+    dbg:       CHK('o_dbg'),
+    dom:       CHK('o_dom'),
+    srcmap:    CHK('o_srcmap'),
+    sarr:      CHK('o_sarr'),
+    sarr_enc:  getEncType(),
+    sarr_idx_types: getIdxTypes(),
+    srot:      CHK('o_srot'),
+    sshuf:     CHK('o_sshuf'),
+    calltrans: CHK('o_calltrans'),
+    wcount:    INT('o_wcount',1),
+    wparams:   INT('o_wparams',2),
+    wchain:    CHK('o_wchain'),
+    senc:      CHK('o_senc'),
+    charcode:  CHK('o_charcode'),
+    atob:      CHK('o_atob'),
+    tmpl:      CHK('o_tmpl'),
+    ssplit:    CHK('o_ssplit'),
+    ren:       CHK('o_ren'),
+    namegen:   VAL('o_namegen'),
+    renglobal: CHK('o_renglobal'),
+    renprop:   CHK('o_renprop'),
+    prop:      CHK('o_prop'),
+    hexn:      CHK('o_hexn'),
+    nsplit:    CHK('o_nsplit'),
+    math:      CHK('o_math'),
+    cff:       CHK('o_cff'),
+    dead:      CHK('o_dead'),
+    iife:      CHK('o_iife'),
+    comma:     CHK('o_comma'),
+    objkeys:   CHK('o_objkeys'),
+    bc:        CHK('o_bc'),
+    oprot:     CHK('o_oprot'),
+    chunk:     CHK('o_chunk'),
+    bcchunk:   INT('o_bcchunk',300),
+    idxshift:  INT('o_idxshift',0),
+    target:    currentTarget,
   };
 }
 
-// ── Presets ───────────────────────────────────────────────────────
-// FIX: SET without disabled check — presets set raw values,
-//      applyTargetConstraints() re-applies disabled state after
+// ── Presets ───────────────────────────────────────────────
+function setEnc(rc4,xor,none){
+  SET('enc-rc4',rc4); SET('enc-xor',xor); SET('enc-none',none||false);
+  msSync('enc');
+}
+function setIdx(hex,computed){
+  SET('idx-hex',hex); SET('idx-computed',computed||false);
+  msSync('idx');
+}
 function applyPreset(){
-  const p = G('preset').value;
-  const ALL = ['o_html','o_strict','o_mini','o_semi','o_simplify','o_ignimport','o_con',
+  const p=G('preset').value;
+  const ALL=['o_html','o_strict','o_mini','o_semi','o_simplify','o_ignimport','o_con',
     'o_self','o_antib','o_native','o_tamp','o_dbg','o_dom','o_srcmap',
     'o_sarr','o_srot','o_sshuf','o_calltrans','o_wchain',
     'o_senc','o_charcode','o_atob','o_tmpl','o_ssplit',
@@ -1236,103 +1633,153 @@ function applyPreset(){
     'o_hexn','o_nsplit','o_math',
     'o_cff','o_dead','o_iife','o_comma','o_objkeys',
     'o_bc','o_oprot','o_chunk'];
+  ALL.forEach(id=>{const e=G(id);if(e){e.disabled=false;e.checked=false;}});
 
-  // Unforce-enable all first (clear disabled state temporarily for preset to work)
-  ALL.forEach(id => { const e=G(id); if(e){ e.disabled=false; e.checked=false; } });
-
-  if(p === 'light'){
+  if(p==='light'){
     ['o_senc','o_ren','o_hexn','o_mini'].forEach(id=>SET(id,true));
-    SETV('o_namegen','hexadecimal'); SETV('o_sarr_enc','none');
-  } else if(p === 'medium'){
+    setEnc(false,false,false); setIdx(true,false);
+    SETV('o_namegen','hexadecimal'); SETV('o_wcount','1'); SETD('v-wc','1');
+  } else if(p==='medium'){
     ['o_sarr','o_srot','o_sshuf','o_calltrans','o_senc','o_atob',
      'o_ren','o_prop','o_hexn','o_nsplit','o_dead','o_iife','o_mini','o_semi'].forEach(id=>SET(id,true));
-    SETV('o_sarr_enc','base64'); SETV('o_namegen','hexadecimal');
-    SETV('o_wcount','1'); SETD('wc-v','1');
-  } else if(p === 'high'){
+    setEnc(false,true,false); setIdx(true,false);
+    SETV('o_namegen','hexadecimal'); SETV('o_wcount','1'); SETD('v-wc','1');
+  } else if(p==='high'){
     ['o_sarr','o_srot','o_sshuf','o_calltrans','o_senc','o_atob','o_tmpl','o_ssplit',
      'o_ren','o_prop','o_hexn','o_nsplit','o_math',
      'o_cff','o_dead','o_iife','o_comma',
      'o_bc','o_oprot','o_chunk',
      'o_self','o_antib','o_native','o_tamp','o_dbg',
      'o_mini','o_semi'].forEach(id=>SET(id,true));
-    SETV('o_sarr_enc','rc4xor'); SETV('o_namegen','hexadecimal');
-    SETV('o_wcount','2'); SETD('wc-v','2');
-    SETV('o_idxshift','13'); SETD('idxsh-v','13');
-  } else if(p === 'max'){
-    const skip = ['o_html','o_dom','o_con','o_charcode','o_srcmap','o_renprop','o_renglobal','o_simplify'];
+    setEnc(true,true,false); setIdx(true,false);
+    SETV('o_namegen','hexadecimal'); SETV('o_wcount','2'); SETD('v-wc','2');
+    SETV('o_idxshift','13'); SETD('v-idxsh','13');
+  } else if(p==='max'){
+    const skip=['o_html','o_dom','o_con','o_charcode','o_srcmap','o_renprop','o_renglobal','o_simplify'];
     ALL.filter(id=>!skip.includes(id)).forEach(id=>SET(id,true));
-    SETV('o_sarr_enc','rc4xor'); SETV('o_namegen','hexadecimal');
-    SETV('o_wcount','3'); SETD('wc-v','3');
-    SETV('o_wparams','3'); SETD('wp-v','3');
-    SETV('o_idxshift','29'); SETD('idxsh-v','29');
-    SETV('o_thresh','1'); SETD('thresh-v','1.00');
+    setEnc(true,true,false); setIdx(true,true);
+    SETV('o_namegen','hexadecimal');
+    SETV('o_wcount','3'); SETD('v-wc','3');
+    SETV('o_wparams','3'); SETD('v-wp','3');
+    SETV('o_idxshift','29'); SETD('v-idxsh','29');
+    SETV('o_thresh','1'); SETD('v-thresh','1.00');
   }
 
-  // Now re-apply target constraints on top of preset
   applyTargetConstraints();
-
-  // Sync dependent UI panels
-  showHide('sarr-sub', CHK('o_sarr'));
-  showHide('dbgi', CHK('o_dbg'));
-  G('renprop-w').style.display = 'none';
+  showSub('sarr-sub', CHK('o_sarr'));
+  showSub('ct-sub', CHK('o_calltrans'));
+  showSub('ssplit-sub', CHK('o_ssplit'));
+  showSub('cff-sub', CHK('o_cff'));
+  showSub('dead-sub', CHK('o_dead'));
+  showSub('dbg-sub', CHK('o_dbg'));
+  showSub('ren-sub', CHK('o_ren'));
+  showSub('chunk-sub', CHK('o_chunk'));
+  G('renprop-w').style.display='none';
   liveCheck();
 }
 
-// ── Run ───────────────────────────────────────────────────────────
+// ── Run ───────────────────────────────────────────────────
 function runObfuscate(){
-  const src = G('input').value;
+  const src=inputEditor.getValue();
   if(!src.trim()){ alert('Paste some JavaScript first.'); return; }
-  const opts = getOpts();
-  const t0 = performance.now();
+  const opts=getOpts();
+  const t0=performance.now();
   try{
-    const {code, st} = obfuscate(src, opts);
-    let out = code;
+    const {code,st}=obfuscate(src,opts);
+    let out=code;
     if(opts.srcmap){
-      _lastMap = buildSourceMap(src);
-      if(VAL('o_smap_mode') === 'inline'){
-        out = code + '\n//# sourceMappingURL=data:application/json;base64,' + btoa(unescape(encodeURIComponent(_lastMap)));
+      _lastMap=buildSourceMap(src);
+      if(VAL('o_smap_mode')==='inline'){
+        out=code+'\n//# sourceMappingURL=data:application/json;base64,'+btoa(unescape(encodeURIComponent(_lastMap)));
       } else {
-        out = code + '\n//# sourceMappingURL=' + (VAL('o_smap_url')||'output.js.map');
+        out=code+'\n//# sourceMappingURL='+(VAL('o_smap_url')||'output.js.map');
       }
-      G('btn-map').disabled = false;
+      G('btn-map').disabled=false;
     } else {
-      _lastMap = null;
-      G('btn-map').disabled = true;
+      _lastMap=null; G('btn-map').disabled=true;
     }
-    G('output').value = out;
-    G('si').textContent = src.length.toLocaleString();
-    G('so').textContent = out.length.toLocaleString();
-    G('sr').textContent = (out.length/src.length).toFixed(1)+'x';
-    G('ss').textContent = st.strings;
-    G('sb').textContent = st.bytecodes;
-    G('st').textContent = ((performance.now()-t0)/1000).toFixed(2)+'s';
+    outputEditor.setValue(out);
+    const elapsed=((performance.now()-t0)/1000).toFixed(2)+'s';
+    SETD('s-in',src.length.toLocaleString()+' B');
+    SETD('s-out',out.length.toLocaleString()+' B');
+    SETD('s-ratio',(out.length/src.length).toFixed(1)+'×');
+    SETD('s-str',st.strings);
+    SETD('s-bc',st.bytecodes);
+    SETD('s-time',elapsed);
+    G('out-hint').textContent=out.length.toLocaleString()+' bytes';
   } catch(e){
-    G('output').value = '// ERROR: ' + e.message + '\n//\n// ' + (e.stack||'');
+    outputEditor.setValue('// ERROR: '+e.message+'\n//\n// '+(e.stack||''));
+    G('out-hint').textContent='Error';
   }
 }
-
+function clearInput(){ inputEditor.setValue(''); }
 function copyOut(){
-  const v = G('output').value; if(!v) return;
-  navigator.clipboard.writeText(v).then(() => {
-    const el = document.querySelector('#pfooter .sb2');
-    const orig = el.textContent; el.textContent = '✓ COPIED';
-    setTimeout(()=>el.textContent=orig, 1500);
+  const v=outputEditor.getValue(); if(!v) return;
+  navigator.clipboard.writeText(v).then(()=>{
+    const btn=document.querySelector('#hdr .btn-ghost');
+    const orig=btn.textContent; btn.textContent='✓ Copied';
+    setTimeout(()=>btn.textContent=orig,1500);
   });
 }
-
 function dlMap(){
   if(!_lastMap) return;
-  const blob = new Blob([_lastMap], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = (VAL('o_smap_url')||'output.js.map').split('/').pop();
+  const blob=new Blob([_lastMap],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=(VAL('o_smap_url')||'output.js.map').split('/').pop();
   a.click();
 }
 
-// ── Init ──────────────────────────────────────────────────────────
-applyPreset();   // sets values + calls applyTargetConstraints + liveCheck
-// Wire all checkboxes to live conflict checker
-document.querySelectorAll('input[type=checkbox]').forEach(el => el.addEventListener('change', liveCheck));
+// ── CodeMirror Init ───────────────────────────────────────
+const inputEditor = CodeMirror(G('in-editor'),{
+  mode:'javascript',
+  lineNumbers:true,
+  foldGutter:true,
+  gutters:['CodeMirror-linenumbers','CodeMirror-foldgutter'],
+  extraKeys:{'Ctrl-Q':cm=>cm.foldCode(cm.getCursor()),'Cmd-Q':cm=>cm.foldCode(cm.getCursor())},
+  matchBrackets:true,
+  autoCloseBrackets:true,
+  lineWrapping:false,
+  tabSize:2,
+  indentWithTabs:false,
+  value:'// Paste your JavaScript here\n\nfunction greet(name) {\n  console.log(\'Hello, \' + name + \'!\');\n  return name.length;\n}\n\ngreet(\'world\');',
+});
+
+const outputEditor = CodeMirror(G('out-editor'),{
+  mode:'javascript',
+  lineNumbers:true,
+  foldGutter:true,
+  gutters:['CodeMirror-linenumbers','CodeMirror-foldgutter'],
+  readOnly:true,
+  lineWrapping:true,
+  tabSize:2,
+  value:'',
+});
+
+// ── Theme ─────────────────────────────────────────────────
+function toggleTheme(){
+  const isDark=document.documentElement.dataset.theme==='dark';
+  const next=isDark?'light':'dark';
+  document.documentElement.dataset.theme=next;
+  G('btn-theme').textContent=isDark?'☾':'☀';
+  G('btn-theme').title=isDark?'Switch to dark mode':'Switch to light mode';
+  try{localStorage.setItem('obscura-theme',next);}catch(e){}
+  setTimeout(()=>{inputEditor.refresh();outputEditor.refresh();},0);
+}
+function initTheme(){
+  let saved='light';
+  try{saved=localStorage.getItem('obscura-theme')||'light';}catch(e){}
+  if(saved==='dark'){
+    document.documentElement.dataset.theme='dark';
+    G('btn-theme').textContent='☀';
+    G('btn-theme').title='Switch to light mode';
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────
+applyPreset();
+initTheme();
+document.querySelectorAll('input[type=checkbox]').forEach(el=>el.addEventListener('change',liveCheck));
 </script>
 </body>
 </html>
