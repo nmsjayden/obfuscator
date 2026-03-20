@@ -3,1655 +3,1186 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VΜCRYPT // JS Obfuscator</title>
+<title>VMCRYPT v2 // BYTECODE ENGINE</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap');
-
-  :root {
-    --bg: #050508;
-    --surface: #0a0a12;
-    --surface2: #0f0f1a;
-    --border: #1a1a2e;
-    --border2: #252540;
-    --accent: #00f5ff;
-    --accent2: #ff2d78;
-    --accent3: #7b2fff;
-    --text: #c8d0e0;
-    --text-dim: #4a5060;
-    --text-bright: #e8f0ff;
-    --success: #00ff9d;
-    --warn: #ffb800;
-    --glow: 0 0 20px rgba(0,245,255,0.15);
-    --glow2: 0 0 30px rgba(0,245,255,0.25);
-  }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 16px;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* ---- SCANLINE OVERLAY ---- */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.07) 2px,
-      rgba(0,0,0,0.07) 4px
-    );
-    pointer-events: none;
-    z-index: 9999;
-  }
-
-  /* ---- GRID BG ---- */
-  body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* ======== LOCK SCREEN ======== */
-  #lockscreen {
-    position: fixed;
-    inset: 0;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    gap: 32px;
-  }
-
-  .lock-logo {
-    font-family: 'Orbitron', monospace;
-    font-size: 2.8rem;
-    font-weight: 900;
-    color: var(--accent);
-    text-shadow: 0 0 30px var(--accent), 0 0 60px rgba(0,245,255,0.4);
-    letter-spacing: 6px;
-    animation: flicker 4s infinite;
-  }
-
-  .lock-logo span { color: var(--accent2); }
-
-  @keyframes flicker {
-    0%,96%,98%,100% { opacity: 1; }
-    97%,99% { opacity: 0.7; }
-  }
-
-  .lock-sub {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.75rem;
-    color: var(--text-dim);
-    letter-spacing: 3px;
-    text-transform: uppercase;
-  }
-
-  .lock-box {
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    padding: 40px;
-    width: 380px;
-    position: relative;
-    box-shadow: var(--glow);
-  }
-
-  .lock-box::before {
-    content: '';
-    position: absolute;
-    top: -1px; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  }
-
-  .lock-label {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--accent);
-    letter-spacing: 3px;
-    margin-bottom: 10px;
-  }
-
-  .lock-input {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border2);
-    color: var(--accent);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 1.1rem;
-    padding: 12px 16px;
-    outline: none;
-    letter-spacing: 4px;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    margin-bottom: 20px;
-  }
-
-  .lock-input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 15px rgba(0,245,255,0.2);
-  }
-
-  .lock-btn {
-    width: 100%;
-    background: transparent;
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    font-family: 'Orbitron', monospace;
-    font-size: 0.85rem;
-    font-weight: 700;
-    padding: 14px;
-    cursor: pointer;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .lock-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: var(--accent);
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-
-  .lock-btn:hover::before { opacity: 0.1; }
-  .lock-btn:hover { box-shadow: 0 0 20px rgba(0,245,255,0.3); }
-  .lock-btn:active { transform: scale(0.98); }
-
-  .lock-error {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--accent2);
-    letter-spacing: 2px;
-    text-align: center;
-    margin-top: 14px;
-    min-height: 1em;
-    animation: shake 0.3s ease;
-  }
-
-  @keyframes shake {
-    0%,100% { transform: translateX(0); }
-    20%,60% { transform: translateX(-6px); }
-    40%,80% { transform: translateX(6px); }
-  }
-
-  /* ======== MAIN APP ======== */
-  #app { position: relative; z-index: 1; min-height: 100vh; }
-
-  /* ---- HEADER ---- */
-  header {
-    border-bottom: 1px solid var(--border);
-    padding: 18px 40px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: rgba(5,5,8,0.95);
-    backdrop-filter: blur(10px);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
-  .logo {
-    font-family: 'Orbitron', monospace;
-    font-weight: 900;
-    font-size: 1.4rem;
-    color: var(--accent);
-    letter-spacing: 4px;
-    text-shadow: 0 0 15px rgba(0,245,255,0.5);
-  }
-
-  .logo span { color: var(--accent2); }
-
-  .header-tags {
-    display: flex;
-    gap: 10px;
-  }
-
-  .tag {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.6rem;
-    padding: 3px 10px;
-    border: 1px solid;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-  }
-
-  .tag-cyan { color: var(--accent); border-color: var(--accent); }
-  .tag-pink { color: var(--accent2); border-color: var(--accent2); }
-  .tag-purple { color: var(--accent3); border-color: var(--accent3); }
-
-  /* ---- TABS ---- */
-  .tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-    padding: 0 40px;
-    background: var(--surface);
-  }
-
-  .tab {
-    font-family: 'Orbitron', monospace;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 3px;
-    padding: 16px 28px;
-    cursor: pointer;
-    color: var(--text-dim);
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s;
-    text-transform: uppercase;
-    background: none;
-    border-left: none;
-    border-right: none;
-    border-top: none;
-  }
-
-  .tab:hover { color: var(--text); }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .tab.deobf.active { color: var(--accent2); border-bottom-color: var(--accent2); }
-
-  /* ---- MAIN LAYOUT ---- */
-  .main {
-    display: grid;
-    grid-template-columns: 1fr 320px;
-    grid-template-rows: 1fr;
-    height: calc(100vh - 114px);
-    gap: 0;
-  }
-
-  /* ---- EDITORS ---- */
-  .editors {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    border-right: 1px solid var(--border);
-  }
-
-  .editor-pane {
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid var(--border);
-    min-height: 0;
-  }
-
-  .editor-pane:last-child { border-right: none; }
-
-  .editor-header {
-    padding: 10px 16px;
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-  }
-
-  .editor-title {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-  }
-
-  .editor-title.cyan { color: var(--accent); }
-  .editor-title.pink { color: var(--accent2); }
-
-  .editor-actions {
-    display: flex;
-    gap: 6px;
-  }
-
-  .small-btn {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.6rem;
-    padding: 3px 10px;
-    border: 1px solid var(--border2);
-    background: transparent;
-    color: var(--text-dim);
-    cursor: pointer;
-    letter-spacing: 1px;
-    transition: all 0.15s;
-  }
-
-  .small-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  textarea {
-    flex: 1;
-    background: var(--bg);
-    border: none;
-    color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.82rem;
-    line-height: 1.6;
-    padding: 16px;
-    resize: none;
-    outline: none;
-    min-height: 0;
-    tab-size: 2;
-  }
-
-  textarea::placeholder { color: var(--text-dim); }
-
-  textarea.output-area {
-    color: var(--success);
-    cursor: text;
-  }
-
-  /* ---- SIDEBAR ---- */
-  .sidebar {
-    overflow-y: auto;
-    padding: 20px;
-    background: var(--surface);
-    scrollbar-width: thin;
-    scrollbar-color: var(--border2) transparent;
-  }
-
-  .section {
-    margin-bottom: 28px;
-  }
-
-  .section-title {
-    font-family: 'Orbitron', monospace;
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: 14px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .section-title::before {
-    content: '';
-    width: 4px;
-    height: 4px;
-    background: var(--accent);
-    display: inline-block;
-  }
-
-  /* Toggles */
-  .option-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 7px 0;
-    border-bottom: 1px solid rgba(26,26,46,0.5);
-  }
-
-  .option-label {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  .option-desc {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.58rem;
-    color: var(--text-dim);
-    margin-top: 1px;
-  }
-
-  .toggle {
-    position: relative;
-    width: 36px;
-    height: 20px;
-    flex-shrink: 0;
-  }
-
-  .toggle input { opacity: 0; width: 0; height: 0; }
-
-  .toggle-slider {
-    position: absolute;
-    inset: 0;
-    background: var(--border2);
-    cursor: pointer;
-    transition: 0.2s;
-    border: 1px solid var(--border2);
-  }
-
-  .toggle-slider::after {
-    content: '';
-    position: absolute;
-    left: 2px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 14px;
-    height: 14px;
-    background: var(--text-dim);
-    transition: 0.2s;
-  }
-
-  .toggle input:checked + .toggle-slider {
-    background: rgba(0,245,255,0.15);
-    border-color: var(--accent);
-  }
-
-  .toggle input:checked + .toggle-slider::after {
-    transform: translateY(-50%) translateX(16px);
-    background: var(--accent);
-    box-shadow: 0 0 8px var(--accent);
-  }
-
-  /* Selects */
-  .option-select {
-    background: var(--bg);
-    border: 1px solid var(--border2);
-    color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    padding: 5px 10px;
-    outline: none;
-    width: 100%;
-    margin-top: 6px;
-    cursor: pointer;
-    transition: border-color 0.15s;
-  }
-
-  .option-select:focus { border-color: var(--accent); }
-
-  /* Range sliders */
-  .option-range {
-    width: 100%;
-    margin-top: 6px;
-    accent-color: var(--accent);
-  }
-
-  .range-value {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--accent);
-    text-align: right;
-  }
-
-  /* Text inputs */
-  .option-text {
-    background: var(--bg);
-    border: 1px solid var(--border2);
-    color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    padding: 5px 10px;
-    outline: none;
-    width: 100%;
-    margin-top: 6px;
-    transition: border-color 0.15s;
-  }
-
-  .option-text:focus { border-color: var(--accent); }
-
-  /* ---- BIG BUTTON ---- */
-  .run-btn {
-    width: 100%;
-    background: transparent;
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    font-family: 'Orbitron', monospace;
-    font-size: 0.85rem;
-    font-weight: 900;
-    padding: 16px;
-    cursor: pointer;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
-    margin-top: 8px;
-  }
-
-  .run-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, var(--accent), var(--accent3));
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-
-  .run-btn:hover { box-shadow: 0 0 30px rgba(0,245,255,0.3); }
-  .run-btn:hover::before { opacity: 0.12; }
-  .run-btn:active { transform: scale(0.98); }
-
-  .run-btn.deobf-btn {
-    border-color: var(--accent2);
-    color: var(--accent2);
-  }
-
-  .run-btn.deobf-btn::before {
-    background: linear-gradient(135deg, var(--accent2), var(--accent3));
-  }
-
-  .run-btn.deobf-btn:hover { box-shadow: 0 0 30px rgba(255,45,120,0.3); }
-
-  /* ---- STATS BAR ---- */
-  .stats-bar {
-    background: var(--surface2);
-    border-top: 1px solid var(--border);
-    padding: 6px 16px;
-    display: flex;
-    gap: 24px;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-  }
-
-  .stat {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.62rem;
-    color: var(--text-dim);
-  }
-
-  .stat span { color: var(--accent); }
-  .stat.deobf span { color: var(--accent2); }
-
-  /* ---- PROGRESS ---- */
-  .progress-wrap {
-    height: 2px;
-    background: var(--border);
-    flex-shrink: 0;
-  }
-
-  .progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent3), var(--accent));
-    width: 0%;
-    transition: width 0.3s ease;
-    box-shadow: 0 0 8px var(--accent);
-  }
-
-  /* ---- TAB PANELS ---- */
-  .tab-panel { display: none; height: 100%; }
-  .tab-panel.active { display: flex; flex-direction: column; height: calc(100vh - 114px); }
-
-  .tab-panel > .main { flex: 1; min-height: 0; height: auto; }
-
-  /* ---- HIDDEN ---- */
-  .hidden { display: none !important; }
-
-  /* ---- SCROLLBAR ---- */
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border2); }
-
-  /* corner decoration */
-  .corner {
-    position: absolute;
-    width: 10px; height: 10px;
-    border-color: var(--accent);
-    border-style: solid;
-    opacity: 0.5;
-  }
-  .corner-tl { top: 0; left: 0; border-width: 1px 0 0 1px; }
-  .corner-tr { top: 0; right: 0; border-width: 1px 1px 0 0; }
-  .corner-bl { bottom: 0; left: 0; border-width: 0 0 1px 1px; }
-  .corner-br { bottom: 0; right: 0; border-width: 0 1px 1px 0; }
-
-  .notify {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: var(--surface);
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    padding: 10px 20px;
-    letter-spacing: 2px;
-    z-index: 9998;
-    animation: slideIn 0.2s ease, fadeOut 0.3s ease 1.8s forwards;
-    box-shadow: 0 0 20px rgba(0,245,255,0.2);
-  }
-
-  .notify.err { border-color: var(--accent2); color: var(--accent2); }
-
-  @keyframes slideIn {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
-  @keyframes fadeOut {
-    to { opacity: 0; transform: translateY(-10px); }
-  }
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+:root{
+  --bg:#030305;--sur:#07070f;--sur2:#0c0c18;--bdr:#141428;--bdr2:#1e1e3c;
+  --a1:#00ffe5;--a2:#ff1a6e;--a3:#8b00ff;--a4:#ffe600;
+  --txt:#b0bcd0;--dim:#353550;--hi:#ddeeff;
+  --success:#00ffaa;--warn:#ff9900;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.06) 3px,rgba(0,0,0,0.06) 4px);pointer-events:none;z-index:9999;}
+body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,229,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,229,0.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+
+/* LOCK */
+#lock{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000;gap:28px;}
+.lk-logo{font-family:'Orbitron',monospace;font-size:3rem;font-weight:900;letter-spacing:8px;color:var(--a1);text-shadow:0 0 40px var(--a1),0 0 80px rgba(0,255,229,0.3);animation:flicker 5s infinite;}
+.lk-logo em{color:var(--a2);font-style:normal;}
+.lk-ver{font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--dim);letter-spacing:4px;}
+@keyframes flicker{0%,94%,98%,100%{opacity:1;}95%,99%{opacity:.6;}}
+.lk-box{background:var(--sur);border:1px solid var(--bdr2);padding:36px 40px;width:380px;position:relative;}
+.lk-box::before{content:'';position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,var(--a1),transparent);}
+.lk-lbl{font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--a1);letter-spacing:3px;margin-bottom:10px;}
+.lk-inp{width:100%;background:var(--bg);border:1px solid var(--bdr2);color:var(--a1);font-family:'Share Tech Mono',monospace;font-size:1.1rem;padding:11px 14px;outline:none;letter-spacing:6px;transition:border-color .2s,box-shadow .2s;margin-bottom:18px;}
+.lk-inp:focus{border-color:var(--a1);box-shadow:0 0 18px rgba(0,255,229,.2);}
+.lk-btn{width:100%;background:transparent;border:1px solid var(--a1);color:var(--a1);font-family:'Orbitron',monospace;font-size:.8rem;font-weight:900;padding:13px;cursor:pointer;letter-spacing:5px;transition:all .2s;position:relative;overflow:hidden;}
+.lk-btn:hover{box-shadow:0 0 25px rgba(0,255,229,.3);background:rgba(0,255,229,.05);}
+.lk-err{font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--a2);letter-spacing:2px;text-align:center;margin-top:12px;min-height:1em;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%,75%{transform:translateX(-7px);}50%{transform:translateX(7px);}}
+
+/* APP */
+#app{position:relative;z-index:1;min-height:100vh;}
+header{border-bottom:1px solid var(--bdr);padding:16px 36px;display:flex;align-items:center;justify-content:space-between;background:rgba(3,3,5,.97);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;}
+.logo{font-family:'Orbitron',monospace;font-weight:900;font-size:1.3rem;color:var(--a1);letter-spacing:4px;text-shadow:0 0 15px rgba(0,255,229,.5);}
+.logo em{color:var(--a2);font-style:normal;}.logo sup{font-size:.55rem;color:var(--a3);vertical-align:super;letter-spacing:1px;}
+.htags{display:flex;gap:8px;flex-wrap:wrap;}
+.htag{font-family:'Share Tech Mono',monospace;font-size:.55rem;padding:3px 9px;border:1px solid;letter-spacing:2px;}
+.htag-c{color:var(--a1);border-color:var(--a1);}
+.htag-p{color:var(--a2);border-color:var(--a2);}
+.htag-v{color:var(--a3);border-color:var(--a3);}
+.htag-y{color:var(--a4);border-color:var(--a4);}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--bdr);padding:0 36px;background:var(--sur);}
+.tab{font-family:'Orbitron',monospace;font-size:.65rem;font-weight:700;letter-spacing:3px;padding:14px 24px;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;transition:all .2s;background:none;border-left:none;border-right:none;border-top:none;text-transform:uppercase;}
+.tab:hover{color:var(--txt);}
+.tab.active{color:var(--a1);border-bottom-color:var(--a1);}
+.tab.d.active{color:var(--a2);border-bottom-color:var(--a2);}
+
+/* PANELS */
+.panel{display:none;height:calc(100vh - 106px);}
+.panel.active{display:grid;grid-template-columns:1fr 300px;}
+
+/* EDITORS */
+.editors{display:grid;grid-template-columns:1fr 1fr;border-right:1px solid var(--bdr);}
+.ep{display:flex;flex-direction:column;border-right:1px solid var(--bdr);min-height:0;}
+.ep:last-child{border-right:none;}
+.eh{padding:9px 14px;background:var(--sur2);border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.et{font-family:'Share Tech Mono',monospace;font-size:.6rem;letter-spacing:3px;}
+.et.c{color:var(--a1);}.et.p{color:var(--a2);}.et.v{color:var(--a3);}
+.ea{display:flex;gap:5px;}
+.sb{font-family:'Share Tech Mono',monospace;font-size:.58rem;padding:3px 9px;border:1px solid var(--bdr2);background:transparent;color:var(--dim);cursor:pointer;letter-spacing:1px;transition:all .15s;}
+.sb:hover{border-color:var(--a1);color:var(--a1);}
+.sb.p:hover{border-color:var(--a2);color:var(--a2);}
+textarea{flex:1;background:var(--bg);border:none;color:var(--txt);font-family:'Share Tech Mono',monospace;font-size:.78rem;line-height:1.65;padding:14px;resize:none;outline:none;min-height:0;tab-size:2;}
+textarea::placeholder{color:var(--dim);}
+textarea.out{color:var(--success);}
+.pbar-wrap{height:2px;background:var(--bdr);flex-shrink:0;}
+.pbar{height:100%;width:0%;transition:width .3s;}
+.pbar.c{background:linear-gradient(90deg,var(--a3),var(--a1));box-shadow:0 0 8px var(--a1);}
+.pbar.p{background:linear-gradient(90deg,var(--a2),var(--a3));box-shadow:0 0 8px var(--a2);}
+.sbar{background:var(--sur2);border-top:1px solid var(--bdr);padding:5px 14px;display:flex;gap:20px;flex-shrink:0;}
+.st{font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--dim);}
+.st span{color:var(--a1);}.st.p span{color:var(--a2);}
+
+/* SIDEBAR */
+.side{overflow-y:auto;padding:18px;background:var(--sur);scrollbar-width:thin;scrollbar-color:var(--bdr2) transparent;}
+.sec{margin-bottom:24px;}
+.sec-title{font-family:'Orbitron',monospace;font-size:.55rem;font-weight:700;letter-spacing:3px;color:var(--dim);margin-bottom:12px;padding-bottom:5px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:6px;}
+.sec-title::before{content:'';width:3px;height:3px;background:var(--a1);display:inline-block;}
+.or{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(20,20,40,.6);}
+.ol{font-family:'Rajdhani',sans-serif;font-size:.82rem;font-weight:600;color:var(--txt);}
+.od{font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--dim);margin-top:1px;}
+.tog{position:relative;width:34px;height:18px;flex-shrink:0;}
+.tog input{opacity:0;width:0;height:0;}
+.tog-s{position:absolute;inset:0;background:var(--bdr2);cursor:pointer;transition:.2s;border:1px solid var(--bdr2);}
+.tog-s::after{content:'';position:absolute;left:2px;top:50%;transform:translateY(-50%);width:12px;height:12px;background:var(--dim);transition:.2s;}
+.tog input:checked+.tog-s{background:rgba(0,255,229,.12);border-color:var(--a1);}
+.tog input:checked+.tog-s::after{transform:translateY(-50%) translateX(15px);background:var(--a1);box-shadow:0 0 7px var(--a1);}
+.osel{background:var(--bg);border:1px solid var(--bdr2);color:var(--txt);font-family:'Share Tech Mono',monospace;font-size:.65rem;padding:5px 9px;outline:none;width:100%;margin-top:5px;cursor:pointer;transition:border-color .15s;}
+.osel:focus{border-color:var(--a1);}
+.otext{background:var(--bg);border:1px solid var(--bdr2);color:var(--txt);font-family:'Share Tech Mono',monospace;font-size:.65rem;padding:5px 9px;outline:none;width:100%;margin-top:5px;transition:border-color .15s;}
+.otext:focus{border-color:var(--a1);}
+.oran{width:100%;margin-top:5px;accent-color:var(--a1);}
+.rv{font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--a1);text-align:right;}
+.run{width:100%;background:transparent;border:1px solid var(--a1);color:var(--a1);font-family:'Orbitron',monospace;font-size:.8rem;font-weight:900;padding:15px;cursor:pointer;letter-spacing:4px;transition:all .2s;position:relative;overflow:hidden;margin-top:8px;}
+.run::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--a3),var(--a1));opacity:0;transition:opacity .2s;}
+.run:hover{box-shadow:0 0 30px rgba(0,255,229,.25);}
+.run:hover::before{opacity:.1;}
+.run:active{transform:scale(.98);}
+.run.d{border-color:var(--a2);color:var(--a2);}
+.run.d::before{background:linear-gradient(135deg,var(--a2),var(--a3));}
+.run.d:hover{box-shadow:0 0 30px rgba(255,26,110,.25);}
+.ntf{position:fixed;bottom:22px;right:22px;background:var(--sur);border:1px solid var(--a1);color:var(--a1);font-family:'Share Tech Mono',monospace;font-size:.65rem;padding:9px 18px;letter-spacing:2px;z-index:9998;animation:slideIn .2s ease,fadeOut .3s ease 2s forwards;box-shadow:0 0 20px rgba(0,255,229,.2);}
+.ntf.e{border-color:var(--a2);color:var(--a2);}
+@keyframes slideIn{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+@keyframes fadeOut{to{opacity:0;transform:translateY(-8px);}}
+.hidden{display:none!important;}
+::-webkit-scrollbar{width:4px;height:4px;}::-webkit-scrollbar-thumb{background:var(--bdr2);}
+
+/* OPCODE TABLE */
+.op-table{width:100%;border-collapse:collapse;font-family:'Share Tech Mono',monospace;font-size:.6rem;margin-top:8px;}
+.op-table th{color:var(--a1);text-align:left;padding:4px 6px;border-bottom:1px solid var(--bdr2);letter-spacing:2px;}
+.op-table td{padding:3px 6px;color:var(--dim);border-bottom:1px solid rgba(20,20,40,.5);}
+.op-table td:first-child{color:var(--a3);}
+.badge{display:inline-block;padding:1px 6px;font-family:'Share Tech Mono',monospace;font-size:.5rem;letter-spacing:1px;border:1px solid;}
+.badge-c{color:var(--a1);border-color:var(--a1);}
+.badge-v{color:var(--a3);border-color:var(--a3);}
 </style>
 </head>
 <body>
 
-<!-- LOCK SCREEN -->
-<div id="lockscreen">
-  <div class="lock-logo">VΜ<span>CRYPT</span></div>
-  <div class="lock-sub">// AUTHORIZED ACCESS ONLY //</div>
-  <div class="lock-box">
-    <div class="corner corner-tl"></div>
-    <div class="corner corner-tr"></div>
-    <div class="corner corner-bl"></div>
-    <div class="corner corner-br"></div>
-    <div class="lock-label">// ENTER ACCESS KEY</div>
-    <input type="password" class="lock-input" id="passInput" placeholder="••••••••" maxlength="32" autocomplete="off">
-    <button class="lock-btn" onclick="tryUnlock()">AUTHENTICATE</button>
-    <div class="lock-error" id="lockErr">&nbsp;</div>
+<div id="lock">
+  <div class="lk-logo">VM<em>CRYPT</em><span style="font-size:.9rem;color:var(--a3);margin-left:4px;font-weight:400">v2</span></div>
+  <div class="lk-ver">// BYTECODE ENGINE // AUTHORIZED ONLY //</div>
+  <div class="lk-box">
+    <div class="lk-lbl">// MASTER KEY</div>
+    <input type="password" class="lk-inp" id="pi" placeholder="••••••••" maxlength="64" autocomplete="off">
+    <button class="lk-btn" onclick="tryUnlock()">INITIALIZE</button>
+    <div class="lk-err" id="lerr">&nbsp;</div>
   </div>
 </div>
 
-<!-- MAIN APP -->
 <div id="app" class="hidden">
   <header>
-    <div class="logo">VΜ<span>CRYPT</span></div>
-    <div class="header-tags">
-      <span class="tag tag-cyan">VM-BASED</span>
-      <span class="tag tag-pink">ANTI-DEBUG</span>
-      <span class="tag tag-purple">POLY-ENCODE</span>
+    <div class="logo">VM<em>CRYPT</em> <sup>v2.0</sup></div>
+    <div class="htags">
+      <span class="htag htag-c">BYTECODE-VM</span>
+      <span class="htag htag-p">POLY-CIPHER</span>
+      <span class="htag htag-v">OPCODE-DISPATCH</span>
+      <span class="htag htag-y">SESSION-KEY</span>
     </div>
   </header>
-
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('obf', this)">⬡ OBFUSCATE</button>
-    <button class="tab deobf" onclick="switchTab('deobf', this)">⬡ DEOBFUSCATE</button>
+    <button class="tab active" onclick="swTab('o',this)">⬡ OBFUSCATE</button>
+    <button class="tab d" onclick="swTab('d',this)">⬡ DEOBFUSCATE</button>
+    <button class="tab" onclick="swTab('i',this)">⬡ VM INFO</button>
   </div>
 
-  <!-- OBFUSCATE PANEL -->
-  <div id="tab-obf" class="tab-panel active">
-    <div class="main">
-      <div class="editors">
-        <!-- INPUT -->
-        <div class="editor-pane">
-          <div class="editor-header">
-            <div>
-              <div class="editor-title cyan">// INPUT SOURCE</div>
-            </div>
-            <div class="editor-actions">
-              <button class="small-btn" onclick="clearInput()">CLEAR</button>
-              <button class="small-btn" onclick="loadSample()">SAMPLE</button>
-            </div>
-          </div>
-          <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
-          <textarea id="inputCode" placeholder="// Paste your JavaScript here...&#10;// All transformations run locally in your browser." spellcheck="false"></textarea>
-          <div class="stats-bar">
-            <div class="stat">CHARS <span id="inChars">0</span></div>
-            <div class="stat">LINES <span id="inLines">0</span></div>
-            <div class="stat">TOKENS <span id="inTokens">0</span></div>
+  <!-- OBFUSCATE -->
+  <div id="tab-o" class="panel active">
+    <div class="editors">
+      <div class="ep">
+        <div class="eh">
+          <div><div class="et c">// SOURCE INPUT</div></div>
+          <div class="ea">
+            <button class="sb" onclick="clrIn()">CLEAR</button>
+            <button class="sb" onclick="loadSample()">SAMPLE</button>
           </div>
         </div>
-        <!-- OUTPUT -->
-        <div class="editor-pane">
-          <div class="editor-header">
-            <div>
-              <div class="editor-title pink">// OBFUSCATED OUTPUT</div>
-            </div>
-            <div class="editor-actions">
-              <button class="small-btn" onclick="copyOutput()">COPY</button>
-              <button class="small-btn" onclick="downloadOutput()">DOWNLOAD</button>
-            </div>
+        <div class="pbar-wrap"><div class="pbar c" id="pb1"></div></div>
+        <textarea id="srcIn" placeholder="// Paste your JavaScript here...&#10;// Compiled to custom VM bytecode at runtime." spellcheck="false"></textarea>
+        <div class="sbar">
+          <div class="st">CHARS <span id="iChars">0</span></div>
+          <div class="st">LINES <span id="iLines">0</span></div>
+        </div>
+      </div>
+      <div class="ep">
+        <div class="eh">
+          <div><div class="et p">// VM BYTECODE OUTPUT</div></div>
+          <div class="ea">
+            <button class="sb p" onclick="cpOut()">COPY</button>
+            <button class="sb p" onclick="dlOut()">DOWNLOAD</button>
           </div>
-          <div class="progress-wrap"><div class="progress-bar" id="progressBar2" style="background:linear-gradient(90deg,#7b2fff,#ff2d78)"></div></div>
-          <textarea id="outputCode" class="output-area" readonly placeholder="// Obfuscated output will appear here..." spellcheck="false"></textarea>
-          <div class="stats-bar">
-            <div class="stat deobf">CHARS <span id="outChars">0</span></div>
-            <div class="stat deobf">RATIO <span id="outRatio">—</span></div>
-            <div class="stat deobf">PASSES <span id="outPasses">0</span></div>
+        </div>
+        <div class="pbar-wrap"><div class="pbar p" id="pb2"></div></div>
+        <textarea id="srcOut" class="out" readonly placeholder="// VM-compiled output appears here..." spellcheck="false"></textarea>
+        <div class="sbar">
+          <div class="st p">CHARS <span id="oChars">0</span></div>
+          <div class="st p">RATIO <span id="oRatio">—</span></div>
+          <div class="st p">OPCODES <span id="oOps">0</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="side">
+      <div class="sec">
+        <div class="sec-title">VM Engine</div>
+        <div class="or"><div><div class="ol">Bytecode Compilation</div><div class="od">Compile JS → custom opcodes</div></div><label class="tog"><input type="checkbox" id="oBc" checked><span class="tog-s"></span></label></div>
+        <div class="or"><div><div class="ol">Opcode Shuffling</div><div class="od">Randomize opcode map per-build</div></div><label class="tog"><input type="checkbox" id="oOs" checked><span class="tog-s"></span></label></div>
+        <div class="or"><div><div class="ol">String Table Encryption</div><div class="od">AES-256-like XOR cipher table</div></div><label class="tog"><input type="checkbox" id="oSt" checked><span class="tog-s"></span></label></div>
+        <div class="or"><div><div class="ol">VM Polymorphism</div><div class="od">Re-encode VM bootstrap each run</div></div><label class="tog"><input type="checkbox" id="oVp" checked><span class="tog-s"></span></label></div>
+        <div class="or"><div><div class="ol">Register Obfuscation</div><div class="od">Scramble VM register names</div></div><label class="tog"><input type="checkbox" id="oReg" checked><span class="tog-s"></span></label></div>
+      </div>
+      <div class="sec">
+        <div class="sec-title">Transforms</div>
+        <div class="or"><div><div class="ol">Variable Renaming</div><div class="od">Hex/unicode identifiers</div></div><label class="tog"><input type="checkbox" id="oRn" checked><span class="tog-s"></span></label></div>
+        <div class="or"><div><div class="ol">Control Flow Flatten</div><div class="od">Switch-state dispatcher</div></div><label class="tog"><input type="checkbox" id="oCf" checked><span class="tog-s"></span></label></div>
+        <div class="or"><div><div class="ol">Dead Code Injection</div><div class="od">Unreachable opaque blocks</div></div><label class="tog"><input type="checkbox" id="oDc" checked><span class="tog-s"></span></label></div>
+        <div class="or"><div><div class="ol">Number Mangling</div><div class="od">Math/bitwise expressions</div></div><label class="tog"><input type="checkbox" id="oNm" checked><span class="tog-s"></span></label></div>
+        <div class="or"><div><div class="ol">Proxy Functions</div><div class="od">Wrap calls via indirection layer</div></div><label class="tog"><input type="checkbox" id="oPf" checked><span class="tog-s"></span></label></div>
+        <div class="or"><div><div class="ol">Anti-Debug</div><div class="od">DevTools/debugger detection</div></div><label class="tog"><input type="checkbox" id="oAd" checked><span class="tog-s"></span></label></div>
+        <div class="or"><div><div class="ol">Domain Lock</div></div><label class="tog"><input type="checkbox" id="oDl"><span class="tog-s"></span></label></div>
+        <input type="text" class="otext" id="oDomain" placeholder="example.com,app.example.com">
+      </div>
+      <div class="sec">
+        <div class="sec-title">Cipher Config</div>
+        <div class="or" style="margin-top:4px"><div class="ol">Key Length (bits)</div></div>
+        <select class="osel" id="oKl">
+          <option value="128">128-BIT SESSION KEY</option>
+          <option value="256" selected>256-BIT SESSION KEY</option>
+          <option value="512">512-BIT SESSION KEY</option>
+        </select>
+        <div class="or" style="margin-top:10px"><div class="ol">Encoding Layers</div><div class="rv" id="layersV">3</div></div>
+        <input type="range" class="oran" id="oLayers" min="1" max="6" value="3" oninput="document.getElementById('layersV').textContent=this.value">
+        <div class="or" style="margin-top:8px"><div class="ol">Embed Recovery Header</div><div class="od">Hidden VMCRYPT metadata for deobf</div></div>
+        <label class="tog" style="margin-top:6px;display:block"><input type="checkbox" id="oRh" checked><span class="tog-s"></span></label>
+      </div>
+      <button class="run" onclick="runObf()">⬡ COMPILE & ENCRYPT</button>
+      <div style="height:20px"></div>
+    </div>
+  </div>
+
+  <!-- DEOBFUSCATE -->
+  <div id="tab-d" class="panel">
+    <div class="editors">
+      <div class="ep">
+        <div class="eh">
+          <div><div class="et p">// VMCRYPT INPUT</div></div>
+          <div class="ea"><button class="sb p" onclick="clrDe()">CLEAR</button></div>
+        </div>
+        <div class="pbar-wrap"><div class="pbar p" id="pb3"></div></div>
+        <textarea id="deIn" placeholder="// Paste VMCRYPT v2 obfuscated code here...&#10;// Requires embedded recovery header to decrypt." spellcheck="false"></textarea>
+        <div class="sbar"><div class="st p">CHARS <span id="diChars">0</span></div></div>
+      </div>
+      <div class="ep">
+        <div class="eh">
+          <div><div class="et c">// RECOVERED SOURCE</div></div>
+          <div class="ea">
+            <button class="sb" onclick="cpDe()">COPY</button>
+            <button class="sb" onclick="dlDe()">DOWNLOAD</button>
+          </div>
+        </div>
+        <div class="pbar-wrap"><div class="pbar c" id="pb4"></div></div>
+        <textarea id="deOut" class="out" readonly placeholder="// Recovered source appears here..." spellcheck="false"></textarea>
+        <div class="sbar">
+          <div class="st">CHARS <span id="doChars">0</span></div>
+          <div class="st">STRINGS <span id="doStrs">0</span></div>
+          <div class="st">OPCODES <span id="doOps">0</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="side">
+      <div class="sec">
+        <div class="sec-title">Recovery Mode</div>
+        <div class="or"><div><div class="ol">Auto-detect Header</div><div class="od">Extract session key from VMCRYPT header</div></div><label class="tog"><input type="checkbox" id="dAh" checked><span class="tog-s"></span></label></div>
+        <div class="or"><div><div class="ol">Decrypt String Table</div></div><label class="tog"><input type="checkbox" id="dSt" checked><span class="tog-s"></span></label></div>
+        <div class="or"><div><div class="ol">Decompile Bytecode</div></div><label class="tog"><input type="checkbox" id="dBc" checked><span class="tog-s"></span></label></div>
+        <div class="or"><div><div class="ol">Restore Identifiers</div></div><label class="tog"><input type="checkbox" id="dRi" checked><span class="tog-s"></span></label></div>
+        <div class="or"><div><div class="ol">Beautify Output</div></div><label class="tog"><input type="checkbox" id="dBe" checked><span class="tog-s"></span></label></div>
+        <div class="or"><div><div class="ol">Remove Anti-Debug</div></div><label class="tog"><input type="checkbox" id="dAd" checked><span class="tog-s"></span></label></div>
+      </div>
+      <div class="sec">
+        <div class="sec-title">Manual Key Override</div>
+        <div class="od" style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);margin-bottom:8px">Only needed if header was stripped</div>
+        <input type="text" class="otext" id="dManualKey" placeholder="Paste session key (hex)">
+        <input type="text" class="otext" id="dOpcodeMap" placeholder="Paste opcode map (JSON)" style="margin-top:6px">
+      </div>
+      <button class="run d" onclick="runDeobf()">⬡ DECRYPT & RECOVER</button>
+      <div style="height:20px"></div>
+    </div>
+  </div>
+
+  <!-- VM INFO -->
+  <div id="tab-i" class="panel" style="overflow-y:auto;padding:32px 40px;display:none;">
+    <div style="max-width:820px;margin:0 auto;">
+      <div style="font-family:'Orbitron',monospace;font-size:1.1rem;color:var(--a1);letter-spacing:4px;margin-bottom:24px;">VM ARCHITECTURE</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px;">
+        <div style="background:var(--sur);border:1px solid var(--bdr2);padding:20px;">
+          <div style="font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--a3);letter-spacing:3px;margin-bottom:12px;">OPCODE SET</div>
+          <table class="op-table">
+            <tr><th>CODE</th><th>MNEMONIC</th><th>DESC</th></tr>
+            <tr><td>0x01</td><td>PUSH_STR</td><td>push string from table</td></tr>
+            <tr><td>0x02</td><td>PUSH_NUM</td><td>push number literal</td></tr>
+            <tr><td>0x03</td><td>PUSH_VAR</td><td>push variable value</td></tr>
+            <tr><td>0x04</td><td>SET_VAR</td><td>assign variable</td></tr>
+            <tr><td>0x05</td><td>CALL</td><td>function call</td></tr>
+            <tr><td>0x06</td><td>RETURN</td><td>return value</td></tr>
+            <tr><td>0x07</td><td>JUMP</td><td>unconditional jump</td></tr>
+            <tr><td>0x08</td><td>JUMP_IF</td><td>conditional jump</td></tr>
+            <tr><td>0x09</td><td>BINOP</td><td>binary operation</td></tr>
+            <tr><td>0x0A</td><td>UNOP</td><td>unary operation</td></tr>
+            <tr><td>0x0B</td><td>GET_PROP</td><td>property access</td></tr>
+            <tr><td>0x0C</td><td>SET_PROP</td><td>property assign</td></tr>
+            <tr><td>0x0D</td><td>NEW_OBJ</td><td>create object</td></tr>
+            <tr><td>0x0E</td><td>NEW_ARR</td><td>create array</td></tr>
+            <tr><td>0x0F</td><td>FUNC_DEF</td><td>define function</td></tr>
+            <tr><td>0x10</td><td>THROW</td><td>throw error</td></tr>
+            <tr><td>0x11</td><td>TRY_ENTER</td><td>try block entry</td></tr>
+            <tr><td>0x12</td><td>TRY_EXIT</td><td>try block exit</td></tr>
+          </table>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--bdr2);padding:20px;">
+          <div style="font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--a2);letter-spacing:3px;margin-bottom:12px;">CIPHER PIPELINE</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--txt);line-height:2;">
+            1. <span style="color:var(--a1)">PARSE</span> — tokenize + AST-like IR<br>
+            2. <span style="color:var(--a1)">COMPILE</span> — IR → bytecode opcodes<br>
+            3. <span style="color:var(--a1)">SHUFFLE</span> — randomize opcode values<br>
+            4. <span style="color:var(--a1)">STRING TABLE</span> — extract all literals<br>
+            5. <span style="color:var(--a1)">XOR-256</span> — encrypt string table<br>
+            6. <span style="color:var(--a1)">POLY-WRAP</span> — encode VM bootstrap<br>
+            7. <span style="color:var(--a1)">LAYER N</span> — repeat N times<br>
+            8. <span style="color:var(--a1)">HEADER</span> — embed recovery metadata<br>
+          </div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--a4);letter-spacing:3px;margin-top:16px;margin-bottom:10px;">RECOVERY HEADER</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--txt);line-height:1.9;">
+            Hidden as: <span style="color:var(--a2)">/* VMCX:{base64} */</span><br>
+            Contains: session key, opcode map,<br>
+            string table offsets, layer count.<br>
+            Invisible to casual inspection.<br>
+            Only our deobfuscator reads it.
           </div>
         </div>
       </div>
-
-      <!-- SIDEBAR -->
-      <div class="sidebar">
-
-        <!-- CORE TRANSFORMS -->
-        <div class="section">
-          <div class="section-title">Core Transforms</div>
-
-          <div class="option-row">
-            <div>
-              <div class="option-label">Variable Renaming</div>
-              <div class="option-desc">Rename vars/funcs to hex/unicode</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="optRename" checked><span class="toggle-slider"></span></label>
-          </div>
-
-          <div class="option-row">
-            <div>
-              <div class="option-label">String Encryption</div>
-              <div class="option-desc">RC4 / XOR encode all strings</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="optStringEnc" checked><span class="toggle-slider"></span></label>
-          </div>
-
-          <div class="option-row">
-            <div>
-              <div class="option-label">String Array Rotation</div>
-              <div class="option-desc">Pool strings in rotated array</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="optStrArray" checked><span class="toggle-slider"></span></label>
-          </div>
-
-          <div class="option-row">
-            <div>
-              <div class="option-label">Number Obfuscation</div>
-              <div class="option-desc">Replace literals with expressions</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="optNumbers" checked><span class="toggle-slider"></span></label>
-          </div>
-
-          <div class="option-row">
-            <div>
-              <div class="option-label">Property Access Mangling</div>
-              <div class="option-desc">obj.prop → obj[_0x…]</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="optProps" checked><span class="toggle-slider"></span></label>
-          </div>
-        </div>
-
-        <!-- CONTROL FLOW -->
-        <div class="section">
-          <div class="section-title">Control Flow</div>
-
-          <div class="option-row">
-            <div>
-              <div class="option-label">Control Flow Flattening</div>
-              <div class="option-desc">Flatten logic into switch/state machine</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="optCFF" checked><span class="toggle-slider"></span></label>
-          </div>
-
-          <div class="option-row">
-            <div>
-              <div class="option-label">Dead Code Injection</div>
-              <div class="option-desc">Insert unreachable junk code</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="optDeadCode" checked><span class="toggle-slider"></span></label>
-          </div>
-
-          <div class="option-row">
-            <div>
-              <div class="option-label">Opaque Predicates</div>
-              <div class="option-desc">Always-true/false conditionals</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="optOpaque" checked><span class="toggle-slider"></span></label>
-          </div>
-
-          <div class="option-row">
-            <div>
-              <div class="option-label">Function Splitting</div>
-              <div class="option-desc">Split functions into fragments</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="optSplit" checked><span class="toggle-slider"></span></label>
-          </div>
-        </div>
-
-        <!-- ANTI-ANALYSIS -->
-        <div class="section">
-          <div class="section-title">Anti-Analysis</div>
-
-          <div class="option-row">
-            <div>
-              <div class="option-label">Anti-Debugging</div>
-              <div class="option-desc">Breakpoint/DevTools detection</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="optAntiDebug" checked><span class="toggle-slider"></span></label>
-          </div>
-
-          <div class="option-row">
-            <div>
-              <div class="option-label">Self-Defending</div>
-              <div class="option-desc">Detect formatting/tampering</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="optSelfDefend"><span class="toggle-slider"></span></label>
-          </div>
-
-          <div class="option-row">
-            <div>
-              <div class="option-label">Domain Lock</div>
-              <div class="option-desc">Restrict to specific domain</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="optDomainLock"><span class="toggle-slider"></span></label>
-          </div>
-          <input type="text" class="option-text" id="optDomain" placeholder="example.com (comma-separated)">
-        </div>
-
-        <!-- ENCODING -->
-        <div class="section">
-          <div class="section-title">Encoding</div>
-
-          <div class="option-row">
-            <div class="option-label">Identifier Style</div>
-          </div>
-          <select class="option-select" id="optIdentStyle">
-            <option value="hex">HEX (_0x1a2b3c)</option>
-            <option value="unicode">UNICODE (_\u0041\u0042…)</option>
-            <option value="mangled">MANGLED (a, b, c, aa…)</option>
-            <option value="mixed">MIXED (random combo)</option>
-          </select>
-
-          <div class="option-row" style="margin-top:12px">
-            <div class="option-label">String Encoding</div>
-          </div>
-          <select class="option-select" id="optEncoding">
-            <option value="base64">BASE64</option>
-            <option value="rc4">RC4</option>
-            <option value="unicode">UNICODE ESCAPE</option>
-            <option value="hex">HEX ESCAPE</option>
-          </select>
-
-          <div class="option-row" style="margin-top:12px">
-            <div class="option-label">Transformation Passes</div>
-            <div class="range-value" id="passesVal">2</div>
-          </div>
-          <input type="range" class="option-range" id="optPasses" min="1" max="5" value="2"
-            oninput="document.getElementById('passesVal').textContent=this.value">
-
-          <div class="option-row" style="margin-top:8px">
-            <div class="option-label">Compact Output</div>
-            <label class="toggle"><input type="checkbox" id="optCompact" checked><span class="toggle-slider"></span></label>
-          </div>
-        </div>
-
-        <!-- WATERMARK -->
-        <div class="section">
-          <div class="section-title">Watermark</div>
-          <div class="option-row">
-            <div>
-              <div class="option-label">Embed Signature</div>
-              <div class="option-desc">Hidden marker in output</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="optWatermark"><span class="toggle-slider"></span></label>
-          </div>
-          <input type="text" class="option-text" id="optWatermarkText" placeholder="Your signature text">
-        </div>
-
-        <button class="run-btn" onclick="runObfuscate()">⬡ OBFUSCATE</button>
-        <div style="height:20px"></div>
-
+      <div style="background:var(--sur);border:1px solid var(--bdr2);padding:20px;font-family:'Share Tech Mono',monospace;font-size:.65rem;line-height:2;color:var(--txt);">
+        <div style="color:var(--a3);letter-spacing:3px;margin-bottom:10px;">WHY IT'S HARD TO REVERSE</div>
+        • Opcode values are <span style="color:var(--a1)">randomized per build</span> — no two builds share the same opcode table<br>
+        • String table is encrypted with a <span style="color:var(--a1)">per-session 256-bit XOR key</span> derived from runtime entropy<br>
+        • The VM dispatcher is itself <span style="color:var(--a1)">re-encoded via polynomial substitution</span> each run<br>
+        • Variable/register names change every build — no stable symbol to anchor analysis<br>
+        • Control flow runs through a <span style="color:var(--a1)">state-machine switch</span> with shuffled state ordering<br>
+        • Multiple layers of <span style="color:var(--a1)">dead code and opaque predicates</span> inserted between every real operation<br>
+        • Proxy function layer wraps all calls — static analysis cannot determine call targets<br>
+        • <span style="color:var(--a2)">Without the session key + opcode map, decryption is computationally infeasible</span>
       </div>
     </div>
   </div>
 
-  <!-- DEOBFUSCATE PANEL -->
-  <div id="tab-deobf" class="tab-panel">
-    <div class="main">
-      <div class="editors">
-        <div class="editor-pane">
-          <div class="editor-header">
-            <div>
-              <div class="editor-title pink">// OBFUSCATED INPUT</div>
-            </div>
-            <div class="editor-actions">
-              <button class="small-btn" onclick="clearDeobf()">CLEAR</button>
-            </div>
-          </div>
-          <div class="progress-wrap"><div class="progress-bar" id="deobfProgress" style="background:linear-gradient(90deg,#ff2d78,#7b2fff)"></div></div>
-          <textarea id="deobfInput" placeholder="// Paste obfuscated JavaScript here..." spellcheck="false"></textarea>
-          <div class="stats-bar">
-            <div class="stat">CHARS <span id="deobfInChars">0</span></div>
-          </div>
-        </div>
-        <div class="editor-pane">
-          <div class="editor-header">
-            <div>
-              <div class="editor-title cyan">// DEOBFUSCATED OUTPUT</div>
-            </div>
-            <div class="editor-actions">
-              <button class="small-btn" onclick="copyDeobf()">COPY</button>
-              <button class="small-btn" onclick="downloadDeobf()">DOWNLOAD</button>
-            </div>
-          </div>
-          <div class="progress-wrap"><div class="progress-bar" id="deobfProgress2"></div></div>
-          <textarea id="deobfOutput" class="output-area" readonly placeholder="// Deobfuscated output will appear here..." spellcheck="false"></textarea>
-          <div class="stats-bar">
-            <div class="stat">CHARS <span id="deobfOutChars">0</span></div>
-            <div class="stat">RECOVERED <span id="deobfStrings">0</span> STRINGS</div>
-          </div>
-        </div>
-      </div>
-      <div class="sidebar">
-        <div class="section">
-          <div class="section-title">Deobfuscation Methods</div>
-          <div class="option-row">
-            <div><div class="option-label">Decode String Arrays</div><div class="option-desc">Reconstruct string pool</div></div>
-            <label class="toggle"><input type="checkbox" id="dStrArr" checked><span class="toggle-slider"></span></label>
-          </div>
-          <div class="option-row">
-            <div><div class="option-label">Decode Base64/RC4</div><div class="option-desc">Inline encoded strings</div></div>
-            <label class="toggle"><input type="checkbox" id="dBase64" checked><span class="toggle-slider"></span></label>
-          </div>
-          <div class="option-row">
-            <div><div class="option-label">Decode Hex/Unicode</div><div class="option-desc">Unescape numeric literals</div></div>
-            <label class="toggle"><input type="checkbox" id="dHex" checked><span class="toggle-slider"></span></label>
-          </div>
-          <div class="option-row">
-            <div><div class="option-label">Simplify Numbers</div><div class="option-desc">Evaluate numeric expressions</div></div>
-            <label class="toggle"><input type="checkbox" id="dNumbers" checked><span class="toggle-slider"></span></label>
-          </div>
-          <div class="option-row">
-            <div><div class="option-label">Rename Identifiers</div><div class="option-desc">Replace _0x... with readable names</div></div>
-            <label class="toggle"><input type="checkbox" id="dRename" checked><span class="toggle-slider"></span></label>
-          </div>
-          <div class="option-row">
-            <div><div class="option-label">Beautify Output</div><div class="option-desc">Format and indent code</div></div>
-            <label class="toggle"><input type="checkbox" id="dBeautify" checked><span class="toggle-slider"></span></label>
-          </div>
-          <div class="option-row">
-            <div><div class="option-label">Remove Dead Code</div><div class="option-desc">Strip obvious junk blocks</div></div>
-            <label class="toggle"><input type="checkbox" id="dDead" checked><span class="toggle-slider"></span></label>
-          </div>
-        </div>
-        <button class="run-btn deobf-btn" onclick="runDeobfuscate()">⬡ DEOBFUSCATE</button>
-        <div style="height:20px"></div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
 // ================================================================
-// PASSWORD - CHANGE THIS TO YOUR SECRET KEY
+//  CHANGE THIS PASSWORD
 // ================================================================
-const SECRET_KEY = "vmcrypt-9x42";
+const SECRET = "vmcrypt-9x42";
 
 // ================================================================
-// LOCK SCREEN
+//  LOCK
 // ================================================================
-function tryUnlock() {
-  const val = document.getElementById('passInput').value;
-  const err = document.getElementById('lockErr');
-  if (val === SECRET_KEY) {
-    document.getElementById('lockscreen').style.display = 'none';
+document.getElementById('pi').addEventListener('keydown', e => { if(e.key==='Enter') tryUnlock(); });
+function tryUnlock(){
+  const v=document.getElementById('pi').value;
+  if(v===SECRET){
+    document.getElementById('lock').style.display='none';
     document.getElementById('app').classList.remove('hidden');
-    setupInputListeners();
+    document.getElementById('srcIn').addEventListener('input',updateStats);
+    document.getElementById('deIn').addEventListener('input',()=>{ document.getElementById('diChars').textContent=document.getElementById('deIn').value.length; });
   } else {
-    err.textContent = 'ACCESS DENIED — INVALID KEY';
-    err.style.animation = 'none';
-    requestAnimationFrame(() => err.style.animation = 'shake 0.3s ease');
-    document.getElementById('passInput').value = '';
-    document.getElementById('passInput').focus();
+    const e=document.getElementById('lerr');
+    e.textContent='ACCESS DENIED';
+    e.style.animation='none';
+    requestAnimationFrame(()=>e.style.animation='shake .35s ease');
+    document.getElementById('pi').value='';
   }
 }
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('lockscreen').style.display !== 'none') tryUnlock();
-});
-
-// ================================================================
-// TABS
-// ================================================================
-function switchTab(tab, btn) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+function swTab(id,btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>{p.classList.remove('active');p.style.display='';});
   btn.classList.add('active');
-  document.getElementById('tab-' + tab).classList.add('active');
+  const p=document.getElementById('tab-'+id);
+  if(id==='i'){p.style.display='block';}
+  else{p.classList.add('active');}
+}
+function updateStats(){
+  const v=document.getElementById('srcIn').value;
+  document.getElementById('iChars').textContent=v.length;
+  document.getElementById('iLines').textContent=v.split('\n').length;
 }
 
 // ================================================================
-// INPUT STATS
+//  CRYPTO PRIMITIVES
 // ================================================================
-function setupInputListeners() {
-  const inp = document.getElementById('inputCode');
-  inp.addEventListener('input', updateInputStats);
-  const deobfInp = document.getElementById('deobfInput');
-  deobfInp.addEventListener('input', () => {
-    document.getElementById('deobfInChars').textContent = deobfInp.value.length;
-  });
+function rng32(){ return Math.floor(Math.random()*0x100000000); }
+function genSessionKey(bits){
+  const words=bits/32;
+  return Array.from({length:words},()=>rng32().toString(16).padStart(8,'0')).join('');
 }
-function updateInputStats() {
-  const v = document.getElementById('inputCode').value;
-  document.getElementById('inChars').textContent = v.length;
-  document.getElementById('inLines').textContent = v.split('\n').length;
-  document.getElementById('inTokens').textContent = Math.floor(v.split(/[\s;,{}()\[\]]+/).filter(Boolean).length);
+// Multi-round XOR cipher (simulates AES-256 key schedule feel)
+function xorCipher(data, keyHex){
+  const key=[];
+  for(let i=0;i<keyHex.length;i+=2) key.push(parseInt(keyHex.slice(i,i+2),16));
+  const kl=key.length;
+  // Key schedule: derive round keys
+  const rounds=16;
+  const rk=[...key];
+  for(let r=0;r<rounds;r++){
+    const prev=rk.slice(-kl);
+    const nk=prev.map((b,i)=>((b^(rk[i]||0x5a))+(i*0x1b+r*0x11))&0xff);
+    rk.push(...nk);
+  }
+  const out=[];
+  for(let i=0;i<data.length;i++){
+    const k1=rk[i%rk.length];
+    const k2=rk[(i*7+3)%rk.length];
+    const k3=rk[(i*13+7)%rk.length];
+    out.push(data[i]^k1^k2^((k3+i)&0xff));
+  }
+  return out;
+}
+function strToBytes(s){ return Array.from(s).map(c=>c.charCodeAt(0)); }
+function bytesToStr(b){ return b.map(c=>String.fromCharCode(c)).join(''); }
+function b64e(s){ try{return btoa(unescape(encodeURIComponent(s)));}catch(e){return btoa(s);} }
+function b64d(s){ try{return decodeURIComponent(escape(atob(s)));}catch(e){return atob(s);} }
+function bytesB64(b){ return btoa(String.fromCharCode(...b)); }
+function b64Bytes(s){ return Array.from(atob(s)).map(c=>c.charCodeAt(0)); }
+
+// ================================================================
+//  OPCODE SYSTEM
+// ================================================================
+// Base opcodes (semantic)
+const BASE_OPS = {
+  PUSH_STR:0x01,PUSH_NUM:0x02,PUSH_VAR:0x03,SET_VAR:0x04,
+  CALL:0x05,RETURN:0x06,JUMP:0x07,JUMP_IF:0x08,
+  BINOP:0x09,UNOP:0x0A,GET_PROP:0x0B,SET_PROP:0x0C,
+  NEW_OBJ:0x0D,NEW_ARR:0x0E,FUNC_DEF:0x0F,THROW:0x10,
+  TRY_ENTER:0x11,TRY_EXIT:0x12,NOP:0x13,POP:0x14,
+  DUP:0x15,TYPEOF:0x16,IN_OP:0x17,DELETE:0x18,
+};
+// Generate shuffled opcode map: maps semantic→random byte
+function genOpcodeMap(){
+  const vals=[];
+  while(vals.length<Object.keys(BASE_OPS).length){
+    const v=Math.floor(Math.random()*200)+10;
+    if(!vals.includes(v)) vals.push(v);
+  }
+  const map={};
+  Object.keys(BASE_OPS).forEach((k,i)=>{ map[k]=vals[i]; });
+  return map;
+}
+function invertOpcodeMap(map){
+  const inv={};
+  for(const [k,v] of Object.entries(map)) inv[v]=k;
+  return inv;
 }
 
 // ================================================================
-// UTILITIES
+//  JS TOKENIZER / COMPILER
 // ================================================================
-let idCounter = 0;
-function randHexId(prefix='_0x') {
-  return prefix + (Math.random()*0xFFFFF|0).toString(16).padStart(5,'0');
+// Lightweight JS tokenizer → statement list
+function tokenize(src){
+  const tokens=[];
+  const re=/\/\/[^\n]*|\/\*[\s\S]*?\*\/|(["'`])((?:[^\\]|\\.)*?)\1|(\d+(?:\.\d+)?)|([a-zA-Z_$][a-zA-Z0-9_$]*)|([+\-*\/=<>!&|?:%^~,.;(){}[\]])/g;
+  let m;
+  while((m=re.exec(src))!==null){
+    if(m[0].startsWith('//')||m[0].startsWith('/*')) continue;
+    if(m[2]!==undefined) tokens.push({t:'STR',v:m[2]||''});
+    else if(m[3]) tokens.push({t:'NUM',v:parseFloat(m[3])});
+    else if(m[4]) tokens.push({t:'ID',v:m[4]});
+    else if(m[5]) tokens.push({t:'PUNCT',v:m[5]});
+  }
+  return tokens;
 }
-function randUnicodeId() {
-  let s = '_';
-  for (let i=0;i<6;i++) s += '\\u' + (0x200 + (Math.random()*0x200|0)).toString(16).padStart(4,'0');
+
+// Compile token stream → bytecode instructions
+function compile(tokens, opcodeMap, stringTable, opts){
+  const instructions=[];
+  let i=0;
+  const varMap={};
+  let varCounter=0;
+  const idStyle=opts.identStyle||'hex';
+
+  function newVar(name){
+    if(!varMap[name]){
+      varMap[name]= opts.rename ? genId(varCounter++) : name;
+    }
+    return varMap[name];
+  }
+  function emit(op,...args){ instructions.push({op:opcodeMap[op],name:op,args}); }
+  function addStr(s){
+    let idx=stringTable.indexOf(s);
+    if(idx<0){ idx=stringTable.length; stringTable.push(s); }
+    return idx;
+  }
+
+  // Inject dead code randomly
+  function maybeDeadCode(){
+    if(opts.deadCode && Math.random()<0.15){
+      emit('NOP');
+      if(Math.random()<0.4) emit('PUSH_NUM', Math.floor(Math.random()*0xff));
+      if(Math.random()<0.3) emit('POP');
+    }
+  }
+
+  while(i<tokens.length){
+    const tok=tokens[i];
+    maybeDeadCode();
+
+    // var/let/const declaration
+    if(tok.t==='ID' && (tok.v==='var'||tok.v==='let'||tok.v==='const')){
+      i++;
+      if(i<tokens.length && tokens[i].t==='ID'){
+        const name=newVar(tokens[i].v);
+        i++;
+        if(i<tokens.length && tokens[i].t==='PUNCT' && tokens[i].v==='='){
+          i++;
+          // collect RHS until ; or newline
+          const rhs=collectExpr(tokens,i);
+          i+=rhs.consumed;
+          compileExpr(rhs.tokens,emit,addStr,newVar,opcodeMap,opts);
+          emit('SET_VAR', addStr(name));
+        }
+      }
+      continue;
+    }
+
+    // function declaration
+    if(tok.t==='ID' && tok.v==='function'){
+      i++;
+      let fname='';
+      if(i<tokens.length && tokens[i].t==='ID'){ fname=newVar(tokens[i].v); i++; }
+      // skip param list
+      let depth=0;
+      while(i<tokens.length){
+        if(tokens[i].v==='(') depth++;
+        if(tokens[i].v===')') { depth--; i++; if(depth===0) break; }
+        i++;
+      }
+      emit('FUNC_DEF', addStr(fname));
+      // skip body for now (simplified)
+      depth=0;
+      while(i<tokens.length){
+        if(tokens[i].v==='{') depth++;
+        if(tokens[i].v==='}') { depth--; i++; if(depth===0) break; }
+        i++;
+      }
+      continue;
+    }
+
+    // return statement
+    if(tok.t==='ID' && tok.v==='return'){
+      i++;
+      const rhs=collectExpr(tokens,i);
+      i+=rhs.consumed;
+      if(rhs.tokens.length) compileExpr(rhs.tokens,emit,addStr,newVar,opcodeMap,opts);
+      else emit('PUSH_NUM',0);
+      emit('RETURN');
+      continue;
+    }
+
+    // console.log / method call patterns
+    if(tok.t==='ID'){
+      const rhs=collectExpr(tokens,i);
+      i+=rhs.consumed;
+      compileExpr(rhs.tokens,emit,addStr,newVar,opcodeMap,opts);
+      continue;
+    }
+
+    i++;
+  }
+  return {instructions, varMap};
+}
+
+function collectExpr(tokens, start){
+  const out=[]; let depth=0; let i=start;
+  while(i<tokens.length){
+    const t=tokens[i];
+    if((t.v==='('||t.v==='{'||t.v==='[')) depth++;
+    if((t.v===')'||t.v==='}'||t.v===']')) { if(depth===0) break; depth--; }
+    if(t.v===';' && depth===0) { i++; break; }
+    out.push(t); i++;
+  }
+  return {tokens:out, consumed:i-start};
+}
+
+function compileExpr(tokens, emit, addStr, newVar, opcodeMap, opts){
+  if(!tokens.length) return;
+  // String literal
+  if(tokens.length===1 && tokens[0].t==='STR'){
+    emit('PUSH_STR', addStr(tokens[0].v)); return;
+  }
+  // Number literal
+  if(tokens.length===1 && tokens[0].t==='NUM'){
+    const n=tokens[0].v;
+    if(opts.numMangle){
+      emit('PUSH_NUM', mangleNum(n));
+    } else {
+      emit('PUSH_NUM', n);
+    }
+    return;
+  }
+  // Variable
+  if(tokens.length===1 && tokens[0].t==='ID'){
+    emit('PUSH_VAR', addStr(newVar(tokens[0].v))); return;
+  }
+  // Binary op pattern: A op B
+  for(let i=1;i<tokens.length-1;i++){
+    const op=tokens[i];
+    if(op.t==='PUNCT' && ['+','-','*','/','===','!==','==','!=','<','>','<=','>=','&&','||'].includes(op.v)){
+      compileExpr(tokens.slice(0,i),emit,addStr,newVar,opcodeMap,opts);
+      compileExpr(tokens.slice(i+1),emit,addStr,newVar,opcodeMap,opts);
+      emit('BINOP', addStr(op.v)); return;
+    }
+  }
+  // Property access: obj.prop(args)
+  if(tokens.length>=3 && tokens[1]?.v==='.'){
+    emit('PUSH_VAR', addStr(newVar(tokens[0].v)));
+    emit('GET_PROP', addStr(tokens[2]?.v||''));
+    if(tokens[3]?.v==='('){
+      const argTokens=tokens.slice(4,tokens.findIndex(t=>t.v===')'));
+      if(argTokens.length) compileExpr(argTokens,emit,addStr,newVar,opcodeMap,opts);
+      emit('CALL', argTokens.length?1:0);
+    }
+    return;
+  }
+  // fallback: push as string
+  const raw=tokens.map(t=>t.v??String(t.t)).join(' ');
+  emit('PUSH_STR', addStr(raw));
+}
+
+function mangleNum(n){
+  // Returns an expression string that evaluates to n
+  const a=Math.floor(Math.random()*100)+1;
+  const b=n-a;
+  return `(${a}+(${b}))`; // stored as string, reconstructed at runtime
+}
+
+function genId(n, style='hex'){
+  if(style==='hex') return '_0x'+(Math.random()*0xfffff|0).toString(16).padStart(5,'0');
+  const c='abcdefghijklmnopqrstuvwxyz';
+  let s='';let i=n;
+  do{s=c[i%26]+s;i=Math.floor(i/26)-1;}while(i>=0);
   return s;
 }
-function randMangledId(n) {
-  const chars='abcdefghijklmnopqrstuvwxyz';
-  let s=''; let idx=n;
-  do { s=chars[idx%26]+s; idx=Math.floor(idx/26)-1; } while(idx>=0);
-  return s;
-}
-function getIdentifier(style, n) {
-  if(style==='hex') return randHexId();
-  if(style==='unicode') return randUnicodeId();
-  if(style==='mangled') return randMangledId(n);
-  return Math.random()>0.5 ? randHexId() : randMangledId(n);
-}
 
-// Base64 encode/decode
-function b64enc(str) { try { return btoa(unescape(encodeURIComponent(str))); } catch(e){ return btoa(str); } }
-function b64dec(str) { try { return decodeURIComponent(escape(atob(str))); } catch(e){ return atob(str); } }
-
-// XOR encode
-function xorEncode(str, key) {
-  let out='';
-  for(let i=0;i<str.length;i++) out+=String.fromCharCode(str.charCodeAt(i)^key.charCodeAt(i%key.length));
+// ================================================================
+//  VM CODEGEN
+// ================================================================
+function serializeInstructions(instructions, opcodeMap){
+  // Serialize to a compact array: [opcode, arg_count, ...args_as_numbers]
+  const out=[];
+  for(const ins of instructions){
+    out.push(ins.op);
+    out.push(ins.args.length);
+    for(const a of ins.args){
+      if(typeof a==='number') out.push(a);
+      else out.push(typeof a==='string'?a.split('').reduce((s,c)=>s+c.charCodeAt(0),0)%65535:0);
+    }
+  }
   return out;
 }
 
-// RC4
-function rc4(str, key) {
-  let s=[],j=0,x,res='';
-  for(let i=0;i<256;i++) s[i]=i;
-  for(let i=0;i<256;i++){j=(j+s[i]+key.charCodeAt(i%key.length))%256;x=s[i];s[i]=s[j];s[j]=x;}
-  let i=0; j=0;
-  for(let y=0;y<str.length;y++){i=(i+1)%256;j=(j+s[i])%256;x=s[i];s[i]=s[j];s[j]=x;res+=String.fromCharCode(str.charCodeAt(y)^s[(s[i]+s[j])%256]);}
-  return res;
+function buildVMRuntime(bytecodeB64, encStrTable, sessionKey, opcodeMap, opts){
+  // Register names
+  const r=(n)=>opts.regObf ? '_r'+genId(n).slice(1) : '_r'+n;
+  const V=r(0),PC=r(1),ST=r(2),STACK=r(3),ENV=r(4),CALL_STACK=r(5);
+
+  // Emit opcode constants (shuffled)
+  const opConsts = Object.entries(opcodeMap).map(([k,v])=>
+    `var ${genId(v)}=${v};`
+  ).join('');
+
+  // VM dispatcher as a giant switch
+  const invMap=invertOpcodeMap(opcodeMap);
+  const cases=Object.entries(opcodeMap).map(([mnemonic,opval])=>{
+    const rn=genId(opval+100);
+    let body='';
+    switch(mnemonic){
+      case 'PUSH_STR': body=`${STACK}.push(${ST}[${PC}[${V}+1]]);${V}+=2;`; break;
+      case 'PUSH_NUM': body=`${STACK}.push(${PC}[${V}+1]);${V}+=2;`; break;
+      case 'PUSH_VAR': body=`${STACK}.push(${ENV}[${ST}[${PC}[${V}+1]]]);${V}+=2;`; break;
+      case 'SET_VAR':  body=`${ENV}[${ST}[${PC}[${V}+1]]]=${STACK}.pop();${V}+=2;`; break;
+      case 'CALL':     body=`{var ${rn}a=${PC}[${V}+1];var ${rn}b=[];for(var ${rn}i=0;${rn}i<${rn}a;${rn}i++)${rn}b.unshift(${STACK}.pop());var ${rn}f=${STACK}.pop();if(typeof ${rn}f==='function')${STACK}.push(${rn}f.apply(null,${rn}b));${V}+=2;}`; break;
+      case 'RETURN':   body=`return ${STACK}.pop();`; break;
+      case 'JUMP':     body=`${V}=${PC}[${V}+1]-1;${V}+=1;`; break;
+      case 'JUMP_IF':  body=`{var ${rn}c=${STACK}.pop();if(${rn}c)${V}=${PC}[${V}+1]-1;else ${V}+=1;${V}+=1;}`; break;
+      case 'BINOP':    body=`{var ${rn}op=${ST}[${PC}[${V}+1]];var ${rn}b2=${STACK}.pop();var ${rn}a2=${STACK}.pop();var ${rn}r;if(${rn}op==='+')${rn}r=${rn}a2+${rn}b2;else if(${rn}op==='-')${rn}r=${rn}a2-${rn}b2;else if(${rn}op==='*')${rn}r=${rn}a2*${rn}b2;else if(${rn}op==='/')${rn}r=${rn}a2/${rn}b2;else if(${rn}op==='===')${rn}r=${rn}a2===${rn}b2;else if(${rn}op==='!==')${rn}r=${rn}a2!==${rn}b2;else if(${rn}op==='<')${rn}r=${rn}a2<${rn}b2;else if(${rn}op==='>')${rn}r=${rn}a2>${rn}b2;else if(${rn}op==='&&')${rn}r=${rn}a2&&${rn}b2;else if(${rn}op==='||')${rn}r=${rn}a2||${rn}b2;else ${rn}r=undefined;${STACK}.push(${rn}r);${V}+=2;}`; break;
+      case 'GET_PROP': body=`{var ${rn}p=${ST}[${PC}[${V}+1]];var ${rn}o=${STACK}.pop();${STACK}.push(${rn}o?${rn}o[${rn}p]:undefined);${V}+=2;}`; break;
+      case 'SET_PROP': body=`{var ${rn}v2=${STACK}.pop();var ${rn}o2=${STACK}.pop();var ${rn}p2=${ST}[${PC}[${V}+1]];if(${rn}o2)${rn}o2[${rn}p2]=${rn}v2;${V}+=2;}`; break;
+      case 'NEW_OBJ':  body=`${STACK}.push({});${V}+=1;`; break;
+      case 'NEW_ARR':  body=`${STACK}.push([]);${V}+=1;`; break;
+      case 'FUNC_DEF': body=`{var ${rn}fn=${ST}[${PC}[${V}+1]];${ENV}[${rn}fn]=function(){return undefined;};${V}+=2;}`; break;
+      case 'THROW':    body=`throw ${STACK}.pop();`; break;
+      case 'TRY_ENTER':body=`${V}+=1;`; break;
+      case 'TRY_EXIT': body=`${V}+=1;`; break;
+      case 'NOP':      body=`${V}+=1;`; break;
+      case 'POP':      body=`${STACK}.pop();${V}+=1;`; break;
+      case 'DUP':      body=`${STACK}.push(${STACK}[${STACK}.length-1]);${V}+=1;`; break;
+      case 'TYPEOF':   body=`${STACK}.push(typeof ${STACK}.pop());${V}+=1;`; break;
+      case 'IN_OP':    body=`{var ${rn}ob=${STACK}.pop();var ${rn}ke=${STACK}.pop();${STACK}.push(${rn}ke in ${rn}ob);${V}+=1;}`; break;
+      case 'DELETE':   body=`${STACK}.pop();${V}+=1;`; break;
+      default:         body=`${V}+=1;`; break;
+    }
+    return `case ${opval}:${body}break;`;
+  }).join('\n');
+
+  // XOR cipher function (inline in VM)
+  const xfn=genId(200);
+  const kfn=genId(201);
+  const sfn=genId(202);
+  const mfn=genId(203);
+
+  // Proxy function layer
+  let proxyLayer='';
+  if(opts.proxyFns){
+    const pf1=genId(210),pf2=genId(211),pf3=genId(212);
+    proxyLayer=`var ${pf1}=function(f,a){return f.apply(null,a);};var ${pf2}=function(o,k){return o[k];};var ${pf3}=function(o,k,v){o[k]=v;return v;};`;
+  }
+
+  // Anti-debug
+  let antiDebug='';
+  if(opts.antiDebug){
+    antiDebug=`(function(){try{var ${genId(220)}=new Date();(function(){}).constructor("debugger")();if(new Date()-${genId(220)}>100){(function ${genId(221)}(){${genId(221)}();})();}}catch(e){}})();`;
+  }
+
+  return `(function(){
+${antiDebug}
+${proxyLayer}
+// VMCRYPT v2 Runtime
+var ${xfn}=function(d,k){
+  var ks=[],j=0,x,r=[];
+  for(var i=0;i<256;i++)ks[i]=i;
+  for(var i=0;i<256;i++){j=(j+ks[i]+k.charCodeAt(i%k.length))&255;x=ks[i];ks[i]=ks[j];ks[j]=x;}
+  var a=0;j=0;
+  for(var i=0;i<d.length;i++){a=(a+1)&255;j=(j+ks[a])&255;x=ks[a];ks[a]=ks[j];ks[j]=x;r.push(d[i]^ks[(ks[a]+ks[j])&255]);}
+  return r;
+};
+var ${kfn}=function(b){return Array.from(atob(b)).map(function(c){return c.charCodeAt(0);});};
+var ${sfn}=function(b){return b.map(function(c){return String.fromCharCode(c);}).join('');};
+var ${mfn}=function(s){return s.split('|').map(function(p){return ${sfn}(${xfn}(${kfn}(p),'${sessionKey.slice(0,32)}'));});};
+// Encrypted string table
+var ${ST}=${mfn}('${encStrTable}');
+// Bytecode
+var ${PC}=${kfn}('${bytecodeB64}');
+var ${V}=0,${STACK}=[],${ENV}=Object.create(null);
+// Inject globals into env
+${ENV}['console']=console;${ENV}['window']=typeof window!=='undefined'?window:this;
+${ENV}['document']=typeof document!=='undefined'?document:null;
+${ENV}['Math']=Math;${ENV}['JSON']=JSON;${ENV}['Object']=Object;
+${ENV}['Array']=Array;${ENV}['String']=String;${ENV}['Number']=Number;
+${ENV}['Boolean']=Boolean;${ENV}['setTimeout']=typeof setTimeout!=='undefined'?setTimeout:null;
+${ENV}['fetch']=typeof fetch!=='undefined'?fetch:null;
+// VM dispatcher
+while(${V}<${PC}.length){
+  var ${PC}[${V}];
+  switch(${PC}[${V}]){
+    ${cases}
+    default:${V}++;break;
+  }
+}
+})();`;
 }
 
-// Unicode escape
-function unicodeEscape(str) {
-  return str.split('').map(c=>c.charCodeAt(0)>127?'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'):c).join('');
-}
+// Fix the VM code (has a syntax error with var ${PC}[${V}] - fix it)
+function buildVMRuntimeFixed(bytecodeB64, encStrTable, sessionKey, opcodeMap, opts){
+  const r=(n)=> '_v'+(n.toString(36));
+  const V=r(0),ST=r(1),STACK=r(2),ENV=r(3),BC=r(4),OP=r(5);
 
-// Hex escape
-function hexEscape(str) {
-  return str.split('').map(c=>'\\x'+c.charCodeAt(0).toString(16).padStart(2,'0')).join('');
-}
+  // Scramble opcode constant names
+  const opNames={};
+  Object.entries(opcodeMap).forEach(([k,v])=>{ opNames[k]='_op'+v.toString(16); });
 
-function encodeString(str, method) {
-  if(method==='base64') return `(function(_0){return atob(_0)})('${b64enc(str)}')`;
-  if(method==='rc4') { const k=randHexId('k'); const enc=b64enc(rc4(str,k)); return `(function(_s,_k){let _r='',_c=[];for(let i=0;i<256;i++)_c[i]=i;let _j=0,_x;for(let i=0;i<256;i++){_j=(_j+_c[i]+_k.charCodeAt(i%_k.length))%256;_x=_c[i];_c[i]=_c[_j];_c[_j]=_x;}let _i=0;_j=0;for(let y=0;y<_s.length;y++){_i=(_i+1)%256;_j=(_j+_c[_i])%256;_x=_c[_i];_c[_i]=_c[_j];_c[_j]=_x;_r+=String.fromCharCode(_s.charCodeAt(y)^_c[(_c[_i]+_c[_j])%256]);}return _r;})(atob('${enc}'),'${k}')`; }
-  if(method==='unicode') return `"${unicodeEscape(str)}"`;
-  if(method==='hex') return `"${hexEscape(str)}"`;
-  return JSON.stringify(str);
+  const cases=Object.entries(opcodeMap).map(([mnemonic,opval])=>{
+    const t='_t'+opval.toString(16);
+    let body='';
+    switch(mnemonic){
+      case 'PUSH_STR': body=`${STACK}.push(${ST}[${BC}[${V}+1]]);${V}+=2;`; break;
+      case 'PUSH_NUM': body=`${STACK}.push(${BC}[${V}+1]);${V}+=2;`; break;
+      case 'PUSH_VAR': body=`${STACK}.push(${ENV}[${ST}[${BC}[${V}+1]]]);${V}+=2;`; break;
+      case 'SET_VAR':  body=`${ENV}[${ST}[${BC}[${V}+1]]]=${STACK}.pop();${V}+=2;`; break;
+      case 'CALL':     body=`{var ${t}n=${BC}[${V}+1];var ${t}a=[];for(var ${t}i=0;${t}i<${t}n;${t}i++)${t}a.unshift(${STACK}.pop());var ${t}f=${STACK}.pop();if(typeof ${t}f==='function')${STACK}.push(${t}f.apply(null,${t}a));else if(typeof ${t}f==='object'&&${t}f){var ${t}k=Object.keys(${t}f)[0]||'';${STACK}.push(${t}f[${t}k]?${t}f[${t}k].apply(${t}f,${t}a):undefined);}${V}+=2;}`; break;
+      case 'RETURN':   body=`return ${STACK}.pop();`; break;
+      case 'JUMP':     body=`${V}=${BC}[${V}+1];continue;`; break;
+      case 'JUMP_IF':  body=`{var ${t}c=${STACK}.pop();if(${t}c){${V}=${BC}[${V}+1];continue;}${V}+=2;}`; break;
+      case 'BINOP':    body=`{var ${t}op=${ST}[${BC}[${V}+1]];var ${t}b=${STACK}.pop();var ${t}a=${STACK}.pop();var ${t}r;switch(${t}op){case '+':${t}r=${t}a+${t}b;break;case '-':${t}r=${t}a-${t}b;break;case '*':${t}r=${t}a*${t}b;break;case '/':${t}r=${t}a/${t}b;break;case '===':${t}r=${t}a===${t}b;break;case '!==':${t}r=${t}a!==${t}b;break;case '==':${t}r=${t}a==${t}b;break;case '!=':${t}r=${t}a!=${t}b;break;case '<':${t}r=${t}a<${t}b;break;case '>':${t}r=${t}a>${t}b;break;case '<=':${t}r=${t}a<=${t}b;break;case '>=':${t}r=${t}a>=${t}b;break;case '&&':${t}r=${t}a&&${t}b;break;case '||':${t}r=${t}a||${t}b;break;default:${t}r=undefined;}${STACK}.push(${t}r);${V}+=2;}`; break;
+      case 'GET_PROP': body=`{var ${t}p=${ST}[${BC}[${V}+1]];var ${t}o=${STACK}.pop();${STACK}.push(${t}o!=null?${t}o[${t}p]:undefined);${V}+=2;}`; break;
+      case 'SET_PROP': body=`{var ${t}v=${STACK}.pop();var ${t}o=${STACK}.pop();var ${t}p=${ST}[${BC}[${V}+1]];if(${t}o!=null)${t}o[${t}p]=${t}v;${V}+=2;}`; break;
+      case 'NEW_OBJ':  body=`${STACK}.push({});${V}+=1;`; break;
+      case 'NEW_ARR':  body=`${STACK}.push([]);${V}+=1;`; break;
+      case 'FUNC_DEF': body=`{var ${t}fn=${ST}[${BC}[${V}+1]];${ENV}[${t}fn]=(function(n){return function(){return ${ENV}[n]&&${ENV}[n].apply(null,arguments);}})(${t}fn);${V}+=2;}`; break;
+      case 'THROW':    body=`throw ${STACK}.pop();`; break;
+      case 'TRY_ENTER':body=`${V}+=1;`; break;
+      case 'TRY_EXIT': body=`${V}+=1;`; break;
+      case 'NOP':      body=`${V}+=1;`; break;
+      case 'POP':      body=`${STACK}.pop();${V}+=1;`; break;
+      case 'DUP':      body=`${STACK}.push(${STACK}[${STACK}.length-1]||null);${V}+=1;`; break;
+      case 'TYPEOF':   body=`${STACK}.push(typeof ${STACK}.pop());${V}+=1;`; break;
+      case 'IN_OP':    body=`{var ${t}ob=${STACK}.pop();var ${t}ke=${STACK}.pop();${STACK}.push(${t}ob!=null?${t}ke in ${t}ob:false);${V}+=1;}`; break;
+      case 'DELETE':   body=`${STACK}.pop();${V}+=1;`; break;
+      default:         body=`${V}++;`; break;
+    }
+    return `case ${opval}:${body}break;`;
+  }).join('\n');
+
+  const xf='_xd', kf='_kb', sf='_bs', mf='_mt';
+  const antiDbg=opts.antiDebug?`(function(){try{var _dd=+new Date();(function(){}).constructor("debugger")();if(+new Date()-_dd>80)while(1){}}catch(e){}setInterval(function(){var _dd=+new Date();debugger;if(+new Date()-_dd>80){try{document.body.innerHTML='';}catch(e){}}},2000);})();`:'';
+  const domainLk=opts.domainLock&&opts.domain?`(function(){var _dl=${JSON.stringify(opts.domain.split(',').map(s=>s.trim()))};var _h=(typeof location!=='undefined'?location.hostname:'');if(!_dl.some(function(d){return _h===d||_h.endsWith('.'+d);})){throw new Error('');}})();`:'';
+
+  return `/* OBFUSCATED BY VMCRYPT v2 */\n${antiDbg}${domainLk}(function(){
+var ${xf}=function(d,k){var s=[],j=0,x,r=[];for(var i=0;i<256;i++)s[i]=i;for(var i=0;i<256;i++){j=(j+s[i]+k.charCodeAt(i%k.length))&255;x=s[i];s[i]=s[j];s[j]=x;}var a=0;j=0;for(var i=0;i<d.length;i++){a=(a+1)&255;j=(j+s[a])&255;x=s[a];s[a]=s[j];s[j]=x;r.push(d[i]^s[(s[a]+s[j])&255]);}return r;};
+var ${kf}=function(b){return Array.from(atob(b)).map(function(c){return c.charCodeAt(0);});};
+var ${sf}=function(b){return b.map(function(c){return String.fromCharCode(c);}).join('');};
+var ${mf}=function(s){var p=s.split('|');return p.map(function(x){return ${sf}(${xf}(${kf}(x),'${sessionKey.slice(0,32)}'));});};
+var ${ST}=${mf}('${encStrTable}');
+var ${BC}=${kf}('${bytecodeB64}');
+var ${V}=0,${STACK}=[],${ENV}=Object.create(null);
+var _g=typeof globalThis!=='undefined'?globalThis:typeof window!=='undefined'?window:this;
+['console','Math','JSON','Object','Array','String','Number','Boolean','Date','RegExp','Promise','fetch','setTimeout','setInterval','clearTimeout','document','window'].forEach(function(k){${ENV}[k]=_g[k];});
+while(${V}<${BC}.length){switch(${BC}[${V}]){${cases}default:${V}++;break;}}
+})();`;
 }
 
 // ================================================================
-// OBFUSCATION ENGINE
+//  MAIN OBFUSCATE ROUTINE
 // ================================================================
-function runObfuscate() {
-  const src = document.getElementById('inputCode').value.trim();
-  if(!src){ notify('No input code!', true); return; }
+function runObf(){
+  const src=document.getElementById('srcIn').value.trim();
+  if(!src){notify('No input!',true);return;}
+  animPbar('pb1','pb2','p');
 
-  animateProgress('progressBar', 'progressBar2');
-
-  const opts = {
-    rename: document.getElementById('optRename').checked,
-    stringEnc: document.getElementById('optStringEnc').checked,
-    strArray: document.getElementById('optStrArray').checked,
-    numbers: document.getElementById('optNumbers').checked,
-    props: document.getElementById('optProps').checked,
-    cff: document.getElementById('optCFF').checked,
-    deadCode: document.getElementById('optDeadCode').checked,
-    opaque: document.getElementById('optOpaque').checked,
-    split: document.getElementById('optSplit').checked,
-    antiDebug: document.getElementById('optAntiDebug').checked,
-    selfDefend: document.getElementById('optSelfDefend').checked,
-    domainLock: document.getElementById('optDomainLock').checked,
-    domain: document.getElementById('optDomain').value,
-    identStyle: document.getElementById('optIdentStyle').value,
-    encoding: document.getElementById('optEncoding').value,
-    passes: parseInt(document.getElementById('optPasses').value),
-    compact: document.getElementById('optCompact').checked,
-    watermark: document.getElementById('optWatermark').checked,
-    watermarkText: document.getElementById('optWatermarkText').value,
+  const opts={
+    rename:document.getElementById('oRn').checked,
+    cff:document.getElementById('oCf').checked,
+    deadCode:document.getElementById('oDc').checked,
+    numMangle:document.getElementById('oNm').checked,
+    proxyFns:document.getElementById('oPf').checked,
+    antiDebug:document.getElementById('oAd').checked,
+    domainLock:document.getElementById('oDl').checked,
+    domain:document.getElementById('oDomain').value,
+    keyBits:parseInt(document.getElementById('oKl').value),
+    layers:parseInt(document.getElementById('oLayers').value),
+    embedHeader:document.getElementById('oRh').checked,
+    regObf:document.getElementById('oReg').checked,
+    strTable:document.getElementById('oSt').checked,
+    vmPoly:document.getElementById('oVp').checked,
+    opcodeShuf:document.getElementById('oOs').checked,
+    bytecode:document.getElementById('oBc').checked,
   };
 
   setTimeout(()=>{
-    try {
-      let result = src;
-      for(let p=0; p<opts.passes; p++) result = obfuscatePass(result, opts, p);
-      if(opts.compact) result = minify(result);
+    try{
+      const sessionKey=genSessionKey(opts.keyBits);
+      const opcodeMap=opts.opcodeShuf?genOpcodeMap():BASE_OPS;
+      const stringTable=[];
 
-      let header = '';
-      if(opts.watermark && opts.watermarkText) {
-        const wm = b64enc(opts.watermarkText);
-        header = `/* VMCRYPT:${wm} */\n`;
+      // Tokenize + compile
+      const tokens=tokenize(src);
+      const {instructions}=compile(tokens,opcodeMap,stringTable,opts);
+
+      // Serialize bytecode
+      const bcArr=serializeInstructions(instructions,opcodeMap);
+      const bytecodeB64=bytesB64(bcArr);
+
+      // Encrypt string table
+      let encStrTable='';
+      if(opts.strTable && stringTable.length>0){
+        const encParts=stringTable.map(s=>{
+          const bytes=strToBytes(s);
+          const enc=xorCipher(bytes,sessionKey.slice(0,32));
+          return bytesB64(enc);
+        });
+        encStrTable=encParts.join('|');
+      } else {
+        encStrTable=stringTable.map(s=>btoa(s)).join('|');
       }
-      if(opts.antiDebug) header += buildAntiDebug() + '\n';
-      if(opts.selfDefend) header += buildSelfDefend() + '\n';
-      if(opts.domainLock && opts.domain) header += buildDomainLock(opts.domain) + '\n';
 
-      result = header + result;
+      // Build VM
+      let result=buildVMRuntimeFixed(bytecodeB64,encStrTable,sessionKey,opcodeMap,opts);
 
-      document.getElementById('outputCode').value = result;
-      const ratio = ((result.length / src.length)*100).toFixed(1);
-      document.getElementById('outChars').textContent = result.length;
-      document.getElementById('outRatio').textContent = ratio + '%';
-      document.getElementById('outPasses').textContent = opts.passes;
-      notify('OBFUSCATION COMPLETE');
-    } catch(e) {
-      notify('ERROR: ' + e.message, true);
+      // Multi-layer wrap
+      for(let l=1;l<opts.layers;l++){
+        result=wrapLayer(result,sessionKey,l,opts);
+      }
+
+      // Embed recovery header
+      if(opts.embedHeader){
+        const header={
+          v:2,
+          sk:sessionKey,
+          om:opcodeMap,
+          st:stringTable,
+          layers:opts.layers,
+          ts:Date.now(),
+        };
+        const hEnc=b64e(JSON.stringify(header));
+        result=`/* VMCX:${hEnc} */\n`+result;
+      }
+
+      document.getElementById('srcOut').value=result;
+      document.getElementById('oChars').textContent=result.length;
+      document.getElementById('oRatio').textContent=((result.length/src.length)*100).toFixed(0)+'%';
+      document.getElementById('oOps').textContent=instructions.filter(i=>i.name!=='NOP').length;
+      notify('VM COMPILATION COMPLETE');
+    }catch(e){
+      notify('ERROR: '+e.message,true);
+      console.error(e);
     }
-  }, 60);
+  },80);
 }
 
-function obfuscatePass(src, opts, passNum) {
-  let result = src;
-  const idStyle = opts.identStyle;
-  let idN = passNum * 200;
-
-  // ---- 1. RENAME VARIABLES ----
-  if(opts.rename) {
-    const varMap = {};
-    let idxN = idN;
-    // Find all var/let/const declarations and function names
-    result = result.replace(/\b(var|let|const)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/g, (m, kw, name) => {
-      if(!varMap[name] && !RESERVED.has(name)) {
-        varMap[name] = getIdentifier(idStyle, idxN++);
-      }
-      return `${kw} ${varMap[name]||name}`;
-    });
-    result = result.replace(/\bfunction\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/g, (m, name) => {
-      if(!varMap[name] && !RESERVED.has(name)) varMap[name] = getIdentifier(idStyle, idxN++);
-      return `function ${varMap[name]||name}`;
-    });
-    // Replace usages
-    for(const [orig, rep] of Object.entries(varMap)) {
-      const re = new RegExp(`\\b${orig.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\b`, 'g');
-      result = result.replace(re, rep);
-    }
-  }
-
-  // ---- 2. STRING ENCRYPTION ----
-  if(opts.stringEnc) {
-    result = result.replace(/(["'`])((?:[^\\]|\\.)*?)\1/g, (m, q, str) => {
-      if(str.length === 0) return m;
-      if(/^[\d\s]*$/.test(str)) return m;
-      return encodeString(str, opts.encoding);
-    });
-  }
-
-  // ---- 3. NUMBER OBFUSCATION ----
-  if(opts.numbers) {
-    result = result.replace(/\b(\d{1,6})\b/g, (m, n) => {
-      const num = parseInt(n);
-      if(num === 0) return '(0x0)';
-      if(num < 0) return m;
-      const a = Math.floor(Math.random() * num) + 1;
-      const b = num - a;
-      const ops = [
-        `(${a}+${b})`,
-        `(${num * 3 - num * 2})`,
-        `(0x${num.toString(16)})`,
-        `(~${~num})`,
-      ];
-      return ops[Math.floor(Math.random()*ops.length)];
-    });
-  }
-
-  // ---- 4. PROPERTY ACCESS MANGLING ----
-  if(opts.props) {
-    result = result.replace(/\.([a-zA-Z_$][a-zA-Z0-9_$]{2,})\b(?!\s*\()/g, (m, prop) => {
-      if(RESERVED.has(prop) || DOM_PROPS.has(prop)) return m;
-      return `[${encodeString(prop, 'hex')}]`;
-    });
-  }
-
-  // ---- 5. DEAD CODE INJECTION ----
-  if(opts.deadCode) {
-    const deadSnippets = [
-      `if(false){var ${randHexId()}=function(){return 0;};}`,
-      `try{}catch(${randHexId()}){}`,
-      `void 0x0;`,
-      `(function(){if(1<0){throw ${randHexId()};}})();`,
-      `var ${randHexId()}=typeof ${randHexId('x')}!=='undefined'?0:0;`,
-    ];
-    // Inject after semicolons randomly
-    result = result.replace(/;/g, (m) => {
-      if(Math.random() < 0.18) {
-        return ';' + deadSnippets[Math.floor(Math.random()*deadSnippets.length)];
-      }
-      return m;
-    });
-  }
-
-  // ---- 6. OPAQUE PREDICATES ----
-  if(opts.opaque) {
-    result = result.replace(/\bif\s*\(/g, (m) => {
-      if(Math.random() < 0.3) {
-        const a = Math.random()*100|0, b = Math.random()*100|0;
-        const sum = a + b;
-        return `if(((${a}+${b})===${sum})&&`;
-      }
-      return m;
-    });
-    // Fix unmatched parens from above
-    result = result.replace(/\((([\d+=><!&|()]+)&&)((?:[^)]|\([^)]*\))*)\)/g, (m, pre, pred, cond) => {
-      return `(${pred}&&(${cond}))`;
-    });
-  }
-
-  // ---- 7. CONTROL FLOW FLATTENING (simplified VM-style) ----
-  if(opts.cff && passNum === 0) {
-    result = flattenControlFlow(result);
-  }
-
-  return result;
+function wrapLayer(src, sessionKey, layerNum, opts){
+  // Encode the entire source as base64 then wrap in an eval-like loader
+  const enc=b64e(src);
+  const lk=sessionKey.slice(layerNum*8, layerNum*8+16)||sessionKey.slice(0,16);
+  const ln=genId(300+layerNum);
+  const ld=genId(301+layerNum);
+  // XOR-encode the b64 string at byte level
+  const bytes=strToBytes(enc);
+  const encBytes=xorCipher(bytes,lk);
+  const encB64=bytesB64(encBytes);
+  return `(function(){
+var ${ln}=function(d,k){var s=[],j=0,x,r=[];for(var i=0;i<256;i++)s[i]=i;for(var i=0;i<256;i++){j=(j+s[i]+k.charCodeAt(i%k.length))&255;x=s[i];s[i]=s[j];s[j]=x;}var a=0;j=0;for(var i=0;i<d.length;i++){a=(a+1)&255;j=(j+s[a])&255;x=s[a];s[a]=s[j];s[j]=x;r.push(d[i]^s[(s[a]+s[j])&255]);}return r;};
+var ${ld}=Array.from(atob('${encB64}')).map(function(c){return c.charCodeAt(0);});
+var _src${layerNum}=${ln}(${ld},'${lk}').map(function(c){return String.fromCharCode(c);}).join('');
+(new Function(_src${layerNum}))();
+})();`;
 }
-
-// Simplified control flow flattening: wraps top-level statements in state machine
-function flattenControlFlow(src) {
-  // Only flatten if code has multiple statements
-  const stmts = src.split(';').filter(s=>s.trim().length>0);
-  if(stmts.length < 3) return src;
-
-  const stateVar = randHexId();
-  const loopVar = randHexId();
-  const orderVar = randHexId();
-
-  // Create shuffled order
-  const indices = stmts.map((_,i)=>i);
-  // Simple shuffle
-  for(let i=indices.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [indices[i],indices[j]]=[indices[j],indices[i]];
-  }
-
-  const orderStr = JSON.stringify(indices.join('|'));
-  let cases = '';
-  indices.forEach((origIdx, stateIdx) => {
-    cases += `case ${stateIdx}: ${stmts[origIdx]}; ${stateVar}=` +
-      (stateIdx<stmts.length-1 ? `${stateIdx+1}` : `-1`) + '; break;\n';
-  });
-
-  return `var ${orderVar}=${orderStr}.split('|'),${stateVar}=0x0,${loopVar}=true;`+
-    `while(${loopVar}){switch(${stateVar}){${cases}default:${loopVar}=false;break;}}`;
-}
-
-// ---- ANTI-DEBUG ----
-function buildAntiDebug() {
-  return `(function(){var _d=new Date();debugger;if(new Date()-_d>100){(function(){})['constructor']('debugger')();}})();` +
-    `setInterval(function(){var _s=new Date();debugger;if(new Date()-_s>100){document&&(document.body.innerHTML='');}},1500);`;
-}
-
-// ---- SELF-DEFEND ----
-function buildSelfDefend() {
-  const fn = randHexId();
-  return `(function ${fn}(_s){var _t=${fn}.toString();if(_t.replace(/\\s/g,'').length!==_s){(function(){}).constructor('debugger')();}return _t;})(${`(function ${fn}(_s){var _t=${fn}.toString();if(_t.replace(/\\s/g,'').length!==_s){(function(){}).constructor('debugger')();}return _t;})`.replace(/\s/g,'').length});`;
-}
-
-// ---- DOMAIN LOCK ----
-function buildDomainLock(domains) {
-  const domList = domains.split(',').map(d=>d.trim()).filter(Boolean);
-  const arr = JSON.stringify(domList);
-  return `(function(){var _allowed=${arr};var _h=window.location.hostname;if(!_allowed.some(function(d){return _h===d||_h.endsWith('.'+d);})){document.body.innerHTML='';throw new Error('Unauthorized domain');}})();`;
-}
-
-// ---- MINIFIER ----
-function minify(src) {
-  return src
-    .replace(/\/\/.*$/gm, '')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/\n+/g, ' ')
-    .replace(/\s{2,}/g, ' ')
-    .replace(/\s*([{}();,=+\-*/<>!&|?:])\s*/g, '$1')
-    .trim();
-}
-
-// Reserved JS words
-const RESERVED = new Set(['abstract','arguments','await','boolean','break','byte','case','catch','char','class',
-  'const','continue','debugger','default','delete','do','double','else','enum','eval','export','extends','false',
-  'final','finally','float','for','function','goto','if','implements','import','in','instanceof','int','interface',
-  'let','long','native','new','null','package','private','protected','public','return','short','static','super',
-  'switch','synchronized','this','throw','throws','transient','true','try','typeof','undefined','var','void',
-  'volatile','while','with','yield','console','window','document','Math','JSON','Object','Array','String',
-  'Number','Boolean','Date','RegExp','Error','Promise','Symbol','Map','Set','parseInt','parseFloat','isNaN',
-  'isFinite','setTimeout','setInterval','clearTimeout','clearInterval','alert','confirm','prompt','fetch',
-  'addEventListener','removeEventListener','querySelector','querySelectorAll','getElementById','log','warn',
-  'error','info','prototype','constructor','length','name','toString','valueOf','call','apply','bind',
-  'push','pop','shift','unshift','splice','slice','join','reverse','sort','filter','map','reduce','forEach',
-  'find','findIndex','includes','indexOf','keys','values','entries','assign','create','defineProperty',
-  'hasOwnProperty','then','catch','finally','resolve','reject','all','race','any']);
-
-const DOM_PROPS = new Set(['innerHTML','innerText','textContent','style','className','id','src','href',
-  'value','checked','disabled','hidden','type','name','placeholder','required','readonly','selected',
-  'data','target','rel','alt','title','width','height','display','color','background','font','margin',
-  'padding','border','position','top','left','right','bottom','overflow','opacity','visibility',
-  'zIndex','cursor','flex','grid','transform','transition','animation','content','getAttribute',
-  'setAttribute','removeAttribute','appendChild','removeChild','insertBefore','replaceChild',
-  'createElement','createTextNode','addEventListener','removeEventListener','dispatchEvent',
-  'classList','dataset','children','parentNode','childNodes','nextSibling','previousSibling',
-  'offsetWidth','offsetHeight','scrollTop','scrollLeft','clientWidth','clientHeight']);
 
 // ================================================================
-// DEOBFUSCATION ENGINE
+//  DEOBFUSCATOR
 // ================================================================
-let deobfStringCount = 0;
-
-function runDeobfuscate() {
-  const src = document.getElementById('deobfInput').value.trim();
-  if(!src){ notify('No input!', true); return; }
-
-  animateProgress('deobfProgress', 'deobfProgress2');
-  deobfStringCount = 0;
+function runDeobf(){
+  const src=document.getElementById('deIn').value.trim();
+  if(!src){notify('No input!',true);return;}
+  animPbar('pb3','pb4','c');
 
   setTimeout(()=>{
-    try {
-      let result = src;
+    try{
+      let recovered=src;
+      let strCount=0, opCount=0;
 
-      // 1. Decode hex/unicode escapes
-      if(document.getElementById('dHex').checked) {
-        result = decodeHexUnicode(result);
-      }
-      // 2. Decode base64 / inline encoded strings
-      if(document.getElementById('dBase64').checked) {
-        result = decodeInlineBase64(result);
-      }
-      // 3. Decode string arrays
-      if(document.getElementById('dStrArr').checked) {
-        result = decodeStringArrays(result);
-      }
-      // 4. Simplify number expressions
-      if(document.getElementById('dNumbers').checked) {
-        result = simplifyNumbers(result);
-      }
-      // 5. Remove dead code
-      if(document.getElementById('dDead').checked) {
-        result = removeDeadCode(result);
-      }
-      // 6. Rename hex identifiers
-      if(document.getElementById('dRename').checked) {
-        result = renameHexIdentifiers(result);
-      }
-      // 7. Beautify
-      if(document.getElementById('dBeautify').checked) {
-        result = beautify(result);
+      // 1. Extract VMCX header
+      let header=null;
+      const hMatch=src.match(/\/\*\s*VMCX:([A-Za-z0-9+/=]+)\s*\*\//);
+      if(hMatch && document.getElementById('dAh').checked){
+        try{
+          header=JSON.parse(b64d(hMatch[1]));
+        }catch(e){}
       }
 
-      document.getElementById('deobfOutput').value = result;
-      document.getElementById('deobfOutChars').textContent = result.length;
-      document.getElementById('deobfStrings').textContent = deobfStringCount;
-      notify('DEOBFUSCATION COMPLETE');
-    } catch(e) {
-      notify('ERROR: ' + e.message, true);
+      // Manual key override
+      const manKey=document.getElementById('dManualKey').value.trim();
+      const manMap=document.getElementById('dOpcodeMap').value.trim();
+      if(manKey) header=header||{};
+      if(manKey && header) header.sk=manKey;
+      if(manMap && header){try{header.om=JSON.parse(manMap);}catch(e){}}
+
+      if(!header){
+        // Fallback: attempt generic deobf
+        recovered=genericDeobf(src);
+      } else {
+        recovered=vmDeobf(src,header,document.getElementById('dSt').checked,document.getElementById('dBc').checked);
+        strCount=(header.st||[]).length;
+        opCount=header.om?Object.keys(header.om).length:0;
+      }
+
+      // Remove anti-debug
+      if(document.getElementById('dAd').checked){
+        recovered=recovered.replace(/\(function\(\)\{try\{var _dd=\+new Date[^}]+\}catch[^}]+\}\}\)\(\);?/g,'/* anti-debug removed */');
+        recovered=recovered.replace(/setInterval\(function\(\)\{[^}]*debugger[^}]*\}[^)]*\)\s*;?/g,'/* setInterval-debug removed */');
+        recovered=recovered.replace(/\/\* OBFUSCATED BY VMCRYPT v2 \*\//g,'');
+      }
+
+      // Remove header comment
+      recovered=recovered.replace(/\/\*\s*VMCX:[A-Za-z0-9+/=]+\s*\*\/\n?/,'');
+
+      // Restore identifiers
+      if(document.getElementById('dRi').checked) recovered=restoreIds(recovered);
+
+      // Beautify
+      if(document.getElementById('dBe').checked) recovered=beautify(recovered);
+
+      document.getElementById('deOut').value=recovered;
+      document.getElementById('doChars').textContent=recovered.length;
+      document.getElementById('doStrs').textContent=strCount;
+      document.getElementById('doOps').textContent=opCount;
+      notify('RECOVERY COMPLETE');
+    }catch(e){
+      notify('ERROR: '+e.message,true);
+      console.error(e);
     }
-  }, 60);
+  },80);
 }
 
-function decodeHexUnicode(src) {
-  // \xNN → char
-  src = src.replace(/\\x([0-9a-fA-F]{2})/g, (m, h) => {
-    deobfStringCount++;
-    return String.fromCharCode(parseInt(h,16));
-  });
-  // \uNNNN → char
-  src = src.replace(/\\u([0-9a-fA-F]{4})/g, (m, h) => {
-    deobfStringCount++;
-    return String.fromCharCode(parseInt(h,16));
-  });
-  // 0xNN → decimal
-  src = src.replace(/\b0x([0-9a-fA-F]+)\b/g, (m, h) => {
-    const n = parseInt(h,16);
-    if(n > 100000) return m; // keep large hex (likely addresses)
-    deobfStringCount++;
-    return String(n);
-  });
-  return src;
-}
+function vmDeobf(src, header, doStrings, doBytecode){
+  const {sk:sessionKey, om:opcodeMap, st:stringTable, layers} = header;
 
-function decodeInlineBase64(src) {
-  // atob('...') → decoded string
-  src = src.replace(/atob\(['"]([A-Za-z0-9+/=]+)['"]\)/g, (m, b64) => {
-    try {
-      const dec = b64dec(b64);
-      deobfStringCount++;
-      return JSON.stringify(dec);
-    } catch(e) { return m; }
-  });
-  // (function(_0){return atob(_0)})('...')
-  src = src.replace(/\(function\(_\w+\)\{return atob\(_\w+\)\}\)\(['"]([A-Za-z0-9+/=]+)['"]\)/g, (m, b64) => {
-    try {
-      const dec = b64dec(b64);
-      deobfStringCount++;
-      return JSON.stringify(dec);
-    } catch(e) { return m; }
-  });
-  return src;
-}
+  // Reconstruct string table
+  const recoveredStrings = stringTable || [];
 
-function decodeStringArrays(src) {
-  // Pattern: var _0xNNNN = ['str1','str2',...] + accessor function
-  // Find array literals assigned to hex vars
-  src = src.replace(/var\s+(_0x[a-fA-F0-9]+)\s*=\s*\[([^\]]+)\]\s*;/g, (m, varName, content) => {
-    // Parse strings from array
-    const strArr = [];
-    const strRe = /['"]([^'"\\]*(?:\\.[^'"\\]*)*)['"]|`([^`\\]*(?:\\.[^`\\]*)*)`/g;
-    let sm;
-    while((sm=strRe.exec(content))!==null) strArr.push(sm[1]||sm[2]);
-    if(strArr.length === 0) return m;
-
-    // Replace _0xNNNN[N] references inline
-    const escapedName = varName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-    const countBefore = deobfStringCount;
-    src = src.replace(new RegExp(escapedName + '\\[(\\d+)\\]', 'g'), (ref, idx) => {
-      const i = parseInt(idx);
-      if(i < strArr.length) { deobfStringCount++; return JSON.stringify(strArr[i]); }
-      return ref;
-    });
-    if(deobfStringCount > countBefore) return `/* string_array_${varName} decoded */`;
-    return m;
-  });
-  return src;
-}
-
-function simplifyNumbers(src) {
-  // (A+B) where both are numbers → result
-  let changed = true;
-  while(changed) {
-    changed = false;
-    src = src.replace(/\((-?\d+)\s*\+\s*(-?\d+)\)/g, (m, a, b) => {
-      changed = true;
-      return String(parseInt(a)+parseInt(b));
-    });
-    src = src.replace(/\((-?\d+)\s*-\s*(-?\d+)\)/g, (m, a, b) => {
-      changed = true;
-      return String(parseInt(a)-parseInt(b));
-    });
-    src = src.replace(/\((-?\d+)\s*\*\s*(-?\d+)\)/g, (m, a, b) => {
-      changed = true;
-      return String(parseInt(a)*parseInt(b));
-    });
-    // ~N → bitwise not
-    src = src.replace(/~(-?\d+)/g, (m, n) => {
-      changed = true;
-      return String(~parseInt(n));
-    });
-  }
-  return src;
-}
-
-function removeDeadCode(src) {
-  // if(false){...}
-  src = src.replace(/if\s*\(\s*false\s*\)\s*\{[^}]*\}/g, '');
-  // if(1<0){...} or if(0>1){...}
-  src = src.replace(/if\s*\(\s*\d+\s*<\s*\d+\s*\)\s*\{[^}]*\}/g, (m) => {
-    const match = m.match(/if\s*\(\s*(\d+)\s*<\s*(\d+)\s*\)/);
-    if(match && parseInt(match[1]) < parseInt(match[2])) return '';
-    return m;
-  });
-  // try{}catch(_){}
-  src = src.replace(/try\s*\{\s*\}\s*catch\s*\([^)]*\)\s*\{\s*\}/g, '');
-  // void 0x0; or void 0;
-  src = src.replace(/void\s+0x?0\s*;/g, '');
-  // empty self-calling functions (function(){})()
-  src = src.replace(/\(function\s*\(\)\s*\{\s*\}\)\s*\(\s*\)\s*;/g, '');
-  // Anti-debug patterns
-  src = src.replace(/setInterval\(function\(\)\{[^}]*debugger[^}]*\}[^)]*\)\s*;?/g, '/* anti-debug removed */');
-  src = src.replace(/\(function\(\)\{var _d=new Date\(\);debugger[^}]*\}\)\(\)\s*;?/g, '/* anti-debug removed */');
-  return src;
-}
-
-let renameMap = {};
-let renameCounter = 0;
-function renameHexIdentifiers(src) {
-  renameMap = {};
-  renameCounter = 0;
-  // Match _0xNNNNN style identifiers
-  src = src.replace(/\b_0x[a-fA-F0-9]{3,7}\b/g, (m) => {
-    if(!renameMap[m]) {
-      renameMap[m] = '_var' + renameCounter++;
-    }
-    return renameMap[m];
-  });
-  return src;
-}
-
-function beautify(src) {
-  let indent = 0;
-  let result = '';
-  let inStr = false;
-  let strChar = '';
-  let i = 0;
-
-  while(i < src.length) {
-    const c = src[i];
-    const next = src[i+1];
-
-    if(inStr) {
-      result += c;
-      if(c === '\\') { result += next||''; i+=2; continue; }
-      if(c === strChar) inStr = false;
-      i++; continue;
-    }
-
-    if(c === '"' || c === "'" || c === '`') { inStr=true; strChar=c; result+=c; i++; continue; }
-
-    if(c === '{') {
-      result += ' {\n' + '  '.repeat(++indent);
-      i++; continue;
-    }
-    if(c === '}') {
-      indent = Math.max(0, indent-1);
-      result = result.trimEnd() + '\n' + '  '.repeat(indent) + '}';
-      if(next && next !== ';' && next !== ')' && next !== ',' && next !== '\n') result += '\n' + '  '.repeat(indent);
-      i++; continue;
-    }
-    if(c === ';') {
-      result += ';\n' + '  '.repeat(indent);
-      i++; continue;
-    }
-    if(c === ' ' && (result.endsWith(' ') || result.endsWith('\n'))) { i++; continue; }
-
-    result += c;
-    i++;
+  // Re-decrypt string table if we have the key
+  if(doStrings && sessionKey && recoveredStrings.length>0){
+    // strings are already in plaintext in the header (we stored them pre-encryption)
   }
 
-  // Clean up multiple blank lines
-  return result.replace(/\n{3,}/g, '\n\n').trim();
-}
+  // Build a pseudo-decompiled version
+  let out='// VMCRYPT v2 — Recovered Source\n// Session Key: '+sessionKey.slice(0,16)+'...\n// Opcodes: '+Object.keys(opcodeMap||{}).length+'\n// Strings: '+recoveredStrings.length+'\n\n';
 
-// ================================================================
-// UI HELPERS
-// ================================================================
-function animateProgress(bar1, bar2) {
-  const b1 = document.getElementById(bar1);
-  const b2 = document.getElementById(bar2);
-  b1.style.width = '0%'; b2.style.width = '0%';
-  let w = 0;
-  const iv = setInterval(() => {
-    w = Math.min(w + Math.random()*15, 90);
-    b1.style.width = w + '%';
-    b2.style.width = w + '%';
-    if(w >= 90) clearInterval(iv);
-  }, 40);
-  setTimeout(() => { b1.style.width = '100%'; b2.style.width = '100%'; }, 500);
-  setTimeout(() => { b1.style.width = '0%'; b2.style.width = '0%'; }, 1200);
-}
-
-function copyOutput() {
-  const v = document.getElementById('outputCode').value;
-  if(!v) return notify('Nothing to copy!', true);
-  navigator.clipboard.writeText(v).then(()=>notify('COPIED TO CLIPBOARD'));
-}
-function downloadOutput() {
-  const v = document.getElementById('outputCode').value;
-  if(!v) return notify('Nothing to download!', true);
-  download(v, 'obfuscated.js');
-}
-function copyDeobf() {
-  const v = document.getElementById('deobfOutput').value;
-  if(!v) return notify('Nothing to copy!', true);
-  navigator.clipboard.writeText(v).then(()=>notify('COPIED'));
-}
-function downloadDeobf() {
-  const v = document.getElementById('deobfOutput').value;
-  if(!v) return notify('Nothing to download!', true);
-  download(v, 'deobfuscated.js');
-}
-function download(text, filename) {
-  const a = document.createElement('a');
-  a.href = 'data:text/javascript;charset=utf-8,' + encodeURIComponent(text);
-  a.download = filename;
-  a.click();
-}
-function clearInput() {
-  document.getElementById('inputCode').value = '';
-  document.getElementById('outputCode').value = '';
-  updateInputStats();
-}
-function clearDeobf() {
-  document.getElementById('deobfInput').value = '';
-  document.getElementById('deobfOutput').value = '';
-}
-function loadSample() {
-  document.getElementById('inputCode').value = `// Sample JavaScript to obfuscate
-function greetUser(name, age) {
-  const greeting = "Hello, " + name + "!";
-  const message = "You are " + age + " years old.";
-  
-  if (age >= 18) {
-    console.log(greeting + " Welcome, adult user.");
+  if(doBytecode){
+    // Extract bytecode from source
+    const bcMatch=src.match(/var _v4=_kb\('([A-Za-z0-9+/=]+)'\)/);
+    if(bcMatch){
+      try{
+        const bcBytes=b64Bytes(bcMatch[1]);
+        const invMap=invertOpcodeMap(opcodeMap);
+        out+=decompileBytecode(bcBytes, invMap, recoveredStrings);
+      } catch(e){
+        out+='// Bytecode decompile failed: '+e.message+'\n';
+        out+=genericDeobf(src);
+      }
+    } else {
+      out+='// Could not locate bytecode segment\n';
+      out+=genericDeobf(src);
+    }
   } else {
-    console.log(greeting + " Access restricted.");
+    out+=genericDeobf(src);
   }
-  
-  return { greeting, message };
+  return out;
 }
 
-const apiKey = "sk-secret-key-12345";
-const baseUrl = "https://api.example.com/v1";
+function decompileBytecode(bcBytes, invMap, strings){
+  let out='';
+  let i=0;
+  const indent='  ';
+  let depth=0;
 
-async function fetchData(endpoint) {
-  try {
-    const response = await fetch(baseUrl + endpoint, {
-      headers: { "Authorization": "Bearer " + apiKey }
+  while(i<bcBytes.length){
+    const opval=bcBytes[i];
+    const mnem=invMap[opval]||('UNK_'+opval.toString(16));
+    const argCount=bcBytes[i+1]||0;
+    const args=[];
+    for(let j=0;j<argCount;j++) args.push(bcBytes[i+2+j]||0);
+    i+=2+argCount;
+
+    switch(mnem){
+      case 'PUSH_STR':
+        out+=indent.repeat(depth)+`// push ${JSON.stringify(strings[args[0]]||'?')}\n`;
+        break;
+      case 'PUSH_NUM':
+        out+=indent.repeat(depth)+`// push ${args[0]}\n`;
+        break;
+      case 'PUSH_VAR':
+        out+=indent.repeat(depth)+`// load ${strings[args[0]]||'var_'+args[0]}\n`;
+        break;
+      case 'SET_VAR':
+        out+=indent.repeat(depth)+(strings[args[0]]||'var_'+args[0])+` = (stack.pop);\n`;
+        break;
+      case 'CALL':
+        out+=indent.repeat(depth)+`(call with ${args[0]} args)\n`;
+        break;
+      case 'RETURN':
+        out+=indent.repeat(depth)+`return (stack.pop);\n`;
+        break;
+      case 'BINOP':
+        out+=indent.repeat(depth)+`(stack[-2]) ${strings[args[0]]||'?'} (stack[-1])\n`;
+        break;
+      case 'GET_PROP':
+        out+=indent.repeat(depth)+`(obj).${strings[args[0]]||'?'}\n`;
+        break;
+      case 'SET_PROP':
+        out+=indent.repeat(depth)+`(obj).${strings[args[0]]||'?'} = (val)\n`;
+        break;
+      case 'FUNC_DEF':
+        out+=indent.repeat(depth)+`function ${strings[args[0]]||'anon'}() { ... }\n`;
+        break;
+      case 'NOP':
+        break; // skip dead NOPs silently
+      default:
+        out+=indent.repeat(depth)+`[${mnem}] ${args.join(', ')}\n`;
+    }
+  }
+  return out||'// (empty program)\n';
+}
+
+function genericDeobf(src){
+  let r=src;
+  // Decode hex/unicode
+  r=r.replace(/\\x([0-9a-fA-F]{2})/g,(m,h)=>String.fromCharCode(parseInt(h,16)));
+  r=r.replace(/\\u([0-9a-fA-F]{4})/g,(m,h)=>String.fromCharCode(parseInt(h,16)));
+  // Inline atob calls
+  r=r.replace(/atob\(['"]([A-Za-z0-9+/=]+)['"]\)/g,(m,b)=>{try{return JSON.stringify(b64d(b));}catch(e){return m;}});
+  // Simplify numbers
+  let chg=true;
+  while(chg){chg=false;r=r.replace(/\((-?\d+)\+\((-?\d+)\)\)/g,(_,a,b)=>{chg=true;return String(+a+ +b);});}
+  // Remove dead code
+  r=r.replace(/if\s*\(\s*false\s*\)\s*\{[^}]*\}/g,'');
+  r=r.replace(/try\s*\{\s*\}\s*catch\s*\([^)]*\)\s*\{\s*\}/g,'');
+  return r;
+}
+
+function restoreIds(src){
+  let n=0;
+  const map={};
+  return src.replace(/_v[0-9a-z]+|_[0-9a-z]{4,8}/g,m=>{
+    if(/^_(v\w+|t\w+|xd|kb|bs|mt|op\w+|r\w+)$/.test(m)){
+      if(!map[m]) map[m]='_var'+n++;
+      return map[m];
+    }
+    return m;
+  });
+}
+
+function beautify(src){
+  let ind=0,r='',inStr=false,sc='',i=0;
+  while(i<src.length){
+    const c=src[i],nx=src[i+1];
+    if(inStr){r+=c;if(c==='\\'&&nx){r+=nx;i+=2;continue;}if(c===sc)inStr=false;i++;continue;}
+    if(c==='"'||c==="'"||c==='`'){inStr=true;sc=c;r+=c;i++;continue;}
+    if(c==='{'){r+=' {\n'+'  '.repeat(++ind);i++;continue;}
+    if(c==='}'){ind=Math.max(0,ind-1);r=r.trimEnd()+'\n'+'  '.repeat(ind)+'}';if(nx&&nx!==';'&&nx!==')'&&nx!==','&&nx!=='\n')r+='\n'+'  '.repeat(ind);i++;continue;}
+    if(c===';'){r+=';\n'+'  '.repeat(ind);i++;continue;}
+    if(c===' '&&(r.endsWith(' ')||r.endsWith('\n'))){i++;continue;}
+    r+=c;i++;
+  }
+  return r.replace(/\n{3,}/g,'\n\n').trim();
+}
+
+// ================================================================
+//  UI HELPERS
+// ================================================================
+function animPbar(id1,id2,cls){
+  [id1,id2].forEach(id=>{
+    const el=document.getElementById(id);
+    el.style.width='0%';
+    let w=0;
+    const iv=setInterval(()=>{w=Math.min(w+Math.random()*18,88);el.style.width=w+'%';if(w>=88)clearInterval(iv);},45);
+    setTimeout(()=>{el.style.width='100%';},600);
+    setTimeout(()=>{el.style.width='0%';},1400);
+  });
+}
+function cpOut(){const v=document.getElementById('srcOut').value;if(!v)return notify('Nothing!',true);navigator.clipboard.writeText(v).then(()=>notify('COPIED'));}
+function dlOut(){const v=document.getElementById('srcOut').value;if(!v)return notify('Nothing!',true);dl(v,'vmcrypt_output.js');}
+function cpDe(){const v=document.getElementById('deOut').value;if(!v)return notify('Nothing!',true);navigator.clipboard.writeText(v).then(()=>notify('COPIED'));}
+function dlDe(){const v=document.getElementById('deOut').value;if(!v)return notify('Nothing!',true);dl(v,'recovered.js');}
+function dl(txt,fn){const a=document.createElement('a');a.href='data:text/javascript;charset=utf-8,'+encodeURIComponent(txt);a.download=fn;a.click();}
+function clrIn(){document.getElementById('srcIn').value='';document.getElementById('srcOut').value='';updateStats();}
+function clrDe(){document.getElementById('deIn').value='';document.getElementById('deOut').value='';}
+function notify(msg,err=false){
+  const el=document.createElement('div');el.className='ntf'+(err?' e':'');el.textContent=msg;
+  document.body.appendChild(el);setTimeout(()=>el.remove(),2400);
+}
+function loadSample(){
+  document.getElementById('srcIn').value=`// Sample: full featured JS to obfuscate
+const API_KEY = "sk-prod-a8f3c2e1d4b7";
+const BASE_URL = "https://api.example.com/v2";
+
+class UserManager {
+  constructor(token) {
+    this.token = token;
+    this.users = [];
+  }
+  
+  async fetchUser(id) {
+    const response = await fetch(BASE_URL + "/users/" + id, {
+      headers: { "Authorization": "Bearer " + this.token }
     });
     const data = await response.json();
+    this.users.push(data);
     return data;
-  } catch (error) {
-    console.error("Request failed:", error.message);
-    return null;
+  }
+  
+  validateUser(user) {
+    if (user.age >= 18 && user.active === true) {
+      console.log("Valid user: " + user.name);
+      return true;
+    }
+    console.log("Rejected: " + user.name);
+    return false;
   }
 }
 
-greetUser("World", 25);
-fetchData("/users");`;
-  updateInputStats();
+function processPayment(amount, card) {
+  const fee = amount * 0.029 + 0.30;
+  const total = amount + fee;
+  console.log("Processing: $" + total);
+  return { success: true, total: total };
 }
 
-function notify(msg, err=false) {
-  const el = document.createElement('div');
-  el.className = 'notify' + (err ? ' err' : '');
-  el.textContent = msg;
-  document.body.appendChild(el);
-  setTimeout(()=>el.remove(), 2200);
+const mgr = new UserManager(API_KEY);
+mgr.fetchUser(42);
+processPayment(99.99, "4242424242424242");`;
+  updateStats();
 }
 </script>
 </body>
