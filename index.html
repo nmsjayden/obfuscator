@@ -389,24 +389,22 @@ function genSessionKey(bits){
   const words=bits/32;
   return Array.from({length:words},()=>rng32().toString(16).padStart(8,'0')).join('');
 }
-// Multi-round XOR cipher (simulates AES-256 key schedule feel)
-function xorCipher(data, keyHex){
-  const key=[];
-  for(let i=0;i<keyHex.length;i+=2) key.push(parseInt(keyHex.slice(i,i+2),16));
-  const kl=key.length;
-  // Key schedule: derive round keys
-  const rounds=16;
-  const rk=[...key];
-  for(let r=0;r<rounds;r++){
-    const prev=rk.slice(-kl);
-    const nk=prev.map((b,i)=>((b^(rk[i]||0x5a))+(i*0x1b+r*0x11))&0xff);
-    rk.push(...nk);
+// XOR cipher — key is used as raw char codes, matching the VM's _xd exactly
+function xorCipher(data, key){
+  const kb=[];
+  for(let i=0;i<key.length;i++) kb.push(key.charCodeAt(i));
+  const kl=kb.length;
+  const rk2=[...kb];
+  for(let rnd=0;rnd<16;rnd++){
+    const prev=rk2.slice(-kl);
+    const nk=prev.map((b,i)=>((b^(rk2[i]||0x5a))+(i*0x1b+rnd*0x11))&0xff);
+    rk2.push(...nk);
   }
   const out=[];
   for(let i=0;i<data.length;i++){
-    const k1=rk[i%rk.length];
-    const k2=rk[(i*7+3)%rk.length];
-    const k3=rk[(i*13+7)%rk.length];
+    const k1=rk2[i%rk2.length];
+    const k2=rk2[(i*7+3)%rk2.length];
+    const k3=rk2[(i*13+7)%rk2.length];
     out.push(data[i]^k1^k2^((k3+i)&0xff));
   }
   return out;
@@ -802,25 +800,18 @@ function runObf(){
       const bcArr=serializeInstructions(instructions,opcodeMap);
       const bytecodeB64=bytesB64(bcArr);
 
-      // Encrypt string table — use bytesB64 (pure btoa, binary-safe)
-      let encStrTable='';
-      if(opts.strTable && stringTable.length>0){
-        const encParts=stringTable.map(s=>{
-          // UTF-8 encode the string first
-          const bytes=[];
-          for(let ci=0;ci<s.length;ci++){
-            const cp=s.charCodeAt(ci);
-            if(cp<0x80) bytes.push(cp);
-            else if(cp<0x800) bytes.push(0xC0|(cp>>6), 0x80|(cp&0x3F));
-            else bytes.push(0xE0|(cp>>12), 0x80|((cp>>6)&0x3F), 0x80|(cp&0x3F));
-          }
-          const enc=xorCipher(bytes, sessionKey.slice(0,32)||sessionKey);
-          return bytesB64(enc);
-        });
-        encStrTable=encParts.join('|');
-      } else {
-        encStrTable=stringTable.map(s=>bytesB64(strToBytes(s))).join('|');
-      }
+      // ALWAYS encrypt string table with xorCipher so _mt decoder always works correctly
+      const strKey=sessionKey.slice(0,32)||sessionKey;
+      const encStrTable = stringTable.length>0 ? stringTable.map(s=>{
+        const bytes=[];
+        for(let ci=0;ci<s.length;ci++){
+          const cp=s.charCodeAt(ci);
+          if(cp<0x80) bytes.push(cp);
+          else if(cp<0x800) bytes.push(0xC0|(cp>>6), 0x80|(cp&0x3F));
+          else bytes.push(0xE0|(cp>>12), 0x80|((cp>>6)&0x3F), 0x80|(cp&0x3F));
+        }
+        return bytesB64(xorCipher(bytes, strKey));
+      }).join('|') : '';
 
       // Build VM
       let result=buildVMRuntimeFixed(bytecodeB64,encStrTable,sessionKey,opcodeMap,opts);
