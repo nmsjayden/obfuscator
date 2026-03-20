@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VΜCRYPT // JS Obfuscator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+    --bg: #050508;
+    --surface: #0a0a12;
+    --surface2: #0f0f1a;
+    --border: #1a1a2e;
+    --border2: #252540;
+    --accent: #00f5ff;
+    --accent2: #ff2d78;
+    --accent3: #7b2fff;
+    --text: #c8d0e0;
+    --text-dim: #4a5060;
+    --text-bright: #e8f0ff;
+    --success: #00ff9d;
+    --warn: #ffb800;
+    --glow: 0 0 20px rgba(0,245,255,0.15);
+    --glow2: 0 0 30px rgba(0,245,255,0.25);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ---- SCANLINE OVERLAY ---- */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.07) 2px,
+      rgba(0,0,0,0.07) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ---- GRID BG ---- */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ======== LOCK SCREEN ======== */
+  #lockscreen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    gap: 32px;
+  }
+
+  .lock-logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 2.8rem;
+    font-weight: 900;
+    color: var(--accent);
+    text-shadow: 0 0 30px var(--accent), 0 0 60px rgba(0,245,255,0.4);
+    letter-spacing: 6px;
+    animation: flicker 4s infinite;
+  }
+
+  .lock-logo span { color: var(--accent2); }
+
+  @keyframes flicker {
+    0%,96%,98%,100% { opacity: 1; }
+    97%,99% { opacity: 0.7; }
+  }
+
+  .lock-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .lock-box {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    padding: 40px;
+    width: 380px;
+    position: relative;
+    box-shadow: var(--glow);
+  }
+
+  .lock-box::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .lock-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+  }
+
+  .lock-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.1rem;
+    padding: 12px 16px;
+    outline: none;
+    letter-spacing: 4px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    margin-bottom: 20px;
+  }
+
+  .lock-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 15px rgba(0,245,255,0.2);
+  }
+
+  .lock-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 14px;
+    cursor: pointer;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .lock-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .lock-btn:hover::before { opacity: 0.1; }
+  .lock-btn:hover { box-shadow: 0 0 20px rgba(0,245,255,0.3); }
+  .lock-btn:active { transform: scale(0.98); }
+
+  .lock-error {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent2);
+    letter-spacing: 2px;
+    text-align: center;
+    margin-top: 14px;
+    min-height: 1em;
+    animation: shake 0.3s ease;
+  }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%,60% { transform: translateX(-6px); }
+    40%,80% { transform: translateX(6px); }
+  }
+
+  /* ======== MAIN APP ======== */
+  #app { position: relative; z-index: 1; min-height: 100vh; }
+
+  /* ---- HEADER ---- */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(5,5,8,0.95);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 1.4rem;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-shadow: 0 0 15px rgba(0,245,255,0.5);
+  }
+
+  .logo span { color: var(--accent2); }
+
+  .header-tags {
+    display: flex;
+    gap: 10px;
+  }
+
+  .tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    padding: 3px 10px;
+    border: 1px solid;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .tag-cyan { color: var(--accent); border-color: var(--accent); }
+  .tag-pink { color: var(--accent2); border-color: var(--accent2); }
+  .tag-purple { color: var(--accent3); border-color: var(--accent3); }
+
+  /* ---- TABS ---- */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    background: var(--surface);
+  }
+
+  .tab {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    padding: 16px 28px;
+    cursor: pointer;
+    color: var(--text-dim);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    background: none;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab.deobf.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+
+  /* ---- MAIN LAYOUT ---- */
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    grid-template-rows: 1fr;
+    height: calc(100vh - 114px);
+    gap: 0;
+  }
+
+  /* ---- EDITORS ---- */
+  .editors {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-right: 1px solid var(--border);
+  }
+
+  .editor-pane {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    min-height: 0;
+  }
+
+  .editor-pane:last-child { border-right: none; }
+
+  .editor-header {
+    padding: 10px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .editor-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .editor-title.cyan { color: var(--accent); }
+  .editor-title.pink { color: var(--accent2); }
+
+  .editor-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .small-btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    padding: 3px 10px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+  }
+
+  .small-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  textarea {
+    flex: 1;
+    background: var(--bg);
+    border: none;
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    padding: 16px;
+    resize: none;
+    outline: none;
+    min-height: 0;
+    tab-size: 2;
+  }
+
+  textarea::placeholder { color: var(--text-dim); }
+
+  textarea.output-area {
+    color: var(--success);
+    cursor: text;
+  }
+
+  /* ---- SIDEBAR ---- */
+  .sidebar {
+    overflow-y: auto;
+    padding: 20px;
+    background: var(--surface);
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+
+  .section {
+    margin-bottom: 28px;
+  }
+
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-title::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    background: var(--accent);
+    display: inline-block;
+  }
+
+  /* Toggles */
+  .option-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(26,26,46,0.5);
+  }
+
+  .option-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .option-desc {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    margin-top: 1px;
+  }
+
+  .toggle {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border2);
+    cursor: pointer;
+    transition: 0.2s;
+    border: 1px solid var(--border2);
+  }
+
+  .toggle-slider::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    background: var(--text-dim);
+    transition: 0.2s;
+  }
+
+  .toggle input:checked + .toggle-slider {
+    background: rgba(0,245,255,0.15);
+    border-color: var(--accent);
+  }
+
+  .toggle input:checked + .toggle-slider::after {
+    transform: translateY(-50%) translateX(16px);
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  /* Selects */
+  .option-select {
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    padding: 5px 10px;
+    outline: none;
+    width: 100%;
+    margin-top: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  .option-select:focus { border-color: var(--accent); }
+
+  /* Range sliders */
+  .option-range {
+    width: 100%;
+    margin-top: 6px;
+    accent-color: var(--accent);
+  }
+
+  .range-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    text-align: right;
+  }
+
+  /* Text inputs */
+  .option-text {
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    padding: 5px 10px;
+    outline: none;
+    width: 100%;
+    margin-top: 6px;
+    transition: border-color 0.15s;
+  }
+
+  .option-text:focus { border-color: var(--accent); }
+
+  /* ---- BIG BUTTON ---- */
+  .run-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.85rem;
+    font-weight: 900;
+    padding: 16px;
+    cursor: pointer;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .run-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .run-btn:hover { box-shadow: 0 0 30px rgba(0,245,255,0.3); }
+  .run-btn:hover::before { opacity: 0.12; }
+  .run-btn:active { transform: scale(0.98); }
+
+  .run-btn.deobf-btn {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  .run-btn.deobf-btn::before {
+    background: linear-gradient(135deg, var(--accent2), var(--accent3));
+  }
+
+  .run-btn.deobf-btn:hover { box-shadow: 0 0 30px rgba(255,45,120,0.3); }
+
+  /* ---- STATS BAR ---- */
+  .stats-bar {
+    background: var(--surface2);
+    border-top: 1px solid var(--border);
+    padding: 6px 16px;
+    display: flex;
+    gap: 24px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--text-dim);
+  }
+
+  .stat span { color: var(--accent); }
+  .stat.deobf span { color: var(--accent2); }
+
+  /* ---- PROGRESS ---- */
+  .progress-wrap {
+    height: 2px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent3), var(--accent));
+    width: 0%;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  /* ---- TAB PANELS ---- */
+  .tab-panel { display: none; height: 100%; }
+  .tab-panel.active { display: flex; flex-direction: column; height: calc(100vh - 114px); }
+
+  .tab-panel > .main { flex: 1; min-height: 0; height: auto; }
+
+  /* ---- HIDDEN ---- */
+  .hidden { display: none !important; }
+
+  /* ---- SCROLLBAR ---- */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  /* corner decoration */
+  .corner {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-color: var(--accent);
+    border-style: solid;
+    opacity: 0.5;
+  }
+  .corner-tl { top: 0; left: 0; border-width: 1px 0 0 1px; }
+  .corner-tr { top: 0; right: 0; border-width: 1px 1px 0 0; }
+  .corner-bl { bottom: 0; left: 0; border-width: 0 0 1px 1px; }
+  .corner-br { bottom: 0; right: 0; border-width: 0 1px 1px 0; }
+
+  .notify {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    padding: 10px 20px;
+    letter-spacing: 2px;
+    z-index: 9998;
+    animation: slideIn 0.2s ease, fadeOut 0.3s ease 1.8s forwards;
+    box-shadow: 0 0 20px rgba(0,245,255,0.2);
+  }
+
+  .notify.err { border-color: var(--accent2); color: var(--accent2); }
+
+  @keyframes slideIn {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes fadeOut {
+    to { opacity: 0; transform: translateY(-10px); }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOCK SCREEN -->
+<div id="lockscreen">
+  <div class="lock-logo">VΜ<span>CRYPT</span></div>
+  <div class="lock-sub">// AUTHORIZED ACCESS ONLY //</div>
+  <div class="lock-box">
+    <div class="corner corner-tl"></div>
+    <div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div>
+    <div class="corner corner-br"></div>
+    <div class="lock-label">// ENTER ACCESS KEY</div>
+    <input type="password" class="lock-input" id="passInput" placeholder="••••••••" maxlength="32" autocomplete="off">
+    <button class="lock-btn" onclick="tryUnlock()">AUTHENTICATE</button>
+    <div class="lock-error" id="lockErr">&nbsp;</div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="hidden">
+  <header>
+    <div class="logo">VΜ<span>CRYPT</span></div>
+    <div class="header-tags">
+      <span class="tag tag-cyan">VM-BASED</span>
+      <span class="tag tag-pink">ANTI-DEBUG</span>
+      <span class="tag tag-purple">POLY-ENCODE</span>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('obf', this)">⬡ OBFUSCATE</button>
+    <button class="tab deobf" onclick="switchTab('deobf', this)">⬡ DEOBFUSCATE</button>
+  </div>
+
+  <!-- OBFUSCATE PANEL -->
+  <div id="tab-obf" class="tab-panel active">
+    <div class="main">
+      <div class="editors">
+        <!-- INPUT -->
+        <div class="editor-pane">
+          <div class="editor-header">
+            <div>
+              <div class="editor-title cyan">// INPUT SOURCE</div>
+            </div>
+            <div class="editor-actions">
+              <button class="small-btn" onclick="clearInput()">CLEAR</button>
+              <button class="small-btn" onclick="loadSample()">SAMPLE</button>
+            </div>
+          </div>
+          <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+          <textarea id="inputCode" placeholder="// Paste your JavaScript here...&#10;// All transformations run locally in your browser." spellcheck="false"></textarea>
+          <div class="stats-bar">
+            <div class="stat">CHARS <span id="inChars">0</span></div>
+            <div class="stat">LINES <span id="inLines">0</span></div>
+            <div class="stat">TOKENS <span id="inTokens">0</span></div>
+          </div>
+        </div>
+        <!-- OUTPUT -->
+        <div class="editor-pane">
+          <div class="editor-header">
+            <div>
+              <div class="editor-title pink">// OBFUSCATED OUTPUT</div>
+            </div>
+            <div class="editor-actions">
+              <button class="small-btn" onclick="copyOutput()">COPY</button>
+              <button class="small-btn" onclick="downloadOutput()">DOWNLOAD</button>
+            </div>
+          </div>
+          <div class="progress-wrap"><div class="progress-bar" id="progressBar2" style="background:linear-gradient(90deg,#7b2fff,#ff2d78)"></div></div>
+          <textarea id="outputCode" class="output-area" readonly placeholder="// Obfuscated output will appear here..." spellcheck="false"></textarea>
+          <div class="stats-bar">
+            <div class="stat deobf">CHARS <span id="outChars">0</span></div>
+            <div class="stat deobf">RATIO <span id="outRatio">—</span></div>
+            <div class="stat deobf">PASSES <span id="outPasses">0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SIDEBAR -->
+      <div class="sidebar">
+
+        <!-- CORE TRANSFORMS -->
+        <div class="section">
+          <div class="section-title">Core Transforms</div>
+
+          <div class="option-row">
+            <div>
+              <div class="option-label">Variable Renaming</div>
+              <div class="option-desc">Rename vars/funcs to hex/unicode</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="optRename" checked><span class="toggle-slider"></span></label>
+          </div>
+
+          <div class="option-row">
+            <div>
+              <div class="option-label">String Encryption</div>
+              <div class="option-desc">RC4 / XOR encode all strings</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="optStringEnc" checked><span class="toggle-slider"></span></label>
+          </div>
+
+          <div class="option-row">
+            <div>
+              <div class="option-label">String Array Rotation</div>
+              <div class="option-desc">Pool strings in rotated array</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="optStrArray" checked><span class="toggle-slider"></span></label>
+          </div>
+
+          <div class="option-row">
+            <div>
+              <div class="option-label">Number Obfuscation</div>
+              <div class="option-desc">Replace literals with expressions</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="optNumbers" checked><span class="toggle-slider"></span></label>
+          </div>
+
+          <div class="option-row">
+            <div>
+              <div class="option-label">Property Access Mangling</div>
+              <div class="option-desc">obj.prop → obj[_0x…]</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="optProps" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+        <!-- CONTROL FLOW -->
+        <div class="section">
+          <div class="section-title">Control Flow</div>
+
+          <div class="option-row">
+            <div>
+              <div class="option-label">Control Flow Flattening</div>
+              <div class="option-desc">Flatten logic into switch/state machine</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="optCFF" checked><span class="toggle-slider"></span></label>
+          </div>
+
+          <div class="option-row">
+            <div>
+              <div class="option-label">Dead Code Injection</div>
+              <div class="option-desc">Insert unreachable junk code</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="optDeadCode" checked><span class="toggle-slider"></span></label>
+          </div>
+
+          <div class="option-row">
+            <div>
+              <div class="option-label">Opaque Predicates</div>
+              <div class="option-desc">Always-true/false conditionals</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="optOpaque" checked><span class="toggle-slider"></span></label>
+          </div>
+
+          <div class="option-row">
+            <div>
+              <div class="option-label">Function Splitting</div>
+              <div class="option-desc">Split functions into fragments</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="optSplit" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+        <!-- ANTI-ANALYSIS -->
+        <div class="section">
+          <div class="section-title">Anti-Analysis</div>
+
+          <div class="option-row">
+            <div>
+              <div class="option-label">Anti-Debugging</div>
+              <div class="option-desc">Breakpoint/DevTools detection</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="optAntiDebug" checked><span class="toggle-slider"></span></label>
+          </div>
+
+          <div class="option-row">
+            <div>
+              <div class="option-label">Self-Defending</div>
+              <div class="option-desc">Detect formatting/tampering</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="optSelfDefend"><span class="toggle-slider"></span></label>
+          </div>
+
+          <div class="option-row">
+            <div>
+              <div class="option-label">Domain Lock</div>
+              <div class="option-desc">Restrict to specific domain</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="optDomainLock"><span class="toggle-slider"></span></label>
+          </div>
+          <input type="text" class="option-text" id="optDomain" placeholder="example.com (comma-separated)">
+        </div>
+
+        <!-- ENCODING -->
+        <div class="section">
+          <div class="section-title">Encoding</div>
+
+          <div class="option-row">
+            <div class="option-label">Identifier Style</div>
+          </div>
+          <select class="option-select" id="optIdentStyle">
+            <option value="hex">HEX (_0x1a2b3c)</option>
+            <option value="unicode">UNICODE (_\u0041\u0042…)</option>
+            <option value="mangled">MANGLED (a, b, c, aa…)</option>
+            <option value="mixed">MIXED (random combo)</option>
+          </select>
+
+          <div class="option-row" style="margin-top:12px">
+            <div class="option-label">String Encoding</div>
+          </div>
+          <select class="option-select" id="optEncoding">
+            <option value="base64">BASE64</option>
+            <option value="rc4">RC4</option>
+            <option value="unicode">UNICODE ESCAPE</option>
+            <option value="hex">HEX ESCAPE</option>
+          </select>
+
+          <div class="option-row" style="margin-top:12px">
+            <div class="option-label">Transformation Passes</div>
+            <div class="range-value" id="passesVal">2</div>
+          </div>
+          <input type="range" class="option-range" id="optPasses" min="1" max="5" value="2"
+            oninput="document.getElementById('passesVal').textContent=this.value">
+
+          <div class="option-row" style="margin-top:8px">
+            <div class="option-label">Compact Output</div>
+            <label class="toggle"><input type="checkbox" id="optCompact" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+        <!-- WATERMARK -->
+        <div class="section">
+          <div class="section-title">Watermark</div>
+          <div class="option-row">
+            <div>
+              <div class="option-label">Embed Signature</div>
+              <div class="option-desc">Hidden marker in output</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="optWatermark"><span class="toggle-slider"></span></label>
+          </div>
+          <input type="text" class="option-text" id="optWatermarkText" placeholder="Your signature text">
+        </div>
+
+        <button class="run-btn" onclick="runObfuscate()">⬡ OBFUSCATE</button>
+        <div style="height:20px"></div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- DEOBFUSCATE PANEL -->
+  <div id="tab-deobf" class="tab-panel">
+    <div class="main">
+      <div class="editors">
+        <div class="editor-pane">
+          <div class="editor-header">
+            <div>
+              <div class="editor-title pink">// OBFUSCATED INPUT</div>
+            </div>
+            <div class="editor-actions">
+              <button class="small-btn" onclick="clearDeobf()">CLEAR</button>
+            </div>
+          </div>
+          <div class="progress-wrap"><div class="progress-bar" id="deobfProgress" style="background:linear-gradient(90deg,#ff2d78,#7b2fff)"></div></div>
+          <textarea id="deobfInput" placeholder="// Paste obfuscated JavaScript here..." spellcheck="false"></textarea>
+          <div class="stats-bar">
+            <div class="stat">CHARS <span id="deobfInChars">0</span></div>
+          </div>
+        </div>
+        <div class="editor-pane">
+          <div class="editor-header">
+            <div>
+              <div class="editor-title cyan">// DEOBFUSCATED OUTPUT</div>
+            </div>
+            <div class="editor-actions">
+              <button class="small-btn" onclick="copyDeobf()">COPY</button>
+              <button class="small-btn" onclick="downloadDeobf()">DOWNLOAD</button>
+            </div>
+          </div>
+          <div class="progress-wrap"><div class="progress-bar" id="deobfProgress2"></div></div>
+          <textarea id="deobfOutput" class="output-area" readonly placeholder="// Deobfuscated output will appear here..." spellcheck="false"></textarea>
+          <div class="stats-bar">
+            <div class="stat">CHARS <span id="deobfOutChars">0</span></div>
+            <div class="stat">RECOVERED <span id="deobfStrings">0</span> STRINGS</div>
+          </div>
+        </div>
+      </div>
+      <div class="sidebar">
+        <div class="section">
+          <div class="section-title">Deobfuscation Methods</div>
+          <div class="option-row">
+            <div><div class="option-label">Decode String Arrays</div><div class="option-desc">Reconstruct string pool</div></div>
+            <label class="toggle"><input type="checkbox" id="dStrArr" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="option-row">
+            <div><div class="option-label">Decode Base64/RC4</div><div class="option-desc">Inline encoded strings</div></div>
+            <label class="toggle"><input type="checkbox" id="dBase64" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="option-row">
+            <div><div class="option-label">Decode Hex/Unicode</div><div class="option-desc">Unescape numeric literals</div></div>
+            <label class="toggle"><input type="checkbox" id="dHex" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="option-row">
+            <div><div class="option-label">Simplify Numbers</div><div class="option-desc">Evaluate numeric expressions</div></div>
+            <label class="toggle"><input type="checkbox" id="dNumbers" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="option-row">
+            <div><div class="option-label">Rename Identifiers</div><div class="option-desc">Replace _0x... with readable names</div></div>
+            <label class="toggle"><input type="checkbox" id="dRename" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="option-row">
+            <div><div class="option-label">Beautify Output</div><div class="option-desc">Format and indent code</div></div>
+            <label class="toggle"><input type="checkbox" id="dBeautify" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="option-row">
+            <div><div class="option-label">Remove Dead Code</div><div class="option-desc">Strip obvious junk blocks</div></div>
+            <label class="toggle"><input type="checkbox" id="dDead" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+        <button class="run-btn deobf-btn" onclick="runDeobfuscate()">⬡ DEOBFUSCATE</button>
+        <div style="height:20px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// PASSWORD - CHANGE THIS TO YOUR SECRET KEY
+// ================================================================
+const SECRET_KEY = "vmcrypt-9x42";
+
+// ================================================================
+// LOCK SCREEN
+// ================================================================
+function tryUnlock() {
+  const val = document.getElementById('passInput').value;
+  const err = document.getElementById('lockErr');
+  if (val === SECRET_KEY) {
+    document.getElementById('lockscreen').style.display = 'none';
+    document.getElementById('app').classList.remove('hidden');
+    setupInputListeners();
+  } else {
+    err.textContent = 'ACCESS DENIED — INVALID KEY';
+    err.style.animation = 'none';
+    requestAnimationFrame(() => err.style.animation = 'shake 0.3s ease');
+    document.getElementById('passInput').value = '';
+    document.getElementById('passInput').focus();
+  }
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('lockscreen').style.display !== 'none') tryUnlock();
+});
+
+// ================================================================
+// TABS
+// ================================================================
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+// ================================================================
+// INPUT STATS
+// ================================================================
+function setupInputListeners() {
+  const inp = document.getElementById('inputCode');
+  inp.addEventListener('input', updateInputStats);
+  const deobfInp = document.getElementById('deobfInput');
+  deobfInp.addEventListener('input', () => {
+    document.getElementById('deobfInChars').textContent = deobfInp.value.length;
+  });
+}
+function updateInputStats() {
+  const v = document.getElementById('inputCode').value;
+  document.getElementById('inChars').textContent = v.length;
+  document.getElementById('inLines').textContent = v.split('\n').length;
+  document.getElementById('inTokens').textContent = Math.floor(v.split(/[\s;,{}()\[\]]+/).filter(Boolean).length);
+}
+
+// ================================================================
+// UTILITIES
+// ================================================================
+let idCounter = 0;
+function randHexId(prefix='_0x') {
+  return prefix + (Math.random()*0xFFFFF|0).toString(16).padStart(5,'0');
+}
+function randUnicodeId() {
+  let s = '_';
+  for (let i=0;i<6;i++) s += '\\u' + (0x200 + (Math.random()*0x200|0)).toString(16).padStart(4,'0');
+  return s;
+}
+function randMangledId(n) {
+  const chars='abcdefghijklmnopqrstuvwxyz';
+  let s=''; let idx=n;
+  do { s=chars[idx%26]+s; idx=Math.floor(idx/26)-1; } while(idx>=0);
+  return s;
+}
+function getIdentifier(style, n) {
+  if(style==='hex') return randHexId();
+  if(style==='unicode') return randUnicodeId();
+  if(style==='mangled') return randMangledId(n);
+  return Math.random()>0.5 ? randHexId() : randMangledId(n);
+}
+
+// Base64 encode/decode
+function b64enc(str) { try { return btoa(unescape(encodeURIComponent(str))); } catch(e){ return btoa(str); } }
+function b64dec(str) { try { return decodeURIComponent(escape(atob(str))); } catch(e){ return atob(str); } }
+
+// XOR encode
+function xorEncode(str, key) {
+  let out='';
+  for(let i=0;i<str.length;i++) out+=String.fromCharCode(str.charCodeAt(i)^key.charCodeAt(i%key.length));
+  return out;
+}
+
+// RC4
+function rc4(str, key) {
+  let s=[],j=0,x,res='';
+  for(let i=0;i<256;i++) s[i]=i;
+  for(let i=0;i<256;i++){j=(j+s[i]+key.charCodeAt(i%key.length))%256;x=s[i];s[i]=s[j];s[j]=x;}
+  let i=0; j=0;
+  for(let y=0;y<str.length;y++){i=(i+1)%256;j=(j+s[i])%256;x=s[i];s[i]=s[j];s[j]=x;res+=String.fromCharCode(str.charCodeAt(y)^s[(s[i]+s[j])%256]);}
+  return res;
+}
+
+// Unicode escape
+function unicodeEscape(str) {
+  return str.split('').map(c=>c.charCodeAt(0)>127?'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'):c).join('');
+}
+
+// Hex escape
+function hexEscape(str) {
+  return str.split('').map(c=>'\\x'+c.charCodeAt(0).toString(16).padStart(2,'0')).join('');
+}
+
+function encodeString(str, method) {
+  if(method==='base64') return `(function(_0){return atob(_0)})('${b64enc(str)}')`;
+  if(method==='rc4') { const k=randHexId('k'); const enc=b64enc(rc4(str,k)); return `(function(_s,_k){let _r='',_c=[];for(let i=0;i<256;i++)_c[i]=i;let _j=0,_x;for(let i=0;i<256;i++){_j=(_j+_c[i]+_k.charCodeAt(i%_k.length))%256;_x=_c[i];_c[i]=_c[_j];_c[_j]=_x;}let _i=0;_j=0;for(let y=0;y<_s.length;y++){_i=(_i+1)%256;_j=(_j+_c[_i])%256;_x=_c[_i];_c[_i]=_c[_j];_c[_j]=_x;_r+=String.fromCharCode(_s.charCodeAt(y)^_c[(_c[_i]+_c[_j])%256]);}return _r;})(atob('${enc}'),'${k}')`; }
+  if(method==='unicode') return `"${unicodeEscape(str)}"`;
+  if(method==='hex') return `"${hexEscape(str)}"`;
+  return JSON.stringify(str);
+}
+
+// ================================================================
+// OBFUSCATION ENGINE
+// ================================================================
+function runObfuscate() {
+  const src = document.getElementById('inputCode').value.trim();
+  if(!src){ notify('No input code!', true); return; }
+
+  animateProgress('progressBar', 'progressBar2');
+
+  const opts = {
+    rename: document.getElementById('optRename').checked,
+    stringEnc: document.getElementById('optStringEnc').checked,
+    strArray: document.getElementById('optStrArray').checked,
+    numbers: document.getElementById('optNumbers').checked,
+    props: document.getElementById('optProps').checked,
+    cff: document.getElementById('optCFF').checked,
+    deadCode: document.getElementById('optDeadCode').checked,
+    opaque: document.getElementById('optOpaque').checked,
+    split: document.getElementById('optSplit').checked,
+    antiDebug: document.getElementById('optAntiDebug').checked,
+    selfDefend: document.getElementById('optSelfDefend').checked,
+    domainLock: document.getElementById('optDomainLock').checked,
+    domain: document.getElementById('optDomain').value,
+    identStyle: document.getElementById('optIdentStyle').value,
+    encoding: document.getElementById('optEncoding').value,
+    passes: parseInt(document.getElementById('optPasses').value),
+    compact: document.getElementById('optCompact').checked,
+    watermark: document.getElementById('optWatermark').checked,
+    watermarkText: document.getElementById('optWatermarkText').value,
+  };
+
+  setTimeout(()=>{
+    try {
+      let result = src;
+      for(let p=0; p<opts.passes; p++) result = obfuscatePass(result, opts, p);
+      if(opts.compact) result = minify(result);
+
+      let header = '';
+      if(opts.watermark && opts.watermarkText) {
+        const wm = b64enc(opts.watermarkText);
+        header = `/* VMCRYPT:${wm} */\n`;
+      }
+      if(opts.antiDebug) header += buildAntiDebug() + '\n';
+      if(opts.selfDefend) header += buildSelfDefend() + '\n';
+      if(opts.domainLock && opts.domain) header += buildDomainLock(opts.domain) + '\n';
+
+      result = header + result;
+
+      document.getElementById('outputCode').value = result;
+      const ratio = ((result.length / src.length)*100).toFixed(1);
+      document.getElementById('outChars').textContent = result.length;
+      document.getElementById('outRatio').textContent = ratio + '%';
+      document.getElementById('outPasses').textContent = opts.passes;
+      notify('OBFUSCATION COMPLETE');
+    } catch(e) {
+      notify('ERROR: ' + e.message, true);
+    }
+  }, 60);
+}
+
+function obfuscatePass(src, opts, passNum) {
+  let result = src;
+  const idStyle = opts.identStyle;
+  let idN = passNum * 200;
+
+  // ---- 1. RENAME VARIABLES ----
+  if(opts.rename) {
+    const varMap = {};
+    let idxN = idN;
+    // Find all var/let/const declarations and function names
+    result = result.replace(/\b(var|let|const)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/g, (m, kw, name) => {
+      if(!varMap[name] && !RESERVED.has(name)) {
+        varMap[name] = getIdentifier(idStyle, idxN++);
+      }
+      return `${kw} ${varMap[name]||name}`;
+    });
+    result = result.replace(/\bfunction\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/g, (m, name) => {
+      if(!varMap[name] && !RESERVED.has(name)) varMap[name] = getIdentifier(idStyle, idxN++);
+      return `function ${varMap[name]||name}`;
+    });
+    // Replace usages
+    for(const [orig, rep] of Object.entries(varMap)) {
+      const re = new RegExp(`\\b${orig.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\b`, 'g');
+      result = result.replace(re, rep);
+    }
+  }
+
+  // ---- 2. STRING ENCRYPTION ----
+  if(opts.stringEnc) {
+    result = result.replace(/(["'`])((?:[^\\]|\\.)*?)\1/g, (m, q, str) => {
+      if(str.length === 0) return m;
+      if(/^[\d\s]*$/.test(str)) return m;
+      return encodeString(str, opts.encoding);
+    });
+  }
+
+  // ---- 3. NUMBER OBFUSCATION ----
+  if(opts.numbers) {
+    result = result.replace(/\b(\d{1,6})\b/g, (m, n) => {
+      const num = parseInt(n);
+      if(num === 0) return '(0x0)';
+      if(num < 0) return m;
+      const a = Math.floor(Math.random() * num) + 1;
+      const b = num - a;
+      const ops = [
+        `(${a}+${b})`,
+        `(${num * 3 - num * 2})`,
+        `(0x${num.toString(16)})`,
+        `(~${~num})`,
+      ];
+      return ops[Math.floor(Math.random()*ops.length)];
+    });
+  }
+
+  // ---- 4. PROPERTY ACCESS MANGLING ----
+  if(opts.props) {
+    result = result.replace(/\.([a-zA-Z_$][a-zA-Z0-9_$]{2,})\b(?!\s*\()/g, (m, prop) => {
+      if(RESERVED.has(prop) || DOM_PROPS.has(prop)) return m;
+      return `[${encodeString(prop, 'hex')}]`;
+    });
+  }
+
+  // ---- 5. DEAD CODE INJECTION ----
+  if(opts.deadCode) {
+    const deadSnippets = [
+      `if(false){var ${randHexId()}=function(){return 0;};}`,
+      `try{}catch(${randHexId()}){}`,
+      `void 0x0;`,
+      `(function(){if(1<0){throw ${randHexId()};}})();`,
+      `var ${randHexId()}=typeof ${randHexId('x')}!=='undefined'?0:0;`,
+    ];
+    // Inject after semicolons randomly
+    result = result.replace(/;/g, (m) => {
+      if(Math.random() < 0.18) {
+        return ';' + deadSnippets[Math.floor(Math.random()*deadSnippets.length)];
+      }
+      return m;
+    });
+  }
+
+  // ---- 6. OPAQUE PREDICATES ----
+  if(opts.opaque) {
+    result = result.replace(/\bif\s*\(/g, (m) => {
+      if(Math.random() < 0.3) {
+        const a = Math.random()*100|0, b = Math.random()*100|0;
+        const sum = a + b;
+        return `if(((${a}+${b})===${sum})&&`;
+      }
+      return m;
+    });
+    // Fix unmatched parens from above
+    result = result.replace(/\((([\d+=><!&|()]+)&&)((?:[^)]|\([^)]*\))*)\)/g, (m, pre, pred, cond) => {
+      return `(${pred}&&(${cond}))`;
+    });
+  }
+
+  // ---- 7. CONTROL FLOW FLATTENING (simplified VM-style) ----
+  if(opts.cff && passNum === 0) {
+    result = flattenControlFlow(result);
+  }
+
+  return result;
+}
+
+// Simplified control flow flattening: wraps top-level statements in state machine
+function flattenControlFlow(src) {
+  // Only flatten if code has multiple statements
+  const stmts = src.split(';').filter(s=>s.trim().length>0);
+  if(stmts.length < 3) return src;
+
+  const stateVar = randHexId();
+  const loopVar = randHexId();
+  const orderVar = randHexId();
+
+  // Create shuffled order
+  const indices = stmts.map((_,i)=>i);
+  // Simple shuffle
+  for(let i=indices.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [indices[i],indices[j]]=[indices[j],indices[i]];
+  }
+
+  const orderStr = JSON.stringify(indices.join('|'));
+  let cases = '';
+  indices.forEach((origIdx, stateIdx) => {
+    cases += `case ${stateIdx}: ${stmts[origIdx]}; ${stateVar}=` +
+      (stateIdx<stmts.length-1 ? `${stateIdx+1}` : `-1`) + '; break;\n';
+  });
+
+  return `var ${orderVar}=${orderStr}.split('|'),${stateVar}=0x0,${loopVar}=true;`+
+    `while(${loopVar}){switch(${stateVar}){${cases}default:${loopVar}=false;break;}}`;
+}
+
+// ---- ANTI-DEBUG ----
+function buildAntiDebug() {
+  return `(function(){var _d=new Date();debugger;if(new Date()-_d>100){(function(){})['constructor']('debugger')();}})();` +
+    `setInterval(function(){var _s=new Date();debugger;if(new Date()-_s>100){document&&(document.body.innerHTML='');}},1500);`;
+}
+
+// ---- SELF-DEFEND ----
+function buildSelfDefend() {
+  const fn = randHexId();
+  return `(function ${fn}(_s){var _t=${fn}.toString();if(_t.replace(/\\s/g,'').length!==_s){(function(){}).constructor('debugger')();}return _t;})(${`(function ${fn}(_s){var _t=${fn}.toString();if(_t.replace(/\\s/g,'').length!==_s){(function(){}).constructor('debugger')();}return _t;})`.replace(/\s/g,'').length});`;
+}
+
+// ---- DOMAIN LOCK ----
+function buildDomainLock(domains) {
+  const domList = domains.split(',').map(d=>d.trim()).filter(Boolean);
+  const arr = JSON.stringify(domList);
+  return `(function(){var _allowed=${arr};var _h=window.location.hostname;if(!_allowed.some(function(d){return _h===d||_h.endsWith('.'+d);})){document.body.innerHTML='';throw new Error('Unauthorized domain');}})();`;
+}
+
+// ---- MINIFIER ----
+function minify(src) {
+  return src
+    .replace(/\/\/.*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\n+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s*([{}();,=+\-*/<>!&|?:])\s*/g, '$1')
+    .trim();
+}
+
+// Reserved JS words
+const RESERVED = new Set(['abstract','arguments','await','boolean','break','byte','case','catch','char','class',
+  'const','continue','debugger','default','delete','do','double','else','enum','eval','export','extends','false',
+  'final','finally','float','for','function','goto','if','implements','import','in','instanceof','int','interface',
+  'let','long','native','new','null','package','private','protected','public','return','short','static','super',
+  'switch','synchronized','this','throw','throws','transient','true','try','typeof','undefined','var','void',
+  'volatile','while','with','yield','console','window','document','Math','JSON','Object','Array','String',
+  'Number','Boolean','Date','RegExp','Error','Promise','Symbol','Map','Set','parseInt','parseFloat','isNaN',
+  'isFinite','setTimeout','setInterval','clearTimeout','clearInterval','alert','confirm','prompt','fetch',
+  'addEventListener','removeEventListener','querySelector','querySelectorAll','getElementById','log','warn',
+  'error','info','prototype','constructor','length','name','toString','valueOf','call','apply','bind',
+  'push','pop','shift','unshift','splice','slice','join','reverse','sort','filter','map','reduce','forEach',
+  'find','findIndex','includes','indexOf','keys','values','entries','assign','create','defineProperty',
+  'hasOwnProperty','then','catch','finally','resolve','reject','all','race','any']);
+
+const DOM_PROPS = new Set(['innerHTML','innerText','textContent','style','className','id','src','href',
+  'value','checked','disabled','hidden','type','name','placeholder','required','readonly','selected',
+  'data','target','rel','alt','title','width','height','display','color','background','font','margin',
+  'padding','border','position','top','left','right','bottom','overflow','opacity','visibility',
+  'zIndex','cursor','flex','grid','transform','transition','animation','content','getAttribute',
+  'setAttribute','removeAttribute','appendChild','removeChild','insertBefore','replaceChild',
+  'createElement','createTextNode','addEventListener','removeEventListener','dispatchEvent',
+  'classList','dataset','children','parentNode','childNodes','nextSibling','previousSibling',
+  'offsetWidth','offsetHeight','scrollTop','scrollLeft','clientWidth','clientHeight']);
+
+// ================================================================
+// DEOBFUSCATION ENGINE
+// ================================================================
+let deobfStringCount = 0;
+
+function runDeobfuscate() {
+  const src = document.getElementById('deobfInput').value.trim();
+  if(!src){ notify('No input!', true); return; }
+
+  animateProgress('deobfProgress', 'deobfProgress2');
+  deobfStringCount = 0;
+
+  setTimeout(()=>{
+    try {
+      let result = src;
+
+      // 1. Decode hex/unicode escapes
+      if(document.getElementById('dHex').checked) {
+        result = decodeHexUnicode(result);
+      }
+      // 2. Decode base64 / inline encoded strings
+      if(document.getElementById('dBase64').checked) {
+        result = decodeInlineBase64(result);
+      }
+      // 3. Decode string arrays
+      if(document.getElementById('dStrArr').checked) {
+        result = decodeStringArrays(result);
+      }
+      // 4. Simplify number expressions
+      if(document.getElementById('dNumbers').checked) {
+        result = simplifyNumbers(result);
+      }
+      // 5. Remove dead code
+      if(document.getElementById('dDead').checked) {
+        result = removeDeadCode(result);
+      }
+      // 6. Rename hex identifiers
+      if(document.getElementById('dRename').checked) {
+        result = renameHexIdentifiers(result);
+      }
+      // 7. Beautify
+      if(document.getElementById('dBeautify').checked) {
+        result = beautify(result);
+      }
+
+      document.getElementById('deobfOutput').value = result;
+      document.getElementById('deobfOutChars').textContent = result.length;
+      document.getElementById('deobfStrings').textContent = deobfStringCount;
+      notify('DEOBFUSCATION COMPLETE');
+    } catch(e) {
+      notify('ERROR: ' + e.message, true);
+    }
+  }, 60);
+}
+
+function decodeHexUnicode(src) {
+  // \xNN → char
+  src = src.replace(/\\x([0-9a-fA-F]{2})/g, (m, h) => {
+    deobfStringCount++;
+    return String.fromCharCode(parseInt(h,16));
+  });
+  // \uNNNN → char
+  src = src.replace(/\\u([0-9a-fA-F]{4})/g, (m, h) => {
+    deobfStringCount++;
+    return String.fromCharCode(parseInt(h,16));
+  });
+  // 0xNN → decimal
+  src = src.replace(/\b0x([0-9a-fA-F]+)\b/g, (m, h) => {
+    const n = parseInt(h,16);
+    if(n > 100000) return m; // keep large hex (likely addresses)
+    deobfStringCount++;
+    return String(n);
+  });
+  return src;
+}
+
+function decodeInlineBase64(src) {
+  // atob('...') → decoded string
+  src = src.replace(/atob\(['"]([A-Za-z0-9+/=]+)['"]\)/g, (m, b64) => {
+    try {
+      const dec = b64dec(b64);
+      deobfStringCount++;
+      return JSON.stringify(dec);
+    } catch(e) { return m; }
+  });
+  // (function(_0){return atob(_0)})('...')
+  src = src.replace(/\(function\(_\w+\)\{return atob\(_\w+\)\}\)\(['"]([A-Za-z0-9+/=]+)['"]\)/g, (m, b64) => {
+    try {
+      const dec = b64dec(b64);
+      deobfStringCount++;
+      return JSON.stringify(dec);
+    } catch(e) { return m; }
+  });
+  return src;
+}
+
+function decodeStringArrays(src) {
+  // Pattern: var _0xNNNN = ['str1','str2',...] + accessor function
+  // Find array literals assigned to hex vars
+  src = src.replace(/var\s+(_0x[a-fA-F0-9]+)\s*=\s*\[([^\]]+)\]\s*;/g, (m, varName, content) => {
+    // Parse strings from array
+    const strArr = [];
+    const strRe = /['"]([^'"\\]*(?:\\.[^'"\\]*)*)['"]|`([^`\\]*(?:\\.[^`\\]*)*)`/g;
+    let sm;
+    while((sm=strRe.exec(content))!==null) strArr.push(sm[1]||sm[2]);
+    if(strArr.length === 0) return m;
+
+    // Replace _0xNNNN[N] references inline
+    const escapedName = varName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const countBefore = deobfStringCount;
+    src = src.replace(new RegExp(escapedName + '\\[(\\d+)\\]', 'g'), (ref, idx) => {
+      const i = parseInt(idx);
+      if(i < strArr.length) { deobfStringCount++; return JSON.stringify(strArr[i]); }
+      return ref;
+    });
+    if(deobfStringCount > countBefore) return `/* string_array_${varName} decoded */`;
+    return m;
+  });
+  return src;
+}
+
+function simplifyNumbers(src) {
+  // (A+B) where both are numbers → result
+  let changed = true;
+  while(changed) {
+    changed = false;
+    src = src.replace(/\((-?\d+)\s*\+\s*(-?\d+)\)/g, (m, a, b) => {
+      changed = true;
+      return String(parseInt(a)+parseInt(b));
+    });
+    src = src.replace(/\((-?\d+)\s*-\s*(-?\d+)\)/g, (m, a, b) => {
+      changed = true;
+      return String(parseInt(a)-parseInt(b));
+    });
+    src = src.replace(/\((-?\d+)\s*\*\s*(-?\d+)\)/g, (m, a, b) => {
+      changed = true;
+      return String(parseInt(a)*parseInt(b));
+    });
+    // ~N → bitwise not
+    src = src.replace(/~(-?\d+)/g, (m, n) => {
+      changed = true;
+      return String(~parseInt(n));
+    });
+  }
+  return src;
+}
+
+function removeDeadCode(src) {
+  // if(false){...}
+  src = src.replace(/if\s*\(\s*false\s*\)\s*\{[^}]*\}/g, '');
+  // if(1<0){...} or if(0>1){...}
+  src = src.replace(/if\s*\(\s*\d+\s*<\s*\d+\s*\)\s*\{[^}]*\}/g, (m) => {
+    const match = m.match(/if\s*\(\s*(\d+)\s*<\s*(\d+)\s*\)/);
+    if(match && parseInt(match[1]) < parseInt(match[2])) return '';
+    return m;
+  });
+  // try{}catch(_){}
+  src = src.replace(/try\s*\{\s*\}\s*catch\s*\([^)]*\)\s*\{\s*\}/g, '');
+  // void 0x0; or void 0;
+  src = src.replace(/void\s+0x?0\s*;/g, '');
+  // empty self-calling functions (function(){})()
+  src = src.replace(/\(function\s*\(\)\s*\{\s*\}\)\s*\(\s*\)\s*;/g, '');
+  // Anti-debug patterns
+  src = src.replace(/setInterval\(function\(\)\{[^}]*debugger[^}]*\}[^)]*\)\s*;?/g, '/* anti-debug removed */');
+  src = src.replace(/\(function\(\)\{var _d=new Date\(\);debugger[^}]*\}\)\(\)\s*;?/g, '/* anti-debug removed */');
+  return src;
+}
+
+let renameMap = {};
+let renameCounter = 0;
+function renameHexIdentifiers(src) {
+  renameMap = {};
+  renameCounter = 0;
+  // Match _0xNNNNN style identifiers
+  src = src.replace(/\b_0x[a-fA-F0-9]{3,7}\b/g, (m) => {
+    if(!renameMap[m]) {
+      renameMap[m] = '_var' + renameCounter++;
+    }
+    return renameMap[m];
+  });
+  return src;
+}
+
+function beautify(src) {
+  let indent = 0;
+  let result = '';
+  let inStr = false;
+  let strChar = '';
+  let i = 0;
+
+  while(i < src.length) {
+    const c = src[i];
+    const next = src[i+1];
+
+    if(inStr) {
+      result += c;
+      if(c === '\\') { result += next||''; i+=2; continue; }
+      if(c === strChar) inStr = false;
+      i++; continue;
+    }
+
+    if(c === '"' || c === "'" || c === '`') { inStr=true; strChar=c; result+=c; i++; continue; }
+
+    if(c === '{') {
+      result += ' {\n' + '  '.repeat(++indent);
+      i++; continue;
+    }
+    if(c === '}') {
+      indent = Math.max(0, indent-1);
+      result = result.trimEnd() + '\n' + '  '.repeat(indent) + '}';
+      if(next && next !== ';' && next !== ')' && next !== ',' && next !== '\n') result += '\n' + '  '.repeat(indent);
+      i++; continue;
+    }
+    if(c === ';') {
+      result += ';\n' + '  '.repeat(indent);
+      i++; continue;
+    }
+    if(c === ' ' && (result.endsWith(' ') || result.endsWith('\n'))) { i++; continue; }
+
+    result += c;
+    i++;
+  }
+
+  // Clean up multiple blank lines
+  return result.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+// ================================================================
+// UI HELPERS
+// ================================================================
+function animateProgress(bar1, bar2) {
+  const b1 = document.getElementById(bar1);
+  const b2 = document.getElementById(bar2);
+  b1.style.width = '0%'; b2.style.width = '0%';
+  let w = 0;
+  const iv = setInterval(() => {
+    w = Math.min(w + Math.random()*15, 90);
+    b1.style.width = w + '%';
+    b2.style.width = w + '%';
+    if(w >= 90) clearInterval(iv);
+  }, 40);
+  setTimeout(() => { b1.style.width = '100%'; b2.style.width = '100%'; }, 500);
+  setTimeout(() => { b1.style.width = '0%'; b2.style.width = '0%'; }, 1200);
+}
+
+function copyOutput() {
+  const v = document.getElementById('outputCode').value;
+  if(!v) return notify('Nothing to copy!', true);
+  navigator.clipboard.writeText(v).then(()=>notify('COPIED TO CLIPBOARD'));
+}
+function downloadOutput() {
+  const v = document.getElementById('outputCode').value;
+  if(!v) return notify('Nothing to download!', true);
+  download(v, 'obfuscated.js');
+}
+function copyDeobf() {
+  const v = document.getElementById('deobfOutput').value;
+  if(!v) return notify('Nothing to copy!', true);
+  navigator.clipboard.writeText(v).then(()=>notify('COPIED'));
+}
+function downloadDeobf() {
+  const v = document.getElementById('deobfOutput').value;
+  if(!v) return notify('Nothing to download!', true);
+  download(v, 'deobfuscated.js');
+}
+function download(text, filename) {
+  const a = document.createElement('a');
+  a.href = 'data:text/javascript;charset=utf-8,' + encodeURIComponent(text);
+  a.download = filename;
+  a.click();
+}
+function clearInput() {
+  document.getElementById('inputCode').value = '';
+  document.getElementById('outputCode').value = '';
+  updateInputStats();
+}
+function clearDeobf() {
+  document.getElementById('deobfInput').value = '';
+  document.getElementById('deobfOutput').value = '';
+}
+function loadSample() {
+  document.getElementById('inputCode').value = `// Sample JavaScript to obfuscate
+function greetUser(name, age) {
+  const greeting = "Hello, " + name + "!";
+  const message = "You are " + age + " years old.";
+  
+  if (age >= 18) {
+    console.log(greeting + " Welcome, adult user.");
+  } else {
+    console.log(greeting + " Access restricted.");
+  }
+  
+  return { greeting, message };
+}
+
+const apiKey = "sk-secret-key-12345";
+const baseUrl = "https://api.example.com/v1";
+
+async function fetchData(endpoint) {
+  try {
+    const response = await fetch(baseUrl + endpoint, {
+      headers: { "Authorization": "Bearer " + apiKey }
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Request failed:", error.message);
+    return null;
+  }
+}
+
+greetUser("World", 25);
+fetchData("/users");`;
+  updateInputStats();
+}
+
+function notify(msg, err=false) {
+  const el = document.createElement('div');
+  el.className = 'notify' + (err ? ' err' : '');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 2200);
+}
+</script>
+</body>
+</html>
