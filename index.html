@@ -429,6 +429,7 @@ const BASE_OPS = {
   NEW_OBJ:0x0D,NEW_ARR:0x0E,FUNC_DEF:0x0F,THROW:0x10,
   TRY_ENTER:0x11,TRY_EXIT:0x12,NOP:0x13,POP:0x14,
   DUP:0x15,TYPEOF:0x16,IN_OP:0x17,DELETE:0x18,
+  CALL_METHOD:0x19,
 };
 // Generate shuffled opcode map: maps semantic→random byte
 function genOpcodeMap(){
@@ -584,41 +585,88 @@ function compileExpr(tokens, emit, addStr, newVar, opcodeMap, opts){
   }
   // Number literal
   if(tokens.length===1 && tokens[0].t==='NUM'){
-    const n=tokens[0].v;
-    if(opts.numMangle){
-      emit('PUSH_NUM', mangleNum(n));
-    } else {
-      emit('PUSH_NUM', n);
-    }
-    return;
+    emit('PUSH_NUM', tokens[0].v); return;
   }
   // Variable
   if(tokens.length===1 && tokens[0].t==='ID'){
     emit('PUSH_VAR', addStr(newVar(tokens[0].v))); return;
   }
-  // Binary op pattern: A op B
-  for(let i=1;i<tokens.length-1;i++){
-    const op=tokens[i];
-    if(op.t==='PUNCT' && ['+','-','*','/','===','!==','==','!=','<','>','<=','>=','&&','||'].includes(op.v)){
-      compileExpr(tokens.slice(0,i),emit,addStr,newVar,opcodeMap,opts);
-      compileExpr(tokens.slice(i+1),emit,addStr,newVar,opcodeMap,opts);
-      emit('BINOP', addStr(op.v)); return;
+
+  // ---- Method call: obj.method(arg1, arg2, ...) ----
+  // Detect: ID . ID ( ... )
+  if(tokens.length>=4 && tokens[0].t==='ID' && tokens[1]?.v==='.' && tokens[2]?.t==='ID' && tokens[3]?.v==='('){
+    // Find matching close paren
+    let depth=0, closeIdx=-1;
+    for(let i=3;i<tokens.length;i++){
+      if(tokens[i].v==='(') depth++;
+      if(tokens[i].v===')') { depth--; if(depth===0){closeIdx=i;break;} }
     }
-  }
-  // Property access: obj.prop(args)
-  if(tokens.length>=3 && tokens[1]?.v==='.'){
-    emit('PUSH_VAR', addStr(newVar(tokens[0].v)));
-    emit('GET_PROP', addStr(tokens[2]?.v||''));
-    if(tokens[3]?.v==='('){
-      const argTokens=tokens.slice(4,tokens.findIndex(t=>t.v===')'));
-      if(argTokens.length) compileExpr(argTokens,emit,addStr,newVar,opcodeMap,opts);
-      emit('CALL', argTokens.length?1:0);
-    }
+    const argTokens=tokens.slice(4, closeIdx>0?closeIdx:undefined);
+    // Push object ref onto stack as THIS context
+    emit('PUSH_VAR', addStr(newVar(tokens[0].v)));  // push obj (for this)
+    emit('PUSH_VAR', addStr(newVar(tokens[0].v)));  // push obj (to get prop from)
+    emit('GET_PROP', addStr(tokens[2].v));           // get method
+    // parse comma-separated args
+    const argGroups=splitArgs(argTokens);
+    for(const ag of argGroups) compileExpr(ag,emit,addStr,newVar,opcodeMap,opts);
+    emit('CALL_METHOD', argGroups.length); // CALL_METHOD uses BASE_OPS.CALL but with this-binding
     return;
   }
-  // fallback: push as string
-  const raw=tokens.map(t=>t.v??String(t.t)).join(' ');
+
+  // ---- Plain function call: fn(args) ----
+  if(tokens.length>=3 && tokens[0].t==='ID' && tokens[1]?.v==='('){
+    let depth=0, closeIdx=-1;
+    for(let i=1;i<tokens.length;i++){
+      if(tokens[i].v==='(') depth++;
+      if(tokens[i].v===')') { depth--; if(depth===0){closeIdx=i;break;} }
+    }
+    const argTokens=tokens.slice(2, closeIdx>0?closeIdx:undefined);
+    emit('PUSH_VAR', addStr(newVar(tokens[0].v)));
+    const argGroups=splitArgs(argTokens);
+    for(const ag of argGroups) compileExpr(ag,emit,addStr,newVar,opcodeMap,opts);
+    emit('CALL', argGroups.length);
+    return;
+  }
+
+  // ---- Binary op: find lowest-precedence operator ----
+  // Scan right-to-left for lowest precedence to handle order correctly
+  const PREC={'||':1,'&&':2,'==':3,'!=':3,'===':3,'!==':3,'<':4,'>':4,'<=':4,'>=':4,'+':5,'-':5,'*':6,'/':6};
+  let bestIdx=-1, bestPrec=999, depth2=0;
+  for(let i=0;i<tokens.length;i++){
+    const t=tokens[i];
+    if(t.v==='('||t.v==='['||t.v==='{') depth2++;
+    if(t.v===')'||t.v===']'||t.v==='}') depth2--;
+    if(depth2===0 && t.t==='PUNCT' && PREC[t.v]!==undefined){
+      if(PREC[t.v]<=bestPrec){ bestPrec=PREC[t.v]; bestIdx=i; }
+    }
+  }
+  if(bestIdx>0 && bestIdx<tokens.length-1){
+    compileExpr(tokens.slice(0,bestIdx),emit,addStr,newVar,opcodeMap,opts);
+    compileExpr(tokens.slice(bestIdx+1),emit,addStr,newVar,opcodeMap,opts);
+    emit('BINOP', addStr(tokens[bestIdx].v)); return;
+  }
+
+  // ---- Parenthesized expression ----
+  if(tokens[0]?.v==='(' && tokens[tokens.length-1]?.v===')'){
+    compileExpr(tokens.slice(1,-1),emit,addStr,newVar,opcodeMap,opts); return;
+  }
+
+  // Fallback: push raw token string
+  const raw=tokens.map(t=>t.v!==undefined?t.v:String(t.t)).join('');
   emit('PUSH_STR', addStr(raw));
+}
+
+// Split comma-separated token groups (respecting parens/brackets)
+function splitArgs(tokens){
+  const groups=[]; let cur=[]; let depth=0;
+  for(const t of tokens){
+    if(t.v==='('||t.v==='['||t.v==='{') depth++;
+    if(t.v===')'||t.v===']'||t.v==='}') depth--;
+    if(t.v===',' && depth===0){ if(cur.length) groups.push(cur); cur=[]; }
+    else cur.push(t);
+  }
+  if(cur.length) groups.push(cur);
+  return groups;
 }
 
 function mangleNum(n){
@@ -653,111 +701,9 @@ function serializeInstructions(instructions, opcodeMap){
   return out;
 }
 
-function buildVMRuntime(bytecodeB64, encStrTable, sessionKey, opcodeMap, opts){
-  // Register names
-  const r=(n)=>opts.regObf ? '_r'+genId(n).slice(1) : '_r'+n;
-  const V=r(0),PC=r(1),ST=r(2),STACK=r(3),ENV=r(4),CALL_STACK=r(5);
-
-  // Emit opcode constants (shuffled)
-  const opConsts = Object.entries(opcodeMap).map(([k,v])=>
-    `var ${genId(v)}=${v};`
-  ).join('');
-
-  // VM dispatcher as a giant switch
-  const invMap=invertOpcodeMap(opcodeMap);
-  const cases=Object.entries(opcodeMap).map(([mnemonic,opval])=>{
-    const rn=genId(opval+100);
-    let body='';
-    switch(mnemonic){
-      case 'PUSH_STR': body=`${STACK}.push(${ST}[${PC}[${V}+1]]);${V}+=2;`; break;
-      case 'PUSH_NUM': body=`${STACK}.push(${PC}[${V}+1]);${V}+=2;`; break;
-      case 'PUSH_VAR': body=`${STACK}.push(${ENV}[${ST}[${PC}[${V}+1]]]);${V}+=2;`; break;
-      case 'SET_VAR':  body=`${ENV}[${ST}[${PC}[${V}+1]]]=${STACK}.pop();${V}+=2;`; break;
-      case 'CALL':     body=`{var ${rn}a=${PC}[${V}+1];var ${rn}b=[];for(var ${rn}i=0;${rn}i<${rn}a;${rn}i++)${rn}b.unshift(${STACK}.pop());var ${rn}f=${STACK}.pop();if(typeof ${rn}f==='function')${STACK}.push(${rn}f.apply(null,${rn}b));${V}+=2;}`; break;
-      case 'RETURN':   body=`return ${STACK}.pop();`; break;
-      case 'JUMP':     body=`${V}=${PC}[${V}+1]-1;${V}+=1;`; break;
-      case 'JUMP_IF':  body=`{var ${rn}c=${STACK}.pop();if(${rn}c)${V}=${PC}[${V}+1]-1;else ${V}+=1;${V}+=1;}`; break;
-      case 'BINOP':    body=`{var ${rn}op=${ST}[${PC}[${V}+1]];var ${rn}b2=${STACK}.pop();var ${rn}a2=${STACK}.pop();var ${rn}r;if(${rn}op==='+')${rn}r=${rn}a2+${rn}b2;else if(${rn}op==='-')${rn}r=${rn}a2-${rn}b2;else if(${rn}op==='*')${rn}r=${rn}a2*${rn}b2;else if(${rn}op==='/')${rn}r=${rn}a2/${rn}b2;else if(${rn}op==='===')${rn}r=${rn}a2===${rn}b2;else if(${rn}op==='!==')${rn}r=${rn}a2!==${rn}b2;else if(${rn}op==='<')${rn}r=${rn}a2<${rn}b2;else if(${rn}op==='>')${rn}r=${rn}a2>${rn}b2;else if(${rn}op==='&&')${rn}r=${rn}a2&&${rn}b2;else if(${rn}op==='||')${rn}r=${rn}a2||${rn}b2;else ${rn}r=undefined;${STACK}.push(${rn}r);${V}+=2;}`; break;
-      case 'GET_PROP': body=`{var ${rn}p=${ST}[${PC}[${V}+1]];var ${rn}o=${STACK}.pop();${STACK}.push(${rn}o?${rn}o[${rn}p]:undefined);${V}+=2;}`; break;
-      case 'SET_PROP': body=`{var ${rn}v2=${STACK}.pop();var ${rn}o2=${STACK}.pop();var ${rn}p2=${ST}[${PC}[${V}+1]];if(${rn}o2)${rn}o2[${rn}p2]=${rn}v2;${V}+=2;}`; break;
-      case 'NEW_OBJ':  body=`${STACK}.push({});${V}+=1;`; break;
-      case 'NEW_ARR':  body=`${STACK}.push([]);${V}+=1;`; break;
-      case 'FUNC_DEF': body=`{var ${rn}fn=${ST}[${PC}[${V}+1]];${ENV}[${rn}fn]=function(){return undefined;};${V}+=2;}`; break;
-      case 'THROW':    body=`throw ${STACK}.pop();`; break;
-      case 'TRY_ENTER':body=`${V}+=1;`; break;
-      case 'TRY_EXIT': body=`${V}+=1;`; break;
-      case 'NOP':      body=`${V}+=1;`; break;
-      case 'POP':      body=`${STACK}.pop();${V}+=1;`; break;
-      case 'DUP':      body=`${STACK}.push(${STACK}[${STACK}.length-1]);${V}+=1;`; break;
-      case 'TYPEOF':   body=`${STACK}.push(typeof ${STACK}.pop());${V}+=1;`; break;
-      case 'IN_OP':    body=`{var ${rn}ob=${STACK}.pop();var ${rn}ke=${STACK}.pop();${STACK}.push(${rn}ke in ${rn}ob);${V}+=1;}`; break;
-      case 'DELETE':   body=`${STACK}.pop();${V}+=1;`; break;
-      default:         body=`${V}+=1;`; break;
-    }
-    return `case ${opval}:${body}break;`;
-  }).join('\n');
-
-  // XOR cipher function (inline in VM)
-  const xfn=genId(200);
-  const kfn=genId(201);
-  const sfn=genId(202);
-  const mfn=genId(203);
-
-  // Proxy function layer
-  let proxyLayer='';
-  if(opts.proxyFns){
-    const pf1=genId(210),pf2=genId(211),pf3=genId(212);
-    proxyLayer=`var ${pf1}=function(f,a){return f.apply(null,a);};var ${pf2}=function(o,k){return o[k];};var ${pf3}=function(o,k,v){o[k]=v;return v;};`;
-  }
-
-  // Anti-debug
-  let antiDebug='';
-  if(opts.antiDebug){
-    antiDebug=`(function(){try{var ${genId(220)}=new Date();(function(){}).constructor("debugger")();if(new Date()-${genId(220)}>100){(function ${genId(221)}(){${genId(221)}();})();}}catch(e){}})();`;
-  }
-
-  return `(function(){
-${antiDebug}
-${proxyLayer}
-// VMCRYPT v2 Runtime
-var ${xfn}=function(d,k){
-  var ks=[],j=0,x,r=[];
-  for(var i=0;i<256;i++)ks[i]=i;
-  for(var i=0;i<256;i++){j=(j+ks[i]+k.charCodeAt(i%k.length))&255;x=ks[i];ks[i]=ks[j];ks[j]=x;}
-  var a=0;j=0;
-  for(var i=0;i<d.length;i++){a=(a+1)&255;j=(j+ks[a])&255;x=ks[a];ks[a]=ks[j];ks[j]=x;r.push(d[i]^ks[(ks[a]+ks[j])&255]);}
-  return r;
-};
-var ${kfn}=function(b){return Array.from(atob(b)).map(function(c){return c.charCodeAt(0);});};
-var ${sfn}=function(b){return b.map(function(c){return String.fromCharCode(c);}).join('');};
-var ${mfn}=function(s){return s.split('|').map(function(p){return ${sfn}(${xfn}(${kfn}(p),'${sessionKey.slice(0,32)}'));});};
-// Encrypted string table
-var ${ST}=${mfn}('${encStrTable}');
-// Bytecode
-var ${PC}=${kfn}('${bytecodeB64}');
-var ${V}=0,${STACK}=[],${ENV}=Object.create(null);
-// Inject globals into env
-${ENV}['console']=console;${ENV}['window']=typeof window!=='undefined'?window:this;
-${ENV}['document']=typeof document!=='undefined'?document:null;
-${ENV}['Math']=Math;${ENV}['JSON']=JSON;${ENV}['Object']=Object;
-${ENV}['Array']=Array;${ENV}['String']=String;${ENV}['Number']=Number;
-${ENV}['Boolean']=Boolean;${ENV}['setTimeout']=typeof setTimeout!=='undefined'?setTimeout:null;
-${ENV}['fetch']=typeof fetch!=='undefined'?fetch:null;
-// VM dispatcher
-while(${V}<${PC}.length){
-  var ${PC}[${V}];
-  switch(${PC}[${V}]){
-    ${cases}
-    default:${V}++;break;
-  }
-}
-})();`;
-}
-
 // Fix the VM code (has a syntax error with var ${PC}[${V}] - fix it)
 function buildVMRuntimeFixed(bytecodeB64, encStrTable, sessionKey, opcodeMap, opts){
-  const r=(n)=> '_v'+(n.toString(36));
-  const V=r(0),ST=r(1),STACK=r(2),ENV=r(3),BC=r(4),OP=r(5);
+  const V='_v0',ST='_v1',STACK='_v2',ENV='_v3',BC='_v4';
 
   // Scramble opcode constant names
   const opNames={};
@@ -771,7 +717,8 @@ function buildVMRuntimeFixed(bytecodeB64, encStrTable, sessionKey, opcodeMap, op
       case 'PUSH_NUM': body=`${STACK}.push(${BC}[${V}+1]);${V}+=2;`; break;
       case 'PUSH_VAR': body=`${STACK}.push(${ENV}[${ST}[${BC}[${V}+1]]]);${V}+=2;`; break;
       case 'SET_VAR':  body=`${ENV}[${ST}[${BC}[${V}+1]]]=${STACK}.pop();${V}+=2;`; break;
-      case 'CALL':     body=`{var ${t}n=${BC}[${V}+1];var ${t}a=[];for(var ${t}i=0;${t}i<${t}n;${t}i++)${t}a.unshift(${STACK}.pop());var ${t}f=${STACK}.pop();if(typeof ${t}f==='function')${STACK}.push(${t}f.apply(null,${t}a));else if(typeof ${t}f==='object'&&${t}f){var ${t}k=Object.keys(${t}f)[0]||'';${STACK}.push(${t}f[${t}k]?${t}f[${t}k].apply(${t}f,${t}a):undefined);}${V}+=2;}`; break;
+      case 'CALL':     body=`{var ${t}n=${BC}[${V}+1];var ${t}a=[];for(var ${t}i=0;${t}i<${t}n;${t}i++)${t}a.unshift(${STACK}.pop());var ${t}f=${STACK}.pop();if(typeof ${t}f==='function')${STACK}.push(${t}f.apply(null,${t}a));${V}+=2;}`; break;
+      case 'CALL_METHOD': body=`{var ${t}n=${BC}[${V}+1];var ${t}a=[];for(var ${t}i=0;${t}i<${t}n;${t}i++)${t}a.unshift(${STACK}.pop());var ${t}f=${STACK}.pop();var ${t}th=${STACK}.pop();if(typeof ${t}f==='function'){var ${t}res=${t}f.apply(${t}th,${t}a);${STACK}.push(${t}res!==undefined?${t}res:null);}else ${STACK}.push(undefined);${V}+=2;}`; break;
       case 'RETURN':   body=`return ${STACK}.pop();`; break;
       case 'JUMP':     body=`${V}=${BC}[${V}+1];continue;`; break;
       case 'JUMP_IF':  body=`{var ${t}c=${STACK}.pop();if(${t}c){${V}=${BC}[${V}+1];continue;}${V}+=2;}`; break;
@@ -795,20 +742,21 @@ function buildVMRuntimeFixed(bytecodeB64, encStrTable, sessionKey, opcodeMap, op
     return `case ${opval}:${body}break;`;
   }).join('\n');
 
-  const xf='_xd', kf='_kb', sf='_bs', mf='_mt';
+  const xf='_xd', uf='_ud', kf='_kb', mf='_mt';
   const antiDbg=opts.antiDebug?`(function(){try{var _dd=+new Date();(function(){}).constructor("debugger")();if(+new Date()-_dd>80)while(1){}}catch(e){}setInterval(function(){var _dd=+new Date();debugger;if(+new Date()-_dd>80){try{document.body.innerHTML='';}catch(e){}}},2000);})();`:'';
-  const domainLk=opts.domainLock&&opts.domain?`(function(){var _dl=${JSON.stringify(opts.domain.split(',').map(s=>s.trim()))};var _h=(typeof location!=='undefined'?location.hostname:'');if(!_dl.some(function(d){return _h===d||_h.endsWith('.'+d);})){throw new Error('');}})();`:'';
+  const domainLk=opts.domainLock&&opts.domain?`(function(){var _dl=${JSON.stringify(opts.domain.split(',').map(s=>s.trim()))};var _h=(typeof location!=='undefined'?location.hostname:'');if(!_dl.some(function(d){return _h===d||_h.endsWith('.'+d);})){throw new Error('blocked');}})();`:'';
+  const vmKey=(sessionKey.slice(0,32)||sessionKey);
 
   return `/* OBFUSCATED BY VMCRYPT v2 */\n${antiDbg}${domainLk}(function(){
-var ${xf}=function(d,k){var s=[],j=0,x,r=[];for(var i=0;i<256;i++)s[i]=i;for(var i=0;i<256;i++){j=(j+s[i]+k.charCodeAt(i%k.length))&255;x=s[i];s[i]=s[j];s[j]=x;}var a=0;j=0;for(var i=0;i<d.length;i++){a=(a+1)&255;j=(j+s[a])&255;x=s[a];s[a]=s[j];s[j]=x;r.push(d[i]^s[(s[a]+s[j])&255]);}return r;};
+var ${xf}=function(d,k){var kb=[];for(var i=0;i<k.length;i++)kb.push(k.charCodeAt(i));var kl=kb.length,rk2=kb.slice();for(var rnd=0;rnd<16;rnd++){var prev=rk2.slice(-kl);var nk=prev.map(function(b,i){return((b^(rk2[i]||0x5a))+(i*0x1b+rnd*0x11))&0xff;});rk2=rk2.concat(nk);}var r=[];for(var i=0;i<d.length;i++){var k1=rk2[i%rk2.length];var k2=rk2[(i*7+3)%rk2.length];var k3=rk2[(i*13+7)%rk2.length];r.push(d[i]^k1^k2^((k3+i)&0xff));}return r;};
+var ${uf}=function(b){var s='',i=0;while(i<b.length){var c=b[i];if(c<0x80){s+=String.fromCharCode(c);i++;}else if(c<0xE0){s+=String.fromCharCode(((c&0x1F)<<6)|(b[i+1]&0x3F));i+=2;}else{s+=String.fromCharCode(((c&0x0F)<<12)|((b[i+1]&0x3F)<<6)|(b[i+2]&0x3F));i+=3;}}return s;};
 var ${kf}=function(b){return Array.from(atob(b)).map(function(c){return c.charCodeAt(0);});};
-var ${sf}=function(b){return b.map(function(c){return String.fromCharCode(c);}).join('');};
-var ${mf}=function(s){var p=s.split('|');return p.map(function(x){return ${sf}(${xf}(${kf}(x),'${sessionKey.slice(0,32)}'));});};
+var ${mf}=function(s){var p=s.split('|');return p.map(function(x){return ${uf}(${xf}(${kf}(x),'${vmKey}'));});};
 var ${ST}=${mf}('${encStrTable}');
 var ${BC}=${kf}('${bytecodeB64}');
 var ${V}=0,${STACK}=[],${ENV}=Object.create(null);
 var _g=typeof globalThis!=='undefined'?globalThis:typeof window!=='undefined'?window:this;
-['console','Math','JSON','Object','Array','String','Number','Boolean','Date','RegExp','Promise','fetch','setTimeout','setInterval','clearTimeout','document','window'].forEach(function(k){${ENV}[k]=_g[k];});
+['console','Math','JSON','Object','Array','String','Number','Boolean','Date','RegExp','Promise','fetch','setTimeout','setInterval','clearTimeout','document','window','alert'].forEach(function(k){if(_g[k]!==undefined)${ENV}[k]=_g[k];});
 while(${V}<${BC}.length){switch(${BC}[${V}]){${cases}default:${V}++;break;}}
 })();`;
 }
@@ -854,17 +802,24 @@ function runObf(){
       const bcArr=serializeInstructions(instructions,opcodeMap);
       const bytecodeB64=bytesB64(bcArr);
 
-      // Encrypt string table
+      // Encrypt string table — use bytesB64 (pure btoa, binary-safe)
       let encStrTable='';
       if(opts.strTable && stringTable.length>0){
         const encParts=stringTable.map(s=>{
-          const bytes=strToBytes(s);
-          const enc=xorCipher(bytes,sessionKey.slice(0,32));
+          // UTF-8 encode the string first
+          const bytes=[];
+          for(let ci=0;ci<s.length;ci++){
+            const cp=s.charCodeAt(ci);
+            if(cp<0x80) bytes.push(cp);
+            else if(cp<0x800) bytes.push(0xC0|(cp>>6), 0x80|(cp&0x3F));
+            else bytes.push(0xE0|(cp>>12), 0x80|((cp>>6)&0x3F), 0x80|(cp&0x3F));
+          }
+          const enc=xorCipher(bytes, sessionKey.slice(0,32)||sessionKey);
           return bytesB64(enc);
         });
         encStrTable=encParts.join('|');
       } else {
-        encStrTable=stringTable.map(s=>btoa(s)).join('|');
+        encStrTable=stringTable.map(s=>bytesB64(strToBytes(s))).join('|');
       }
 
       // Build VM
@@ -902,20 +857,35 @@ function runObf(){
 }
 
 function wrapLayer(src, sessionKey, layerNum, opts){
-  // Encode the entire source as base64 then wrap in an eval-like loader
-  const enc=b64e(src);
-  const lk=sessionKey.slice(layerNum*8, layerNum*8+16)||sessionKey.slice(0,16);
+  // Key: use a 16-char window cycling through the full key, never empty
+  const keyLen=16;
+  const offset=(layerNum*keyLen)%sessionKey.length;
+  let lk='';
+  for(let i=0;i<keyLen;i++) lk+=sessionKey[(offset+i)%sessionKey.length];
+
+  // Encode the source as UTF-8 bytes, then XOR, then pure btoa (binary-safe, no %XX)
+  const bytes=[];
+  for(let i=0;i<src.length;i++){
+    const cp=src.charCodeAt(i);
+    if(cp<0x80){ bytes.push(cp); }
+    else if(cp<0x800){ bytes.push(0xC0|(cp>>6), 0x80|(cp&0x3F)); }
+    else{ bytes.push(0xE0|(cp>>12), 0x80|((cp>>6)&0x3F), 0x80|(cp&0x3F)); }
+  }
+  const encBytes=xorCipher(bytes, lk);
+  const encB64=bytesB64(encBytes);   // pure btoa — safe inside string literals
+
   const ln=genId(300+layerNum);
   const ld=genId(301+layerNum);
-  // XOR-encode the b64 string at byte level
-  const bytes=strToBytes(enc);
-  const encBytes=xorCipher(bytes,lk);
-  const encB64=bytesB64(encBytes);
+  const ls=genId(302+layerNum);
+  const lu=genId(303+layerNum);
+
+  // Decoder: XOR → UTF-8 decode → run with new Function
   return `(function(){
 var ${ln}=function(d,k){var s=[],j=0,x,r=[];for(var i=0;i<256;i++)s[i]=i;for(var i=0;i<256;i++){j=(j+s[i]+k.charCodeAt(i%k.length))&255;x=s[i];s[i]=s[j];s[j]=x;}var a=0;j=0;for(var i=0;i<d.length;i++){a=(a+1)&255;j=(j+s[a])&255;x=s[a];s[a]=s[j];s[j]=x;r.push(d[i]^s[(s[a]+s[j])&255]);}return r;};
+var ${lu}=function(b){var s='',i=0;while(i<b.length){var c=b[i];if(c<0x80){s+=String.fromCharCode(c);i++;}else if(c<0xE0){s+=String.fromCharCode(((c&0x1F)<<6)|(b[i+1]&0x3F));i+=2;}else{s+=String.fromCharCode(((c&0x0F)<<12)|((b[i+1]&0x3F)<<6)|(b[i+2]&0x3F));i+=3;}}return s;};
 var ${ld}=Array.from(atob('${encB64}')).map(function(c){return c.charCodeAt(0);});
-var _src${layerNum}=${ln}(${ld},'${lk}').map(function(c){return String.fromCharCode(c);}).join('');
-(new Function(_src${layerNum}))();
+var ${ls}=${lu}(${ln}(${ld},'${lk}'));
+(new Function(${ls}))();
 })();`;
 }
 
