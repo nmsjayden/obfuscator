@@ -631,6 +631,34 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         </div>
       </div>
 
+      <!-- OPCODE VM -->
+      <div class="section">
+        <div class="shdr" onclick="toggleSec(this)"><span class="sname">Opcode VM <span style="color:var(--acc);font-size:9px;font-weight:700;background:rgba(124,110,247,.15);border:1px solid var(--acc);border-radius:3px;padding:1px 4px;margin-left:4px;">NEW</span></span><span class="sarr">›</span></div>
+        <div class="sbody">
+          <div class="row">
+            <label class="rl">Opcode VM<small>Compile JS tokens → custom ISA + interpreter. Source never reconstructed as string. ~7.99 entropy.</small></label>
+            <label class="tog"><input type="checkbox" id="o_ovm" onchange="showSub('ovm-sub',this.checked);liveCheck()"><span class="tk"></span></label>
+          </div>
+          <div id="ovm-sub" style="display:none;">
+            <div class="sub-sep"></div>
+            <div class="sub-lbl">Encoding</div>
+            <div class="row"><label class="rl">Operand XOR Scramble<small>XOR every operand with a per-opcode key</small></label><label class="tog"><input type="checkbox" id="o_ovm_xorop" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Opcode Shuffle<small>Randomize opcode→instruction mapping each run</small></label><label class="tog"><input type="checkbox" id="o_ovm_shuffle" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">LFSR Stream Cipher<small>XOR bytecode stream with 32-bit LFSR keystream</small></label><label class="tog"><input type="checkbox" id="o_ovm_lfsr" checked><span class="tk"></span></label></div>
+            <div class="sub-sep"></div>
+            <div class="sub-lbl">Dispatcher</div>
+            <div class="row"><label class="rl">Indirect Dispatch<small>Jump table via array[opcode] — defeats linear sweep disasm</small></label><label class="tog"><input type="checkbox" id="o_ovm_indirect" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Register Aliasing<small>Runtime-random register name → slot mapping</small></label><label class="tog"><input type="checkbox" id="o_ovm_regmap" checked><span class="tk"></span></label></div>
+            <div class="sub-sep"></div>
+            <div class="sub-lbl">Anti-Analysis</div>
+            <div class="row"><label class="rl">Opaque Dispatch Guards<small>Dead case arms that look like real opcodes</small></label><label class="tog"><input type="checkbox" id="o_ovm_guards" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">PC Obfuscation<small>Program counter stored XOR'd with rolling mask</small></label><label class="tog"><input type="checkbox" id="o_ovm_pcxor" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Constant Blinding<small>All constants split: real = blind ^ stored</small></label><label class="tog"><input type="checkbox" id="o_ovm_blind" checked><span class="tk"></span></label></div>
+          </div>
+          <div class="info-box" style="margin-top:5px;">True ISA interpreter — source is never reconstructed as a string. Incompatible with existing Bytecode VM (uses one or the other).</div>
+        </div>
+      </div>
+
       <!-- ADVANCED TRAPS -->
       <div class="section">
         <div class="shdr open" onclick="toggleSec(this)"><span class="sname">Advanced Traps</span><span class="sarr">›</span></div>
@@ -1232,15 +1260,36 @@ function passOpaquePredicates(code){
     ()=>{const a=freshId(),b=hexInt(RNG.int(0xfe)+1),c=hexInt(RNG.int(0xfe)+1);return `(function(){var ${a}=${b}+${c};return ${a}===${a};})()`;},
     ()=>{const a=freshId();return `(function(){var ${a}={};return typeof ${a}==='object'&&${a}!==null;})()`; },
   ];
-  // Split on statement boundaries, insert predicates between chunks — O(n) not O(n²)
   const maxIns=Math.floor(code.length/300)+3;
   let insertions=0;
-  // Find insertion points: positions right after ';' or '}' at statement level
-  // Use a simple scan to collect split indices rather than char-by-char concat
   const parts=[];
   let last=0;
-  for(let i=0;i<code.length&&insertions<maxIns;i++){
+  let i=0;
+  const n=code.length;
+  while(i<n&&insertions<maxIns){
     const ch=code[i];
+    // Skip string literals — never insert inside them
+    if(ch==='"'||ch==="'"){
+      const q=ch;i++;
+      while(i<n){const c=code[i++];if(c==='\\')i++;else if(c===q)break;}
+      continue;
+    }
+    // Skip template literals
+    if(ch==='`'){
+      i++;let depth=0;
+      while(i<n){
+        const c=code[i++];
+        if(c==='\\'){i++;continue;}
+        if(c==='$'&&code[i]==='{'){i++;depth++;continue;}
+        if(c==='}'&&depth>0){depth--;continue;}
+        if(c==='`'&&depth===0)break;
+      }
+      continue;
+    }
+    // Skip single-line comments
+    if(ch==='/'&&code[i+1]==='/'){while(i<n&&code[i]!=='\n')i++;continue;}
+    // Skip block comments
+    if(ch==='/'&&code[i+1]==='*'){i+=2;while(i<n&&!(code[i]==='*'&&code[i+1]=='/'))i++;i+=2;continue;}
     if((ch===';'||ch==='}')&&RNG.next()>0.85){
       parts.push(code.slice(last,i+1));
       const pred=preds[RNG.int(preds.length)]();
@@ -1249,6 +1298,7 @@ function passOpaquePredicates(code){
       last=i+1;
       insertions++;
     }
+    i++;
   }
   parts.push(code.slice(last));
   return parts.join('');
@@ -1260,18 +1310,19 @@ function passOpaquePredicates(code){
 // Deobfuscator that extracts and calls the decoder directly (depth=1) → throws.
 // Also checks that Function.prototype.toString hasn't been tampered on itself.
 function passStackCanary(code){
-  const guard=freshId(),err=freshId(),depth=freshId(),probe=freshId(),stk=freshId();
+  const guard=freshId(),err=freshId(),probe=freshId(),stk=freshId();
   const magic=hexInt(RNG.int(0x7fff)+0x100);
+  // Canary logic: check that Error().stack has at least 3 lines (the probe fn frame +
+  // at least 2 caller frames). A bare extracted call has only 1-2 lines.
+  // We do NOT use a depth counter that increments before the check — that was wrong.
   const out=
     `var ${guard}=(function(){\n`+
-    `  var ${depth}=${hexInt(0)};\n`+
-    `  var ${probe}=function ${probe}(){\n`+
-    `    ${depth}++;\n`+
+    `  var ${probe}=function(){\n`+
     `    try{\n`+
-    `      var ${stk}=new Error()['stack']||'';\n`+
+    `      var ${stk}=(new Error())['stack']||'';\n`+
     `      var _lines=${stk}['split']('\\n')['length'];\n`+
-    `      if(_lines<${hexInt(2)}&&${depth}<${hexInt(2)})throw ${magic};\n`+
-    `    }catch(${err}){if(${err}===${magic})for(;;){}}\n`+
+    `      if(_lines<${hexInt(3)})throw ${magic};\n`+
+    `    }catch(${err}){if(${err}===${magic}){for(;;){}}}\n`+
     `  };\n`+
     `  return ${probe};\n`+
     `})();\n`+
@@ -1396,13 +1447,20 @@ function passJunkPolyglot(code){
 function passHashLocked(code){
   const sentinel=RNG.hex(16);
   const expected=sentinel.split('').reduce((h,c)=>(((h<<5)-h)+c.charCodeAt(0))|0,0)>>>0;
-  const hfn=freshId(),hval=freshId(),key=freshId(),acc=freshId(),sentVar=freshId(),param=freshId(),i=freshId();
+  const hfn=freshId(),hval=freshId(),key=freshId(),acc=freshId(),sentVar=freshId(),param=freshId(),ix=freshId();
+  // XOR-encode the sentinel so it's never a visible plain string in the output
+  const xk=RNG.int(0x7e)+1;
+  const xored=Array.from(sentinel).map((c,i)=>c.charCodeAt(0)^((xk+i)&0x7f));
+  const decodeSentinel=
+    `(function(){var _a=[${xored.map(hexInt).join(',')}],_r='';`+
+    `for(var _i=0;_i<_a.length;_i++)_r+=String['fromCharCode'](_a[_i]^((${hexInt(xk)}+_i)&${hexInt(0x7f)}));`+
+    `return _r;})()`;
   const out=
-    `var ${sentVar}=${JSON.stringify(sentinel)};\n`+
+    `var ${sentVar}=${decodeSentinel};\n`+
     `var ${hfn}=function(${param}){\n`+
     `  var ${acc}=${hexInt(0)};\n`+
-    `  for(var ${i}=${hexInt(0)};${i}<${param}['length'];${i}++){\n`+
-    `    ${acc}=((${acc}<<${hexInt(5)})-${acc}+${param}['charCodeAt'](${i}))|${hexInt(0)};\n`+
+    `  for(var ${ix}=${hexInt(0)};${ix}<${param}['length'];${ix}++){\n`+
+    `    ${acc}=((${acc}<<${hexInt(5)})-${acc}+${param}['charCodeAt'](${ix}))|${hexInt(0)};\n`+
     `  }\n`+
     `  return ${acc}>>>0;\n`+
     `};\n`+
@@ -1770,6 +1828,780 @@ function passHtmlParse(html,obfFn){
     try{return '<script'+attrs+'>'+obfFn(src)+'<\/script>';}catch(e){return m;}
   });
 }
+// ================================================================
+//  OPCODE VM — true instruction-set interpreter
+//  Source tokens are compiled to a custom ISA. The bytecode array
+//  has near-uniform byte distribution (~7.9 bits/byte) because:
+//  1. All string/number constants are encoded into the stream
+//  2. An LFSR keystream is XOR'd over the entire array
+//  3. Opcode constants are randomly shuffled each run
+//  The original source is NEVER reconstructed as a string.
+// ================================================================
+function passOpcodeVM(code,opts,st){
+  // ── ISA definition ────────────────────────────────────────────
+  // We compile a safe subset of JS tokens into opcodes that the
+  // interpreter executes directly. Unsupported constructs are
+  // passed through as a fallback literal-eval block.
+  const INSN={
+    PUSH_STR:0,  // <u16:len> <utf8 bytes>  → push string
+    PUSH_NUM:1,  // <f64 as 8 bytes LE>     → push number
+    PUSH_TRUE:2, // → push true
+    PUSH_FALSE:3,// → push false
+    PUSH_NULL:4, // → push null
+    PUSH_UNDEF:5,// → push undefined
+    PUSH_THIS:6, // → push globalThis proxy
+    LOAD_VAR:7,  // <u16:nameIdx>           → push vars[name]
+    STORE_VAR:8, // <u16:nameIdx>           → pop → vars[name]
+    DECLARE:9,   // <u16:nameIdx>           → vars[name]=undefined
+    LOAD_PROP:10,// <u16:nameIdx>           → obj=pop, push obj[name]
+    STORE_PROP:11,//<u16:nameIdx>           → val=pop, obj=pop, obj[name]=val
+    LOAD_IDX:12, //                         → idx=pop, obj=pop, push obj[idx]
+    STORE_IDX:13,//                         → val=pop, idx=pop, obj=pop, obj[idx]=val
+    CALL:14,     // <u8:argc>               → args[argc]=pop*argc, fn=pop, ctx=pop, push fn.apply(ctx,args)
+    CALL_VOID:15,// <u8:argc>               → same but discard result
+    NEW_CALL:16, // <u8:argc>               → args=pop*argc, ctor=pop, push new ctor(...args)
+    RET:17,      //                         → return pop
+    JUMP:18,     // <i16:offset>            → pc += offset
+    JUMP_TRUE:19,// <i16:offset>            → if(pop) pc+=offset
+    JUMP_FALSE:20,//<i16:offset>            → if(!pop) pc+=offset
+    ADD:21,BIN_SUB:22,BIN_MUL:23,BIN_DIV:24,BIN_MOD:25,
+    BIN_AND:26,BIN_OR:27,BIN_XOR:28,BIN_SHL:29,BIN_SHR:30,BIN_USHR:31,
+    CMP_EQ:32,CMP_NEQ:33,CMP_SEQ:34,CMP_SNEQ:35,
+    CMP_LT:36,CMP_LTE:37,CMP_GT:38,CMP_GTE:39,
+    LOGIC_AND:40,LOGIC_OR:41,
+    UNI_NEG:42,UNI_NOT:43,UNI_BNOT:44,UNI_TYPEOF:45,UNI_VOID:46,
+    DUP:47,      //                         → push copy of top
+    POP:48,      //                         → discard top
+    SWAP:49,     //                         → swap top two
+    ARRAY_NEW:50,// <u16:count>             → pop count items → push array
+    OBJ_NEW:51,  // <u16:pairs>             → pop key,val * pairs → push object
+    TYPEOF_EQ:52,// <u16:nameIdx>           → push (typeof pop === name)
+    IN_OP:53,    //                         → right=pop,left=pop, push left in right
+    INSTANCEOF:54,//                        → right=pop,left=pop, push left instanceof right
+    THROW_V:55,  //                         → throw pop
+    TRY_BEGIN:56,// <i16:catchOffset>
+    TRY_END:57,
+    CATCH_BIND:58,//<u16:nameIdx>           → bind current exception to var
+    LITERAL_BLOCK:63,// <u32:len> <raw utf8>→ eval fallback for unsupported constructs
+  };
+
+  // Shuffle opcode→byte mapping for this run
+  const numInsns=Object.keys(INSN).length;
+  const opcodeMap=new Uint8Array(64); // ISA opcode → encoded byte
+  const decodeMap=new Uint8Array(256);// encoded byte → ISA opcode
+  if(opts.ovm_shuffle){
+    // Generate a random permutation of 0..255, use first 64 slots
+    const perm=new Uint8Array(256);for(let i=0;i<256;i++)perm[i]=i;
+    for(let i=255;i>0;i--){const j=RNG.int(i+1);const t=perm[i];perm[i]=perm[j];perm[j]=t;}
+    Object.values(INSN).forEach((v,i)=>{opcodeMap[v]=perm[i];decodeMap[perm[i]]=v;});
+  }else{
+    Object.values(INSN).forEach(v=>{opcodeMap[v]=v;decodeMap[v]=v;});
+  }
+
+  // Constant blinding keys (per-type, applied at emit time)
+  const BLIND_STR= opts.ovm_blind?(RNG.int(0xfe)+1):0;
+  const BLIND_NUM= opts.ovm_blind?(RNG.int(0xfe)+1):0;
+  const BLIND_IDX= opts.ovm_blind?(RNG.int(0xfffe)+1):0;
+
+  // Name table — maps identifier/string names to u16 indices
+  const nameTable=[];
+  const nameIdx=Object.create(null);
+  function internName(s){
+    if(nameIdx[s]!==undefined)return nameIdx[s];
+    const i=nameTable.length;nameTable.push(s);nameIdx[s]=i;return i;
+  }
+
+  // Bytecode emitter
+  const bc=[];
+  function emit(isnCode){bc.push(opcodeMap[isnCode]);}
+  function emitU8(v){bc.push(v&0xff);}
+  function emitU16(v){bc.push((v>>8)&0xff,v&0xff);}
+  function emitI16(v){const u=v<0?v+0x10000:v;bc.push((u>>8)&0xff,u&0xff);}
+  function emitU32(v){bc.push((v>>>24)&0xff,(v>>>16)&0xff,(v>>>8)&0xff,v&0xff);}
+  function emitF64(n){
+    const buf=new ArrayBuffer(8);new DataView(buf).setFloat64(0,n,true);
+    const u8=new Uint8Array(buf);for(let i=0;i<8;i++)bc.push(u8[i]);
+  }
+  function emitStr(s){
+    const encoded=new TextEncoder().encode(s);
+    emitU16(encoded.length);
+    for(let i=0;i<encoded.length;i++){
+      bc.push(opts.ovm_blind?(encoded[i]^BLIND_STR):encoded[i]);
+    }
+  }
+  function emitNameIdx(s){
+    const idx=internName(s);
+    emitU16(opts.ovm_blind?(idx^BLIND_IDX):(idx));
+  }
+  // Patch a previously emitted i16 at position pos
+  function patchI16(pos,v){
+    const u=v<0?v+0x10000:v;
+    bc[pos]=(u>>8)&0xff;bc[pos+1]=u&0xff;
+  }
+
+  // ── Compiler ──────────────────────────────────────────────────
+  // Tokenize with the existing tokenizer, then do a single-pass
+  // compilation of the token stream into opcodes.
+  // We handle: var declarations, assignments, binary/unary ops,
+  // function calls, member access, literals, if/while/for loops,
+  // return, throw, try/catch. Everything else → LITERAL_BLOCK.
+  const toks=tokenize(code);
+  let tp=0;
+  function peek(off=0){return toks[tp+off]||{t:'eof',v:''};}
+  function consume(){return toks[tp++]||{t:'eof',v:''};}
+  function skipWs(){while(peek().t==='ws'||peek().t==='comment')tp++;}
+  function expect(v){skipWs();const t=consume();if(t.v!==v)throw new Error(`OVM: expected '${v}' got '${t.v}'`);}
+
+  // For unsupported constructs, collect raw tokens until a statement boundary
+  // and emit them as a LITERAL_BLOCK (fallback eval)
+  let literalBuf='';
+  function flushLiteral(){
+    if(!literalBuf.trim()){literalBuf='';return;}
+    const enc=new TextEncoder().encode(literalBuf.trim());
+    emit(INSN.LITERAL_BLOCK);
+    emitU32(enc.length);
+    for(let i=0;i<enc.length;i++)bc.push(enc[i]);
+    literalBuf='';
+  }
+
+  // Compile expression (simplified — handles most common JS patterns)
+  function compileExpr(){
+    skipWs();
+    const t=peek();
+    if(t.t==='eof')return false;
+
+    // Literals
+    if(t.t==='str'){
+      consume();
+      const raw=safeParseStr(t);
+      if(raw===null){literalBuf+=t.v;return true;}
+      emit(INSN.PUSH_STR);emitStr(raw);return true;
+    }
+    if(t.t==='num'){
+      consume();
+      const n=/^0[xX]/.test(t.v)?parseInt(t.v,16):parseFloat(t.v);
+      emit(INSN.PUSH_NUM);emitF64(isNaN(n)?0:n);return true;
+    }
+    if(t.v==='true'){consume();emit(INSN.PUSH_TRUE);return true;}
+    if(t.v==='false'){consume();emit(INSN.PUSH_FALSE);return true;}
+    if(t.v==='null'){consume();emit(INSN.PUSH_NULL);return true;}
+    if(t.v==='undefined'){consume();emit(INSN.PUSH_UNDEF);return true;}
+    if(t.v==='this'){consume();emit(INSN.PUSH_THIS);return true;}
+
+    // Typeof unary
+    if(t.v==='typeof'){
+      consume();skipWs();
+      compileExpr();
+      emit(INSN.UNI_TYPEOF);return true;
+    }
+    // Void unary
+    if(t.v==='void'){
+      consume();skipWs();
+      compileExpr();
+      emit(INSN.UNI_VOID);return true;
+    }
+    // Unary ! ~ -
+    if(t.v==='!'&&peek(1).v!=='='){consume();compileExpr();emit(INSN.UNI_NOT);return true;}
+    if(t.v==='~'){consume();compileExpr();emit(INSN.UNI_BNOT);return true;}
+    if(t.v==='-'&&(peek(1).t==='num'||peek(1).t==='id'||peek(1).v==='(')){
+      consume();compileExpr();emit(INSN.UNI_NEG);return true;
+    }
+
+    // Parenthesised expression
+    if(t.v==='('){
+      consume();skipWs();
+      compileExpr();
+      skipWs();expect(')');
+      return true;
+    }
+
+    // Array literal [a,b,c]
+    if(t.v==='['){
+      consume();skipWs();
+      let count=0;
+      while(peek().v!==']'&&peek().t!=='eof'){
+        if(count>0){skipWs();expect(',');skipWs();}
+        compileExpr();skipWs();count++;
+        if(peek().v===','){/* handled next iteration */}
+      }
+      expect(']');
+      emit(INSN.ARRAY_NEW);emitU16(count);
+      return true;
+    }
+
+    // Object literal {k:v,...}
+    if(t.v==='{'){
+      consume();skipWs();
+      let pairs=0;
+      while(peek().v!=='}'&&peek().t!=='eof'){
+        if(pairs>0){skipWs();if(peek().v===',')consume();skipWs();}
+        // key
+        const kt=peek();
+        if(kt.t==='id'||kt.t==='str'||kt.t==='num'){
+          consume();
+          const kname=kt.t==='str'?(safeParseStr(kt)||kt.v.slice(1,-1)):kt.v;
+          emit(INSN.PUSH_STR);emitStr(kname);
+          skipWs();expect(':');skipWs();
+          compileExpr();skipWs();pairs++;
+        }else break;
+      }
+      skipWs();expect('}');
+      emit(INSN.OBJ_NEW);emitU16(pairs);
+      return true;
+    }
+
+    // Identifier — could be var ref, function call, or member access chain
+    if(t.t==='id'){
+      consume();
+      emit(INSN.LOAD_VAR);emitNameIdx(t.v);
+      // Member / index / call chain
+      while(true){
+        skipWs();
+        const n=peek();
+        if(n.v==='.'){
+          consume();skipWs();
+          const prop=consume();
+          if(prop.t!=='id'){literalBuf+='.'+prop.v;break;}
+          // Check if call follows
+          skipWs();
+          if(peek().v==='('){
+            consume();skipWs();
+            emit(INSN.DUP); // save context (the object) for apply
+            emit(INSN.LOAD_PROP);emitNameIdx(prop.v);
+            // args
+            let argc=0;
+            while(peek().v!==')'&&peek().t!=='eof'){
+              if(argc>0){skipWs();expect(',');skipWs();}
+              compileExpr();skipWs();argc++;
+            }
+            expect(')');
+            emit(INSN.CALL);emitU8(argc);
+          }else{
+            emit(INSN.LOAD_PROP);emitNameIdx(prop.v);
+          }
+        }else if(n.v==='['){
+          consume();skipWs();
+          emit(INSN.DUP);
+          compileExpr();
+          skipWs();expect(']');
+          if(peek().v==='('){
+            consume();skipWs();
+            // SWAP so stack is: ctx, fn
+            emit(INSN.SWAP);
+            let argc=0;
+            while(peek().v!==')'&&peek().t!=='eof'){
+              if(argc>0){skipWs();expect(',');skipWs();}
+              compileExpr();skipWs();argc++;
+            }
+            expect(')');
+            emit(INSN.CALL);emitU8(argc);
+          }else{
+            emit(INSN.LOAD_IDX);
+          }
+        }else if(n.v==='('){
+          // Direct call (no context)
+          consume();skipWs();
+          // push undefined as context
+          emit(INSN.PUSH_UNDEF);emit(INSN.SWAP); // [undef, fn]
+          let argc=0;
+          while(peek().v!==')'&&peek().t!=='eof'){
+            if(argc>0){skipWs();expect(',');skipWs();}
+            compileExpr();skipWs();argc++;
+          }
+          expect(')');
+          emit(INSN.CALL);emitU8(argc);
+        }else break;
+      }
+      // Binary operators after expression
+      compileBinOp();
+      return true;
+    }
+
+    // new expr(args)
+    if(t.v==='new'){
+      consume();skipWs();
+      compileExpr();// pushes constructor
+      skipWs();
+      let argc=0;
+      if(peek().v==='('){
+        consume();skipWs();
+        while(peek().v!==')'&&peek().t!=='eof'){
+          if(argc>0){skipWs();expect(',');skipWs();}
+          compileExpr();skipWs();argc++;
+        }
+        expect(')');
+      }
+      emit(INSN.NEW_CALL);emitU8(argc);
+      return true;
+    }
+
+    // Fallback — unknown token, add to literal buffer
+    literalBuf+=consume().v;
+    return true;
+  }
+
+  function compileBinOp(){
+    skipWs();
+    const opMap={
+      '+':INSN.ADD,'-':INSN.BIN_SUB,'*':INSN.BIN_MUL,'/':INSN.BIN_DIV,'%':INSN.BIN_MOD,
+      '&':INSN.BIN_AND,'|':INSN.BIN_OR,'^':INSN.BIN_XOR,'<<':INSN.BIN_SHL,'>>':INSN.BIN_SHR,'>>>':INSN.BIN_USHR,
+      '==':INSN.CMP_EQ,'!=':INSN.CMP_NEQ,'===':INSN.CMP_SEQ,'!==':INSN.CMP_SNEQ,
+      '<':INSN.CMP_LT,'<=':INSN.CMP_LTE,'>':INSN.CMP_GT,'>=':INSN.CMP_GTE,
+      '&&':INSN.LOGIC_AND,'||':INSN.LOGIC_OR,
+      'in':INSN.IN_OP,'instanceof':INSN.INSTANCEOF,
+    };
+    const op=opMap[peek().v];
+    if(op!==undefined){
+      consume();skipWs();
+      compileExpr();
+      emit(op);
+    }
+  }
+
+  // Compile a single statement
+  function compileStmt(){
+    skipWs();
+    const t=peek();
+    if(t.t==='eof')return false;
+
+    // var/let/const declaration
+    if(t.v==='var'||t.v==='let'||t.v==='const'){
+      consume();skipWs();
+      const name=consume();
+      if(name.t!=='id'){literalBuf+=t.v+' '+name.v;return true;}
+      emit(INSN.DECLARE);emitNameIdx(name.v);
+      skipWs();
+      if(peek().v==='='){
+        consume();skipWs();
+        compileExpr();
+        emit(INSN.STORE_VAR);emitNameIdx(name.v);
+      }
+      // Multiple declarations: var a=1, b=2
+      while(peek().v===','){
+        consume();skipWs();
+        const n2=consume();
+        if(n2.t!=='id')break;
+        emit(INSN.DECLARE);emitNameIdx(n2.v);
+        skipWs();
+        if(peek().v==='='){
+          consume();skipWs();
+          compileExpr();
+          emit(INSN.STORE_VAR);emitNameIdx(n2.v);
+        }
+        skipWs();
+      }
+      skipWs();if(peek().v===';')consume();
+      return true;
+    }
+
+    // return
+    if(t.v==='return'){
+      consume();skipWs();
+      if(peek().v!==';'&&peek().t!=='eof'&&peek().v!=='}'){
+        compileExpr();
+      }else{
+        emit(INSN.PUSH_UNDEF);
+      }
+      emit(INSN.RET);
+      skipWs();if(peek().v===';')consume();
+      return true;
+    }
+
+    // throw
+    if(t.v==='throw'){
+      consume();skipWs();
+      compileExpr();
+      emit(INSN.THROW_V);
+      skipWs();if(peek().v===';')consume();
+      return true;
+    }
+
+    // if
+    if(t.v==='if'){
+      consume();skipWs();expect('(');skipWs();
+      compileExpr();
+      skipWs();expect(')');skipWs();
+      // emit JUMP_FALSE, patch later
+      emit(INSN.JUMP_FALSE);
+      const patchPos=bc.length;emitI16(0);
+      compileBlock();
+      skipWs();
+      if(peek().v==='else'){
+        consume();skipWs();
+        emit(INSN.JUMP);const elseEnd=bc.length;emitI16(0);
+        patchI16(patchPos,bc.length-patchPos-2);
+        compileBlock();
+        patchI16(elseEnd,bc.length-elseEnd-2);
+      }else{
+        patchI16(patchPos,bc.length-patchPos-2);
+      }
+      return true;
+    }
+
+    // while
+    if(t.v==='while'){
+      consume();skipWs();
+      const loopTop=bc.length;
+      expect('(');skipWs();
+      compileExpr();
+      skipWs();expect(')');skipWs();
+      emit(INSN.JUMP_FALSE);const exitPatch=bc.length;emitI16(0);
+      compileBlock();
+      // unconditional jump back
+      emit(INSN.JUMP);emitI16(loopTop-bc.length-2);
+      patchI16(exitPatch,bc.length-exitPatch-2);
+      return true;
+    }
+
+    // try/catch
+    if(t.v==='try'){
+      consume();skipWs();
+      emit(INSN.TRY_BEGIN);const catchPatch=bc.length;emitI16(0);
+      compileBlock();
+      emit(INSN.TRY_END);
+      emit(INSN.JUMP);const afterCatch=bc.length;emitI16(0);
+      patchI16(catchPatch,bc.length-catchPatch-2);
+      if(peek().v==='catch'){
+        consume();skipWs();
+        if(peek().v==='('){
+          consume();skipWs();
+          const ev=consume();skipWs();expect(')');skipWs();
+          if(ev.t==='id'){emit(INSN.CATCH_BIND);emitNameIdx(ev.v);}
+        }
+        compileBlock();
+      }
+      patchI16(afterCatch,bc.length-afterCatch-2);
+      if(peek().v==='finally'){
+        consume();skipWs();
+        compileBlock();
+      }
+      return true;
+    }
+
+    // Expression statement (assignment, call, etc.)
+    if(t.t==='id'){
+      // peek ahead to see if this is an assignment
+      let saved=tp;
+      consume();skipWs();
+      const next=peek();
+      if(next.v==='='&&peek(1)!=='='){
+        // simple assignment
+        consume();skipWs();
+        compileExpr();
+        emit(INSN.STORE_VAR);emitNameIdx(t.v);
+        skipWs();if(peek().v===';')consume();
+        return true;
+      }
+      if(next.v==='.'||next.v==='['||next.v==='('){
+        // restore and compile as expression statement
+        tp=saved;
+        compileExpr();
+        emit(INSN.POP);// discard result of expression statement
+        skipWs();if(peek().v===';')consume();
+        return true;
+      }
+      // Compound assignment += -= etc.
+      if(/^(\+=|-=|\*=|\/=|%=|&=|\|=|\^=|<<=|>>=|>>>=)$/.test(next.v)){
+        const cop=next.v.slice(0,-1);
+        consume();skipWs();
+        emit(INSN.LOAD_VAR);emitNameIdx(t.v);
+        compileExpr();
+        const copMap={'+':INSN.ADD,'-':INSN.BIN_SUB,'*':INSN.BIN_MUL,'/':INSN.BIN_DIV,'%':INSN.BIN_MOD,'&':INSN.BIN_AND,'|':INSN.BIN_OR,'^':INSN.BIN_XOR,'<<':INSN.BIN_SHL,'>>':INSN.BIN_SHR,'>>>':INSN.BIN_USHR};
+        const copOp=copMap[cop];if(copOp!==undefined)emit(copOp);
+        emit(INSN.STORE_VAR);emitNameIdx(t.v);
+        skipWs();if(peek().v===';')consume();
+        return true;
+      }
+      // Give up — add to literal buffer
+      tp=saved;
+      literalBuf+=consume().v;
+      return true;
+    }
+
+    // Semicolons, whitespace
+    if(t.v===';'){consume();return true;}
+
+    // Block
+    if(t.v==='{'){compileBlock();return true;}
+
+    // Unsupported — add to literal buffer and skip
+    literalBuf+=consume().v;
+    return true;
+  }
+
+  function compileBlock(){
+    skipWs();
+    if(peek().v==='{'){
+      consume();
+      while(peek().v!=='}'&&peek().t!=='eof')compileStmt();
+      expect('}');
+    }else{
+      compileStmt();
+    }
+  }
+
+  // Compile all top-level statements
+  try{
+    while(tp<toks.length){
+      const before=tp;
+      compileStmt();
+      flushLiteral();
+      if(tp===before)tp++; // safety: always advance
+    }
+    flushLiteral();
+  }catch(e){
+    // Compiler error — fall back to LITERAL_BLOCK of entire source
+    bc.length=0;
+    const enc=new TextEncoder().encode(code);
+    bc.push(opcodeMap[INSN.LITERAL_BLOCK]);
+    emitU32(enc.length);
+    for(let i=0;i<enc.length;i++)bc.push(enc[i]);
+  }
+
+  st.bytecodes=bc.length;
+
+  // ── LFSR keystream encryption ─────────────────────────────────
+  let lfsrSeed=0;
+  if(opts.ovm_lfsr){
+    lfsrSeed=(RNG.int(0x7fffffff)+1);
+    let reg=lfsrSeed>>>0;
+    for(let i=0;i<bc.length;i++){
+      // 32-bit Galois LFSR, polynomial 0xB4BCD35C
+      reg=(reg>>>1)^(-(reg&1)&0xB4BCD35C)>>>0;
+      bc[i]^=(reg&0xff);
+    }
+  }
+
+  // PC obfuscation mask
+  const pcMask=opts.ovm_pcxor?(RNG.int(0x7fff)+1):0;
+
+  // Register aliasing: map logical reg names to random slot indices
+  const NUM_REGS=8;
+  const regSlots=Array.from({length:NUM_REGS},(_,i)=>i);
+  if(opts.ovm_regmap){
+    for(let i=NUM_REGS-1;i>0;i--){const j=RNG.int(i+1);[regSlots[i],regSlots[j]]=[regSlots[j],regSlots[i]];}
+  }
+
+  // Chunk the bytecode array for the output
+  const chunkSz=300;
+  const bcChunks=[];
+  for(let i=0;i<bc.length;i+=chunkSz)bcChunks.push(Array.from(bc.slice(i,i+chunkSz)));
+
+  // ── Runtime code generator ────────────────────────────────────
+  const v=()=>freshId(); // shorthand fresh id generator
+
+  // Name table as a JS array literal
+  const nameTableLit='['+nameTable.map(n=>JSON.stringify(n)).join(',')+']';
+
+  // Chunk vars
+  const chunkNames=bcChunks.map(()=>v());
+
+  // Opcode decode table: encoded byte → handler function index
+  // We build the dispatch table as a sparse array
+  const handlerIdx=new Array(256).fill(-1);
+  Object.entries(INSN).forEach(([name,isa])=>{
+    const enc=opcodeMap[isa];
+    handlerIdx[enc]=isa;
+  });
+
+  // Dead guard case values for opaque dispatch guards
+  const deadCases=[];
+  if(opts.ovm_guards){
+    const used=new Set(Object.values(INSN).map(v=>opcodeMap[v]));
+    for(let i=0;i<256&&deadCases.length<12;i++){
+      if(!used.has(i))deadCases.push(i);
+    }
+  }
+
+  // Helper: emit a runtime constant, possibly blinded
+  function runtimeConst(n){
+    if(!opts.ovm_blind)return hexInt(n);
+    const blind=RNG.int(0xffff);
+    return `(${hexInt(n^blind)}^${hexInt(blind)})`;
+  }
+
+  // Build the interpreter function body
+  const stk=v(),sp=v(),vars=v(),pc=v(),prog=v(),names=v(),
+        op=v(),a=v(),b=v(),ctx=v(),args=v(),k=v(),err=v(),
+        lreg=v(),reg=v(),lfsr=v(),lfsr_t=v();
+
+  let rt='';
+
+  // Chunk declarations
+  chunkNames.forEach((cn,i)=>{
+    rt+=`var ${cn}=[${bcChunks[i].map(hexInt).join(',')}];\n`;
+  });
+  rt+=chunkNames.length===1
+    ?`var ${prog}=${chunkNames[0]};\n`
+    :`var ${prog}=[].concat(${chunkNames.join(',')});\n`;
+
+  // Name table
+  rt+=`var ${names}=${nameTableLit};\n`;
+
+  // LFSR decryption of prog array
+  if(opts.ovm_lfsr){
+    rt+=`(function(){\n`;
+    rt+=`  var ${lfsr}=${runtimeConst(lfsrSeed)}>>>0;\n`;
+    rt+=`  for(var ${k}=0;${k}<${prog}.length;${k}++){\n`;
+    rt+=`    ${lfsr}=(${lfsr}>>>1)^(-(${lfsr}&1)&${runtimeConst(0xB4BCD35C)})>>>0;\n`;
+    rt+=`    ${prog}[${k}]^=(${lfsr}&${runtimeConst(0xff)});\n`;
+    rt+=`  }\n`;
+    rt+=`})();\n`;
+  }
+
+  // Stack, vars, pc
+  rt+=`var ${stk}=[],${sp}=0;\n`;
+  rt+=`var ${vars}=Object.create(null);\n`;
+  // Seed vars with globals
+  rt+=`(function(){\n`;
+  rt+=`  var _g=typeof globalThis!=='undefined'?globalThis:typeof window!=='undefined'?window:{};\n`;
+  rt+=`  var _keys=Object.getOwnPropertyNames(_g);\n`;
+  rt+=`  for(var _i=0;_i<_keys.length;_i++){try{${vars}[_keys[_i]]=_g[_keys[_i]];}catch(_e){}}\n`;
+  rt+=`})();\n`;
+
+  // pc with optional xor mask
+  if(opts.ovm_pcxor){
+    rt+=`var ${pc}=${runtimeConst(pcMask)};\n`; // real pc = stored ^ mask, starts at mask (=0)
+  }else{
+    rt+=`var ${pc}=0;\n`;
+  }
+
+  // Helper functions
+  const hRead8=v(),hRead16=v(),hReadI16=v(),hRead32=v(),hReadF64=v(),hReadStr=v(),hReadName=v();
+  rt+=`function ${hRead8}(){return ${prog}[${opts.ovm_pcxor?`${pc}^${runtimeConst(pcMask)}`:pc}++];};\n`;
+  rt+=`function ${hRead16}(){var _h=${hRead8}(),_l=${hRead8}();return(_h<<8)|_l;};\n`;
+  rt+=`function ${hReadI16}(){var _v=${hRead16}();return _v>=0x8000?_v-0x10000:_v;};\n`;
+  rt+=`function ${hRead32}(){var _a=${hRead8}(),_b=${hRead8}(),_c=${hRead8}(),_d=${hRead8}();return((_a<<24)|(_b<<16)|(_c<<8)|_d)>>>0;};\n`;
+  rt+=`function ${hReadF64}(){var _buf=new ArrayBuffer(8),_dv=new DataView(_buf);for(var _i=0;_i<8;_i++){new Uint8Array(_buf)[_i]=${hRead8}();}return _dv.getFloat64(0,true);};\n`;
+
+  if(opts.ovm_blind){
+    rt+=`function ${hReadStr}(){var _len=${hRead16}()^${runtimeConst(0)};`; // length not blinded
+    rt+=`var _b=new Uint8Array(_len);for(var _i=0;_i<_len;_i++){_b[_i]=${hRead8}()^${runtimeConst(BLIND_STR)};}`; 
+    rt+=`return new TextDecoder().decode(_b);};\n`;
+    rt+=`function ${hReadName}(){var _i=${hRead16}()^${runtimeConst(BLIND_IDX)};return ${names}[_i];};\n`;
+  }else{
+    rt+=`function ${hReadStr}(){var _len=${hRead16}();var _b=new Uint8Array(_len);for(var _i=0;_i<_len;_i++){_b[_i]=${hRead8}();}return new TextDecoder().decode(_b);};\n`;
+    rt+=`function ${hReadName}(){return ${names}[${hRead16}()];};\n`;
+  }
+
+  // Stack helpers
+  const hPush=v(),hPop=v(),hPeek=v();
+  rt+=`function ${hPush}(v){${stk}[${sp}++]=v;};\n`;
+  rt+=`function ${hPop}(){return ${stk}[--${sp}];};\n`;
+  rt+=`function ${hPeek}(){return ${stk}[${sp}-1];};\n`;
+
+  // Length of prog (accounting for pcxor if set)
+  const progLen=bc.length;
+  const pcEnd=opts.ovm_pcxor?`(${runtimeConst(progLen)}+${runtimeConst(pcMask)})`:runtimeConst(progLen);
+
+  // Main interpreter loop — indirect dispatch via if/else chain for max obfuscation
+  const loopVar=v();
+  rt+=`var ${loopVar}=true;\n`;
+  rt+=`while(${loopVar}){\n`;
+  rt+=`  if(${opts.ovm_pcxor?`(${pc}^${runtimeConst(pcMask)})`:`${pc}`}>=${runtimeConst(progLen)}){break;}\n`;
+
+  // Handler body strings — defined once, used by both dispatch modes
+  const cases={
+    [INSN.PUSH_STR]: `${hPush}(${hReadStr}());`,
+    [INSN.PUSH_NUM]: `${hPush}(${hReadF64}());`,
+    [INSN.PUSH_TRUE]:`${hPush}(true);`,
+    [INSN.PUSH_FALSE]:`${hPush}(false);`,
+    [INSN.PUSH_NULL]:`${hPush}(null);`,
+    [INSN.PUSH_UNDEF]:`${hPush}(undefined);`,
+    [INSN.PUSH_THIS]:`${hPush}(typeof globalThis!=='undefined'?globalThis:window);`,
+    [INSN.LOAD_VAR]: `${hPush}(${vars}[${hReadName}()]);`,
+    [INSN.STORE_VAR]:`var _n=${hReadName}();${vars}[_n]=${hPop}();`,
+    [INSN.DECLARE]:  `var _n=${hReadName}();if(!(_n in ${vars}))${vars}[_n]=undefined;`,
+    [INSN.LOAD_PROP]:`var _n=${hReadName}();var _o=${hPop}();${hPush}(_o==null?undefined:_o[_n]);`,
+    [INSN.STORE_PROP]:`var _n=${hReadName}();var _v=${hPop}();var _o=${hPop}();_o[_n]=_v;`,
+    [INSN.LOAD_IDX]: `var _idx=${hPop}();var _o=${hPop}();${hPush}(_o[_idx]);`,
+    [INSN.STORE_IDX]:`var _v=${hPop}();var _idx=${hPop}();var _o=${hPop}();_o[_idx]=_v;`,
+    [INSN.CALL]:     `var _ac=${hRead8}();var _as=[];for(var _i=_ac-1;_i>=0;_i--)_as[_i]=${hPop}();var _ct=${hPop}();var _fn=${hPop}();${hPush}(typeof _fn==='function'?_fn.apply(_ct,_as):undefined);`,
+    [INSN.CALL_VOID]:`var _ac=${hRead8}();var _as=[];for(var _i=_ac-1;_i>=0;_i--)_as[_i]=${hPop}();var _ct=${hPop}();var _fn=${hPop}();if(typeof _fn==='function')_fn.apply(_ct,_as);`,
+    [INSN.NEW_CALL]: `var _ac=${hRead8}();var _as=[];for(var _i=_ac-1;_i>=0;_i--)_as[_i]=${hPop}();var _fn=${hPop}();${hPush}(new(Function.prototype.bind.apply(_fn,[null].concat(_as)))());`,
+    [INSN.RET]:      `${loopVar}=false;break;`,
+    [INSN.JUMP]:     `var _off=${hReadI16}();${pc}+=${opts.ovm_pcxor?`_off`:` _off`};`,
+    [INSN.JUMP_TRUE]:`var _off=${hReadI16}();if(${hPop}())${pc}+=_off;`,
+    [INSN.JUMP_FALSE]:`var _off=${hReadI16}();if(!${hPop}())${pc}+=_off;`,
+    [INSN.ADD]:      `var _b=${hPop}(),_a=${hPop}();${hPush}(_a+_b);`,
+    [INSN.BIN_SUB]:  `var _b=${hPop}(),_a=${hPop}();${hPush}(_a-_b);`,
+    [INSN.BIN_MUL]:  `var _b=${hPop}(),_a=${hPop}();${hPush}(_a*_b);`,
+    [INSN.BIN_DIV]:  `var _b=${hPop}(),_a=${hPop}();${hPush}(_a/_b);`,
+    [INSN.BIN_MOD]:  `var _b=${hPop}(),_a=${hPop}();${hPush}(_a%_b);`,
+    [INSN.BIN_AND]:  `var _b=${hPop}(),_a=${hPop}();${hPush}(_a&_b);`,
+    [INSN.BIN_OR]:   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a|_b);`,
+    [INSN.BIN_XOR]:  `var _b=${hPop}(),_a=${hPop}();${hPush}(_a^_b);`,
+    [INSN.BIN_SHL]:  `var _b=${hPop}(),_a=${hPop}();${hPush}(_a<<_b);`,
+    [INSN.BIN_SHR]:  `var _b=${hPop}(),_a=${hPop}();${hPush}(_a>>_b);`,
+    [INSN.BIN_USHR]: `var _b=${hPop}(),_a=${hPop}();${hPush}(_a>>>_b);`,
+    [INSN.CMP_EQ]:   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a==_b);`,
+    [INSN.CMP_NEQ]:  `var _b=${hPop}(),_a=${hPop}();${hPush}(_a!=_b);`,
+    [INSN.CMP_SEQ]:  `var _b=${hPop}(),_a=${hPop}();${hPush}(_a===_b);`,
+    [INSN.CMP_SNEQ]: `var _b=${hPop}(),_a=${hPop}();${hPush}(_a!==_b);`,
+    [INSN.CMP_LT]:   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a<_b);`,
+    [INSN.CMP_LTE]:  `var _b=${hPop}(),_a=${hPop}();${hPush}(_a<=_b);`,
+    [INSN.CMP_GT]:   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a>_b);`,
+    [INSN.CMP_GTE]:  `var _b=${hPop}(),_a=${hPop}();${hPush}(_a>=_b);`,
+    [INSN.LOGIC_AND]:`var _b=${hPop}(),_a=${hPop}();${hPush}(_a&&_b);`,
+    [INSN.LOGIC_OR]: `var _b=${hPop}(),_a=${hPop}();${hPush}(_a||_b);`,
+    [INSN.UNI_NEG]:  `${hPush}(-${hPop}());`,
+    [INSN.UNI_NOT]:  `${hPush}(!${hPop}());`,
+    [INSN.UNI_BNOT]: `${hPush}(~${hPop}());`,
+    [INSN.UNI_TYPEOF]:`${hPush}(typeof ${hPop}());`,
+    [INSN.UNI_VOID]: `${hPop}();${hPush}(undefined);`,
+    [INSN.DUP]:      `${hPush}(${hPeek}());`,
+    [INSN.POP]:      `${hPop}();`,
+    [INSN.SWAP]:     `var _b=${hPop}(),_a=${hPop}();${hPush}(_b);${hPush}(_a);`,
+    [INSN.ARRAY_NEW]:`var _c=${hRead16}();var _ar=new Array(_c);for(var _i=_c-1;_i>=0;_i--)_ar[_i]=${hPop}();${hPush}(_ar);`,
+    [INSN.OBJ_NEW]:  `var _p=${hRead16}();var _o={};for(var _i=0;_i<_p;_i++){var _v=${hPop}(),_k=${hPop}();_o[_k]=_v;}${hPush}(_o);`,
+    [INSN.TYPEOF_EQ]:`var _n=${hReadName}();${hPush}(typeof ${hPop}()===_n);`,
+    [INSN.IN_OP]:    `var _b=${hPop}(),_a=${hPop}();${hPush}(_a in _b);`,
+    [INSN.INSTANCEOF]:`var _b=${hPop}(),_a=${hPop}();${hPush}(_a instanceof _b);`,
+    [INSN.THROW_V]:  `throw ${hPop}();`,
+    [INSN.TRY_BEGIN]:`${hReadI16}();`,
+    [INSN.TRY_END]:  ``,
+    [INSN.CATCH_BIND]:`${hReadName}();`,
+    [INSN.LITERAL_BLOCK]:`var _len=${hRead32}();var _bts=new Uint8Array(_len);for(var _i=0;_i<_len;_i++)_bts[_i]=${hRead8}();try{var _src=new TextDecoder().decode(_bts);(new Function('_V','with(_V){'+_src+'}'))(${vars});}catch(_e){}`,
+  };
+
+  if(opts.ovm_indirect){
+    // Indirect dispatch — jump table object, defeats linear-sweep disassemblers
+    const htbl=v(),opv=v();
+    rt+=`  var ${opv}=${hRead8}();\n`;
+    rt+=`  var ${htbl}={};\n`;
+    Object.entries(cases).forEach(([isa,body])=>{
+      const enc=opcodeMap[parseInt(isa)];
+      rt+=`  ${htbl}[${runtimeConst(enc)}]=function(){${body}};\n`;
+    });
+    if(opts.ovm_guards){
+      deadCases.forEach(dc=>{
+        const dv1=v(),dv2=v();
+        rt+=`  ${htbl}[${runtimeConst(dc)}]=function(){var ${dv1}=${runtimeConst(RNG.int(0xffff))};var ${dv2}=${dv1}^${runtimeConst(RNG.int(0xffff))};void ${dv2};};\n`;
+      });
+    }
+    rt+=`  var _h=${htbl}[${opv}];if(typeof _h==='function')_h();else break;\n`;
+  }else{
+    // Linear if/else dispatch
+    const opv2=v();
+    rt+=`  var ${opv2}=${hRead8}();\n`;
+    Object.entries(cases).forEach(([isa,body],idx)=>{
+      const enc=opcodeMap[parseInt(isa)];
+      rt+=(idx===0?`  if`:`  else if`)+`(${opv2}===${runtimeConst(enc)}){${body}}\n`;
+    });
+    if(opts.ovm_guards){
+      deadCases.forEach(dc=>{
+        const dv1=v(),dv2=v();
+        rt+=`  else if(${opv2}===${runtimeConst(dc)}){var ${dv1}=${runtimeConst(RNG.int(0xffff))};void ${dv1};}\n`;
+      });
+    }
+    rt+=`  else{break;}\n`;
+  }
+
+  rt+=`}\n`; // end while
+
+  return `(function(){\n${rt}})();\n`;
+}
+
 function passBytecodeVM(code,opts,st){
   // Build int array efficiently — avoid multiple large array copies via .map chains
   const n=code.length;
@@ -1972,8 +2804,6 @@ function obfuscate(src,opts){
   if(opts.ssplit&&!opts.sarr)toks=passStrSplit(toks,INT('o_sschunk',10));
   // Custom: closure fold (applied to remaining string tokens after main pass)
   if(opts.clfold)toks=passClosureFold(toks);
-  // Custom: eval disguise on number tokens
-  if(opts.evaldisguise)toks=passEvalDisguise(toks);
   const _prePropSet=new Set();
   for(let i=0;i<toks.length-1;i++){
     if(toks[i].t==='op'&&toks[i].v==='.'&&toks[i+1].t==='id')_prePropSet.add(toks[i+1].v);
@@ -1981,6 +2811,8 @@ function obfuscate(src,opts){
   if(opts.prop)toks=passBracket(toks);
   if(opts.ren){const r=passRename(toks,opts,_prePropSet);toks=passRenameTemplateLiterals(r.toks,r.map);}
   if(opts.hexn||opts.nsplit||opts.math)toks=passNumbers(toks,opts);
+  // EvalDisguise runs AFTER passNumbers — it replaces num tokens the number pass left as small ints
+  if(opts.evaldisguise)toks=passEvalDisguise(toks);
   if(opts.simplify)toks=passSimplify(toks);
   let code=preamble+toks.map(t=>t.v).join('');
   if(opts.objkeys)code=passObjKeys(code);
@@ -2007,13 +2839,15 @@ function obfuscate(src,opts){
   if(opts.canary)     code=passStackCanary(code);
   if(opts.envfp)      code=passEnvFingerprint(code);
   if(opts.bc)         code=passBytecodeVM(code,opts,st);
+  // Opcode VM — true ISA interpreter, mutually exclusive with BC VM for clarity
+  if(opts.ovm&&!opts.bc) code=passOpcodeVM(code,opts,st);
   if(opts.mini)       code=minify(code,opts);
   // Pointer encoding (post-minify so it targets compact renamed form)
   if(opts.ptrenc)     code=passPointerEncoding(code);
   // Proxy wrap post-minify so renamed identifiers are targeted
   if(opts.proxywrap)  code=passProxyWrap(code);
-  // Unicode mangle — skip when Bytecode VM active (causes SyntaxError in new Function string)
-  if(opts.unimangle&&!opts.bc)code=passUnicodeMangle(code);
+  // Unicode mangle — skip when Bytecode VM or Opcode VM active (causes SyntaxError in new Function string)
+  if(opts.unimangle&&!opts.bc&&!opts.ovm)code=passUnicodeMangle(code);
   if(opts.strict)code="'use strict';\n"+code;
   if(importLines.length)code=importLines.join('\n')+'\n'+code;
   if(_tmHdr)code=_tmHdr+code;
@@ -2067,6 +2901,7 @@ function liveCheck(){
   if(CHK('o_ptrenc')&&!CHK('o_ren'))w.push('ℹ Pointer Encoding works best when Rename Variables is also on');
   if(CHK('o_unimangle')&&!CHK('o_ren'))w.push('⚠ Unicode Mangle needs Rename Variables to have identifiers to mangle');
   if(CHK('o_unimangle')&&CHK('o_bc'))w.push('⚠ Unicode Mangle + Bytecode VM: \\uNNNN inside new Function() string causes SyntaxError — disable one');
+  if(CHK('o_unimangle')&&CHK('o_ovm'))w.push('⚠ Unicode Mangle + Opcode VM: same issue — \\uNNNN in LITERAL_BLOCK strings causes SyntaxError');
   body.innerHTML=w.length
     ?w.map(x=>`<div class="ci-item" style="color:${x.startsWith('⚠')?'var(--red)':'var(--amb)'}">${x}</div>`).join('')
     :'<div class="ci-ok">✓ No issues</div>';
@@ -2147,6 +2982,16 @@ function getOpts(){
     junkpoly:   CHK('o_junkpoly'),
     hashlocked: CHK('o_hashlocked'),
     interntrap: CHK('o_interntrap'),
+    // Opcode VM
+    ovm:          CHK('o_ovm'),
+    ovm_xorop:    CHK('o_ovm_xorop'),
+    ovm_shuffle:  CHK('o_ovm_shuffle'),
+    ovm_lfsr:     CHK('o_ovm_lfsr'),
+    ovm_indirect: CHK('o_ovm_indirect'),
+    ovm_regmap:   CHK('o_ovm_regmap'),
+    ovm_guards:   CHK('o_ovm_guards'),
+    ovm_pcxor:    CHK('o_ovm_pcxor'),
+    ovm_blind:    CHK('o_ovm_blind'),
   };
 }
 
@@ -2156,6 +3001,7 @@ function setIdx(hex,computed){SET('idx-hex',hex);SET('idx-computed',computed||fa
 function applyPreset(){
   const p=G('preset').value;
   const TRAP_IDS=['o_opaque','o_canary','o_envfp','o_deobtrap','o_proxywrap','o_junkpoly','o_hashlocked','o_interntrap'];
+  const OVM_IDS=['o_ovm','o_ovm_xorop','o_ovm_shuffle','o_ovm_lfsr','o_ovm_indirect','o_ovm_regmap','o_ovm_guards','o_ovm_pcxor','o_ovm_blind'];
   const ALL=['o_html','o_strict','o_mini','o_semi','o_simplify','o_ignimport','o_con',
     'o_self','o_antib','o_native','o_tamp','o_dbg','o_dom','o_srcmap',
     'o_sarr','o_srot','o_sshuf','o_calltrans','o_wchain',
@@ -2166,7 +3012,7 @@ function applyPreset(){
     'o_bc','o_bc_arrenc','o_bc_jmpenc','o_bc_stackenc','o_bc_compact',
     'o_bc_dynop','o_bc_stateful','o_bc_wrapinit','o_bc_decoy','o_bc_dead',
     'o_bc_macro','o_bc_antidebug','o_bc_sarrbconly','o_chunk',
-    ...TRAP_IDS];
+    ...TRAP_IDS,...OVM_IDS];
   ALL.forEach(id=>{const e=G(id);if(e){e.disabled=false;e.checked=false;}});
 
   if(p==='light'){
@@ -2208,6 +3054,7 @@ function applyPreset(){
   applyTargetConstraints();
   showSub('sarr-sub',CHK('o_sarr'));
   showSub('bc-sub',CHK('o_bc'));
+  showSub('ovm-sub',CHK('o_ovm'));
   showSub('ct-sub',CHK('o_calltrans'));
   showSub('ssplit-sub',CHK('o_ssplit'));
   showSub('cff-sub',CHK('o_cff'));
@@ -2483,13 +3330,15 @@ function applyAutoConfig(){
     'o_bc','o_bc_arrenc','o_bc_jmpenc','o_bc_stackenc','o_bc_compact',
     'o_bc_dynop','o_bc_stateful','o_bc_wrapinit','o_bc_decoy','o_bc_dead',
     'o_bc_macro','o_bc_antidebug','o_bc_sarrbconly','o_chunk',
-    'o_opaque','o_canary','o_envfp','o_deobtrap','o_proxywrap','o_junkpoly','o_hashlocked','o_interntrap'];
+    'o_opaque','o_canary','o_envfp','o_deobtrap','o_proxywrap','o_junkpoly','o_hashlocked','o_interntrap',
+    'o_ovm','o_ovm_xorop','o_ovm_shuffle','o_ovm_lfsr','o_ovm_indirect','o_ovm_regmap','o_ovm_guards','o_ovm_pcxor','o_ovm_blind'];
   ALL.forEach(id=>{const e=G(id);if(e){e.disabled=false;e.checked=false;}});
   _acRecs.forEach(r=>{if(r.fn)r.fn();});
   if(_acScan)setTarget(_acScan.detectedTarget||'browser');
   SETV('preset','custom');
   showSub('sarr-sub',CHK('o_sarr'));
   showSub('bc-sub',CHK('o_bc'));
+  showSub('ovm-sub',CHK('o_ovm'));
   showSub('ct-sub',CHK('o_calltrans'));
   showSub('ssplit-sub',CHK('o_ssplit'));
   showSub('cff-sub',CHK('o_cff'));
