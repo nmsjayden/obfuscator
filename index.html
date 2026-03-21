@@ -319,6 +319,108 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   line-height:1;flex-shrink:0;
 }
 #btn-theme:hover{color:var(--tx);border-color:var(--bd2);}
+
+/* ── AUTO-CONFIG MODAL ───────────────────────────────────── */
+#ac-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);
+  z-index:900;align-items:center;justify-content:center;
+}
+#ac-overlay.open{display:flex;}
+#ac-modal{
+  background:var(--sf);border:1px solid var(--bd2);border-radius:10px;
+  width:520px;max-width:94vw;max-height:88vh;display:flex;flex-direction:column;
+  box-shadow:0 20px 60px rgba(0,0,0,.22);overflow:hidden;
+}
+#ac-head{
+  display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--bd);
+  gap:9px;flex-shrink:0;
+}
+#ac-head h2{font-size:13.5px;font-weight:700;flex:1;letter-spacing:-.01em;color:var(--tx);}
+.ac-close{
+  background:none;border:none;font-size:18px;color:var(--tx3);cursor:pointer;
+  line-height:1;padding:2px 4px;border-radius:3px;
+}
+.ac-close:hover{color:var(--tx);}
+#ac-body{flex:1;overflow-y:auto;padding:16px;}
+#ac-body::-webkit-scrollbar{width:3px;}
+#ac-body::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+
+.ac-section{margin-bottom:16px;}
+.ac-section-title{
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--tx3);margin-bottom:8px;
+}
+
+/* detection badges */
+.ac-badges{display:flex;flex-wrap:wrap;gap:5px;}
+.ac-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 8px;border-radius:20px;font-size:11px;font-weight:500;
+  border:1px solid transparent;
+}
+.ac-badge.ok {background:#ECFDF5;border-color:#A7F3D0;color:#065F46;}
+.ac-badge.warn{background:#FFFBEB;border-color:#FDE68A;color:#92400E;}
+.ac-badge.info{background:#EFF6FF;border-color:#BFDBFE;color:#1E40AF;}
+.ac-badge.neu {background:var(--bg2);border-color:var(--bd);color:var(--tx2);}
+[data-theme=dark] .ac-badge.ok {background:#052e16;border-color:#166534;color:#4ade80;}
+[data-theme=dark] .ac-badge.warn{background:#422006;border-color:#854d0e;color:#fcd34d;}
+[data-theme=dark] .ac-badge.info{background:#0b2a40;border-color:#1e3a5f;color:#93c5fd;}
+[data-theme=dark] .ac-badge.neu {background:var(--bg2);border-color:var(--bd);color:var(--tx2);}
+
+/* level picker */
+.ac-levels{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.ac-lvl{
+  padding:8px 6px;background:var(--bg);border:1.5px solid var(--bd);border-radius:6px;
+  cursor:pointer;text-align:center;transition:all .12s;
+}
+.ac-lvl:hover{border-color:var(--bd2);background:var(--bg2);}
+.ac-lvl.sel{border-color:var(--tx);background:var(--tx);}
+.ac-lvl.sel .ac-lvl-name{color:#fff;}
+.ac-lvl.sel .ac-lvl-desc{color:rgba(255,255,255,.65);}
+.ac-lvl-name{font-size:12px;font-weight:700;color:var(--tx);display:block;margin-bottom:2px;}
+.ac-lvl-desc{font-size:10px;color:var(--tx3);display:block;}
+
+/* recommendations list */
+.ac-rec-list{display:flex;flex-direction:column;gap:4px;}
+.ac-rec{
+  display:flex;align-items:flex-start;gap:8px;padding:7px 9px;
+  border-radius:5px;font-size:11.5px;line-height:1.4;
+  background:var(--bg);border:1px solid var(--bd);
+}
+.ac-rec-icon{flex-shrink:0;font-size:13px;margin-top:1px;}
+.ac-rec-text{color:var(--tx);flex:1;}
+.ac-rec-text b{font-weight:600;}
+.ac-rec-text small{display:block;color:var(--tx3);font-size:10.5px;margin-top:1px;}
+.ac-rec.on  {background:#ECFDF5;border-color:#A7F3D0;}
+.ac-rec.off {background:#FEF2F2;border-color:#FECACA;}
+.ac-rec.set {background:#EFF6FF;border-color:#BFDBFE;}
+[data-theme=dark] .ac-rec.on {background:#052e16;border-color:#166534;}
+[data-theme=dark] .ac-rec.off{background:#450a0a;border-color:#7f1d1d;}
+[data-theme=dark] .ac-rec.set{background:#0b2a40;border-color:#1e3a5f;}
+
+/* footer */
+#ac-foot{
+  display:flex;align-items:center;justify-content:flex-end;
+  padding:12px 16px;border-top:1px solid var(--bd);gap:8px;flex-shrink:0;
+}
+#ac-apply{
+  padding:6px 20px;background:var(--tx);border:1px solid var(--tx);color:#fff;
+  font-family:var(--sans);font-size:12px;font-weight:700;border-radius:var(--rs);
+  cursor:pointer;transition:opacity .12s;
+}
+#ac-apply:hover{opacity:.82;}
+#ac-cancel{
+  padding:6px 14px;background:none;border:1px solid var(--bd);color:var(--tx2);
+  font-family:var(--sans);font-size:12px;font-weight:500;border-radius:var(--rs);
+  cursor:pointer;transition:all .12s;
+}
+#ac-cancel:hover{color:var(--tx);border-color:var(--bd2);}
+#btn-ac{
+  padding:5px 11px;background:none;border:1px solid var(--bd);color:var(--tx2);
+  font-family:var(--sans);font-size:12px;font-weight:500;border-radius:var(--rs);
+  cursor:pointer;transition:all .12s;white-space:nowrap;
+}
+#btn-ac:hover{color:var(--tx);border-color:var(--bd2);background:var(--bg);}
 </style>
 </head>
 <body>
@@ -329,7 +431,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   <div class="logo">
     <div class="logo-mark"></div>
     Obscura
-    <span class="logo-ver">8.2</span>
+    <span class="logo-ver">8.3</span>
   </div>
 
   <span class="hd"></span>
@@ -357,6 +459,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   <div class="h-gap"></div>
 
   <button id="btn-theme" onclick="toggleTheme()" title="Toggle dark mode">☾</button>
+  <button id="btn-ac" onclick="openAutoConfig()" style="margin-left:4px;" title="Scan code and auto-configure settings">⚡ Auto-Config</button>
   <button class="btn-ghost" onclick="copyOut()" style="margin-left:4px;">Copy</button>
   <button class="btn-ghost" id="btn-map" onclick="dlMap()" disabled style="margin-left:4px;">↓ .map</button>
   <button id="btn-run" onclick="runObfuscate()">▶ Run</button>
@@ -925,6 +1028,40 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 
 </div><!-- end app -->
 
+<!-- ── AUTO-CONFIG MODAL ──────────────────────────────────── -->
+<div id="ac-overlay" onclick="if(event.target===this)closeAutoConfig()">
+  <div id="ac-modal">
+    <div id="ac-head">
+      <span style="font-size:16px;">⚡</span>
+      <h2>Auto-Config</h2>
+      <button class="ac-close" onclick="closeAutoConfig()">×</button>
+    </div>
+    <div id="ac-body">
+      <div class="ac-section">
+        <div class="ac-section-title">Detected in your code</div>
+        <div class="ac-badges" id="ac-badges">—</div>
+      </div>
+      <div class="ac-section">
+        <div class="ac-section-title">Protection level</div>
+        <div class="ac-levels" id="ac-levels">
+          <div class="ac-lvl" data-l="light"  onclick="acPickLevel('light')">  <span class="ac-lvl-name">Light</span>  <span class="ac-lvl-desc">Fast · safe</span></div>
+          <div class="ac-lvl" data-l="medium" onclick="acPickLevel('medium')"> <span class="ac-lvl-name">Medium</span> <span class="ac-lvl-desc">Balanced</span></div>
+          <div class="ac-lvl" data-l="high"   onclick="acPickLevel('high')">   <span class="ac-lvl-name">High</span>   <span class="ac-lvl-desc">Strong</span></div>
+          <div class="ac-lvl" data-l="max"    onclick="acPickLevel('max')">    <span class="ac-lvl-name">Max</span>    <span class="ac-lvl-desc">Everything</span></div>
+        </div>
+      </div>
+      <div class="ac-section">
+        <div class="ac-section-title">What will be configured</div>
+        <div class="ac-rec-list" id="ac-recs">Pick a level above.</div>
+      </div>
+    </div>
+    <div id="ac-foot">
+      <button id="ac-cancel" onclick="closeAutoConfig()">Cancel</button>
+      <button id="ac-apply"  onclick="applyAutoConfig()">✓ Apply</button>
+    </div>
+  </div>
+</div>
+
 <!-- CodeMirror -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
@@ -1285,7 +1422,14 @@ function passStrSplit(toks,chunkLen){
     if(inner.length<cl*2) return tok;
     const mid=Math.floor(inner.length/2);
     let splitAt=mid;
-    for(let i=mid;i>=1;i--){ if(inner[i-1]!=='\\'){splitAt=i;break;} }
+    // Walk leftward from mid to find a position not in the middle of an escape sequence.
+    // Count consecutive backslashes ending just before candidate position i;
+    // an odd count means the char AT i is escaped — unsafe to split there.
+    for(let i=mid;i>=1;i--){
+      let bs=0;
+      for(let k=i-1;k>=0&&inner[k]==='\\';k--) bs++;
+      if(bs%2===0){splitAt=i;break;}
+    }
     if(splitAt<1||splitAt>=inner.length) return tok;
     return {...tok,v:`(${q+inner.slice(0,splitAt)+q}+${q+inner.slice(splitAt)+q})`};
   });
@@ -1336,6 +1480,7 @@ function passRename(toks,opts){
     }
     return pfx+'_0x'+(c++).toString(16).padStart(4,'0')+RNG.hex(2);
   }
+  // ── Build rename map ─────────────────────────────────────
   for(let i=0;i<toks.length;i++){
     const tok=toks[i];
     if(tok.t!=='id') continue;
@@ -1345,18 +1490,38 @@ function passRename(toks,opts){
     for(let j=i-1;j>=0;j--){if(toks[j].t!=='ws'&&toks[j].t!=='comment'){prev=toks[j];break;}}
     let next=null;
     for(let j=i+1;j<toks.length;j++){if(toks[j].t!=='ws'&&toks[j].t!=='comment'){next=toks[j];break;}}
-    if(prev&&prev.v==='.') continue;
-    if(next&&next.v===':') continue;
+    if(prev&&prev.v==='.') continue;           // property access: obj.foo
+    if(next&&next.v===':') continue;           // object key or label declaration: foo:
+    // Label references: break myLabel / continue myLabel — the declaration (next===':')
+    // is already skipped above; skip the reference too so they stay in sync.
+    if(prev&&(prev.v==='break'||prev.v==='continue')) continue;
     map[tok.v]=make();
   }
-  return toks.map((tok,i)=>{
+  // ── Apply rename map ─────────────────────────────────────
+  const renamedToks=toks.map((tok,i)=>{
     if(tok.t!=='id'||!map[tok.v]) return tok;
     let prev=null,next=null;
     for(let j=i-1;j>=0;j--){if(toks[j].t!=='ws'&&toks[j].t!=='comment'){prev=toks[j];break;}}
     for(let j=i+1;j<toks.length;j++){if(toks[j].t!=='ws'&&toks[j].t!=='comment'){next=toks[j];break;}}
     if(prev&&prev.v==='.') return tok;
     if(next&&next.v===':') return tok;
+    if(prev&&(prev.v==='break'||prev.v==='continue')) return tok;
     return {...tok,v:map[tok.v]};
+  });
+  // Return both the renamed token list AND the map so the template-literal
+  // post-pass can rename identifiers inside ${...} expressions.
+  return {toks:renamedToks,map};
+}
+
+// After passRename, apply the same map inside template-literal ${...} slots.
+// Template literals are tokenised as a single string token so the rename pass
+// never touches variables embedded in them — this post-pass fixes that.
+function passRenameTemplateLiterals(toks,map){
+  if(!Object.keys(map).length) return toks;
+  return toks.map(tok=>{
+    if(tok.t!=='str'||tok.v[0]!=='`') return tok;
+    const newV=tok.v.replace(/\$\{([a-zA-Z_$][a-zA-Z0-9_$]*)\}/g,(_,id)=>'${'+(map[id]||id)+'}');
+    return newV===tok.v?tok:{...tok,v:newV};
   });
 }
 function passBracket(toks){
@@ -1508,7 +1673,7 @@ function passDomain(code,doms,redir){
 function passIgnoreImports(src){
   const lines=src.split('\n'),imp=[],rest=[];
   for(const l of lines){
-    if(/^\s*(import[\s{*]|export\s+(default\s+)?|const\s+\w+\s*=\s*require\()/.test(l)) imp.push(l);
+    if(/^\s*(import[\s{*]|export\s+(default\s+)?|(const|var|let)\s+[\w{*]\w*\s*=\s*require\()/.test(l)) imp.push(l);
     else rest.push(l);
   }
   return {importLines:imp,rest:rest.join('\n')};
@@ -1685,6 +1850,14 @@ function minify(code,opts){
   return code.trim();
 }
 
+// ── Tampermonkey header preservation ─────────────────────
+// Extracts the // ==UserScript== ... // ==/UserScript== block
+// so it survives minification (the comment stripper would kill it).
+function extractTmHeader(src){
+  const m=src.match(/^([ \t]*\/\/ ==UserScript==[\s\S]*?\/\/ ==\/UserScript==[ \t]*(?:\r?\n|$))/);
+  return m?{header:m[1],rest:src.slice(m[1].length)}:{header:'',rest:src};
+}
+
 // ── Source map ────────────────────────────────────────────
 let _lastMap=null;
 function buildSourceMap(orig){
@@ -1702,6 +1875,10 @@ function obfuscate(src,opts){
   if(opts.html){ return {code:passHtmlParse(src,s=>obfuscate(s,{...opts,html:false}).code),st}; }
   let importLines=[],workSrc=src;
   if(opts.ignimport){const r=passIgnoreImports(src);importLines=r.importLines;workSrc=r.rest;}
+  // Preserve Tampermonkey // ==UserScript== header block — extract before any
+  // token pass and re-attach after minification so it is never stripped.
+  const {header:_tmHdr,rest:_tmRest}=extractTmHeader(workSrc);
+  if(_tmHdr) workSrc=_tmRest;
   let toks=tokenize(workSrc),preamble='';
   // bc_sarrbconly: only apply string array when bytecode VM is also active
   const doSarr = opts.sarr && (!opts.bc_sarrbconly || opts.bc);
@@ -1712,7 +1889,7 @@ function obfuscate(src,opts){
   else if(opts.senc){ toks=passEscape(toks,st); }
   if(opts.ssplit&&!opts.sarr) toks=passStrSplit(toks,INT('o_sschunk',10));
   if(opts.prop) toks=passBracket(toks);
-  if(opts.ren) toks=passRename(toks,opts);
+  if(opts.ren){const r=passRename(toks,opts);toks=passRenameTemplateLiterals(r.toks,r.map);}
   if(opts.hexn||opts.nsplit||opts.math) toks=passNumbers(toks,opts);
   if(opts.simplify) toks=passSimplify(toks);
   let code=preamble+toks.map(t=>t.v).join('');
@@ -1733,6 +1910,8 @@ function obfuscate(src,opts){
   if(opts.mini)   code=minify(code,opts);
   if(opts.strict) code="'use strict';\n"+code;
   if(importLines.length) code=importLines.join('\n')+'\n'+code;
+  // Re-attach Tampermonkey header (must stay as first block, never minified)
+  if(_tmHdr) code=_tmHdr+code;
   return {code,st};
 }
 
@@ -1771,10 +1950,12 @@ function applyTargetConstraints(){
 function liveCheck(){
   const body=G('conflicts-inner'); if(!body) return;
   const w=[];
-  if(currentTarget==='browser-no-eval') w.push('Bytecode VM disabled — uses new Function()');
+  if(currentTarget==='browser-no-eval') w.push('Bytecode VM and Debug Protection disabled — both use new Function()/eval internally');
   if(currentTarget==='node') w.push('Domain Lock, Debug Protection, Native Check, atob, VM Anti-Debug disabled for Node.js');
   if(currentTarget==='tampermonkey') w.push('Domain Lock, Native Fn Check, and HTML mode disabled — Tampermonkey handles site matching via @match and wraps native APIs');
   if(CHK('o_charcode')&&CHK('o_sarr')) w.push('Charcode + String Array both on — String Array takes priority');
+  if(CHK('o_ssplit')&&CHK('o_sarr')) w.push('Split Strings has no effect when String Array is on — String Array takes priority for all string extraction');
+  if(CHK('o_objkeys')&&!CHK('o_sarr')) w.push('Object Key Transform runs on the final code text — may corrupt string literals that contain a "key": pattern; enable String Array first to avoid this');
   if(CHK('o_self')&&CHK('o_antib')) w.push('Self-Defending + Anti-Beautifier overlap — one is sufficient');
   if(CHK('o_renprop')) w.push('Rename Properties may break dynamic property access');
   if(CHK('o_dom')&&domains.length===0) w.push('Domain Lock is on but no domains have been added');
@@ -2020,6 +2201,361 @@ function initTheme(){
   }
 }
 
+// ================================================================
+//  AUTO-CONFIG — Code scanner + smart settings recommender
+// ================================================================
+
+// ── Scanner ───────────────────────────────────────────────────────
+function scanScript(src){
+  const s={
+    // Environment signals
+    isTampermonkey : /\/\/ ==UserScript==/.test(src),
+    hasGmApis      : /\bGM_[a-zA-Z]+\b|GM\./.test(src),
+    hasWindowDoc   : /\b(window|document|navigator|location|localStorage|sessionStorage|XMLHttpRequest|fetch)\b/.test(src),
+    hasNodeApis    : /\b(process|Buffer|__dirname|__filename)\b/.test(src),
+    // Code features
+    hasEval        : /\beval\s*\(|\bnew\s+Function\s*\(/.test(src),
+    hasImports     : /^\s*(import\s[\s\S]|export\s|(const|var|let)\s+[\w{*].*=\s*require\s*\()/m.test(src),
+    hasTemplateLit : /`[^`]*\$\{/.test(src),
+    hasAtobBtoa    : /\b(atob|btoa)\s*\(/.test(src),
+    hasAsyncAwait  : /\b(async\s+function|async\s+\(|await\s)/.test(src),
+    hasClasses     : /\bclass\s+[A-Z]/.test(src),
+    hasStrictMode  : /['"]use strict['"]/.test(src),
+    hasLabeledLoop : /\b(break|continue)\s+[a-zA-Z_$][a-zA-Z0-9_$]*/.test(src),
+    hasWithStmt    : /\bwith\s*\(/.test(src),
+    hasRegex       : /(?<![*\/])\/(?!\*)[^\n]{1,80}\/[gimsuy]*/.test(src),
+    hasDomWrite    : /\.(innerHTML|outerHTML|write|writeln)\s*[=\(]/.test(src),
+    hasTryCatch    : /\btry\s*\{/.test(src),
+    hasTypedArrays : /\b(Uint8Array|Int32Array|Float64Array|ArrayBuffer)\b/.test(src),
+    // Size
+    bytes          : src.length,
+    lines          : src.split('\n').length,
+  };
+
+  // Derived target
+  if(s.isTampermonkey || s.hasGmApis)              s.detectedTarget='tampermonkey';
+  else if(s.hasNodeApis && !s.hasWindowDoc)         s.detectedTarget='node';
+  else                                              s.detectedTarget='browser';
+
+  // If code uses eval/new Function the Bytecode VM (which itself calls new Function)
+  // may double-eval — flag it but don't hard-disable; user can still enable it.
+  s.evalRisk = s.hasEval;
+  // atob pass would shadow/conflict with native atob calls already in the code
+  s.atobRisk = s.hasAtobBtoa;
+  // with() makes rename fundamentally unsafe (can't know scope statically)
+  s.renameRisk = s.hasWithStmt;
+
+  return s;
+}
+
+// ── Badge builder ─────────────────────────────────────────────────
+function acBuildBadges(s){
+  const b=[];
+  const add=(cls,icon,txt)=>b.push(`<span class="ac-badge ${cls}">${icon} ${txt}</span>`);
+
+  if(s.isTampermonkey)  add('ok',  '🐵','Tampermonkey script');
+  else if(s.hasGmApis)  add('ok',  '🐵','GM_ APIs detected');
+  if(s.detectedTarget==='node') add('info','🖥','Node.js environment');
+  if(s.hasWindowDoc)    add('info','🌐','Browser DOM APIs');
+  if(s.hasEval)         add('warn','⚠','eval / new Function');
+  if(s.hasImports)      add('info','📦','import / require');
+  if(s.hasAtobBtoa)     add('warn','⚠','native atob/btoa');
+  if(s.hasTemplateLit)  add('neu', '✦','Template literals');
+  if(s.hasAsyncAwait)   add('neu', '✦','async / await');
+  if(s.hasClasses)      add('neu', '✦','ES6 Classes');
+  if(s.hasWithStmt)     add('warn','⚠','with() statement');
+  if(s.hasLabeledLoop)  add('neu', '✦','Labeled loops');
+  if(s.hasRegex)        add('neu', '✦','RegExp literals');
+  if(s.hasTypedArrays)  add('neu', '✦','TypedArrays');
+  if(s.hasTryCatch)     add('neu', '✦','try/catch');
+  if(s.hasStrictMode)   add('neu', '✦','"use strict"');
+  if(s.hasImports && s.isTampermonkey) add('warn','⚠','Imports in TM script — needs Ignore Imports');
+
+  const sz=s.bytes<2000?'Tiny (<2 KB)':s.bytes<10000?'Small (<10 KB)':s.bytes<50000?'Medium (<50 KB)':'Large (50+ KB)';
+  add('neu','📏',sz+' · '+s.lines+' lines');
+
+  if(!b.length) add('neu','✦','Plain JavaScript');
+  return b.join('');
+}
+
+// ── Recommendation engine ─────────────────────────────────────────
+// Returns an array of {kind:'on'|'off'|'set', icon, label, reason, action}
+// where action() mutates the DOM settings when Apply is clicked.
+function acBuildRecs(s, level){
+  const recs=[];
+  const on =(label,reason,fn)=>recs.push({kind:'on', icon:'✓',label,reason,fn});
+  const off=(label,reason,fn)=>recs.push({kind:'off',icon:'✕',label,reason,fn});
+  const set=(label,reason,fn)=>recs.push({kind:'set',icon:'◎',label,reason,fn});
+
+  // ── TARGET ─────────────────────────────────────────────────
+  if(s.detectedTarget==='tampermonkey'){
+    set('Target → Tampermonkey','Detected ==UserScript== header / GM_ API',()=>setTarget('tampermonkey'));
+  } else if(s.detectedTarget==='node'){
+    set('Target → Node.js','Detected Node.js APIs, no browser APIs',()=>setTarget('node'));
+  } else {
+    set('Target → Browser','Standard browser environment',()=>setTarget('browser'));
+  }
+
+  // ── IGNORE IMPORTS ────────────────────────────────────────
+  if(s.hasImports){
+    on('Ignore Imports','Prevents import/require lines from being broken',()=>SET('o_ignimport',true));
+  } else {
+    off('Ignore Imports','No import/require statements detected',()=>SET('o_ignimport',false));
+  }
+
+  // ── RENAME ────────────────────────────────────────────────
+  if(s.hasWithStmt){
+    off('Rename Variables — DISABLED','with() statement makes static rename unsafe; it cannot see through the with-scope',()=>SET('o_ren',false));
+  } else if(level==='light'){
+    on('Rename Variables','Replaces local identifiers',()=>SET('o_ren',true));
+  } else {
+    on('Rename Variables','Replaces local identifiers',()=>SET('o_ren',true));
+  }
+
+  // ── STRING ARRAY ──────────────────────────────────────────
+  if(level==='light'){
+    on('String Array','Core obfuscation: extracts all strings into encoded pool',()=>{
+      SET('o_sarr',true);showSub('sarr-sub',true);
+      SET('o_srot',false);SET('o_sshuf',false);SET('o_calltrans',false);
+      setEnc(false,false,false);setIdx(true,false);
+      SETV('o_wcount','1');SETD('v-wc','1');
+    });
+  } else if(level==='medium'){
+    on('String Array + Rotate + Shuffle','Full array pipeline with XOR encoding',()=>{
+      SET('o_sarr',true);showSub('sarr-sub',true);
+      SET('o_srot',true);SET('o_sshuf',true);SET('o_calltrans',true);showSub('ct-sub',true);
+      setEnc(false,true,false);setIdx(true,false);
+      SETV('o_wcount','1');SETD('v-wc','1');
+    });
+  } else {
+    on('String Array + RC4/XOR + Rotate + Shuffle + Calls Transform','Maximum string pool protection',()=>{
+      SET('o_sarr',true);showSub('sarr-sub',true);
+      SET('o_srot',true);SET('o_sshuf',true);SET('o_calltrans',true);showSub('ct-sub',true);
+      setEnc(true,true,false);setIdx(true,level==='max');
+      SETV('o_wcount',level==='max'?'3':'2');SETD('v-wc',level==='max'?'3':'2');
+      if(level==='max'){SETV('o_idxshift','13');SETD('v-idxsh','13');}
+    });
+  }
+
+  // ── ATOB PASS ─────────────────────────────────────────────
+  if(s.atobRisk){
+    off('atob Encoding — skipped','Code already calls atob/btoa natively; adding another layer would double-decode at runtime',()=>SET('o_atob',false));
+  } else if(level==='light'){
+    off('atob Encoding','Not needed at light level',()=>SET('o_atob',false));
+  } else {
+    on('atob Encoding','Wraps strings in atob(base64)+TextDecoder IIFE',()=>SET('o_atob',true));
+  }
+
+  // ── HEX NUMBERS ───────────────────────────────────────────
+  on('Hex Literals','Converts numeric literals to 0x notation',()=>SET('o_hexn',true));
+
+  // ── NUMBER SPLIT ──────────────────────────────────────────
+  if(level==='light'){
+    off('Number Splitting','Not needed at light level',()=>SET('o_nsplit',false));
+  } else {
+    on('Number Splitting','0x61 → (0x21+0x40)',()=>SET('o_nsplit',true));
+  }
+
+  // ── CONTROL FLOW ──────────────────────────────────────────
+  if(level==='light'){
+    off('Control Flow Flattening','Skipped at light level — adds overhead',()=>{SET('o_cff',false);showSub('cff-sub',false);});
+  } else if(level==='medium'){
+    on('Control Flow Flattening','Shuffles execution into while/switch dispatch',()=>{SET('o_cff',true);showSub('cff-sub',true);});
+  } else {
+    on('Control Flow Flattening + Dead Code','Full obfuscation of execution flow',()=>{
+      SET('o_cff',true);showSub('cff-sub',true);
+      SET('o_dead',true);showSub('dead-sub',true);
+    });
+  }
+
+  // ── IIFE / COMMA ──────────────────────────────────────────
+  if(level!=='light'){
+    on('IIFE Wrap','Wraps output in (function(){...})()',()=>SET('o_iife',true));
+  } else {
+    off('IIFE Wrap','Not needed at light level',()=>SET('o_iife',false));
+  }
+  if(level==='high'||level==='max'){
+    on('Comma Obfuscation','void(d1=n, d2=n, fn())',()=>SET('o_comma',true));
+  } else {
+    off('Comma Obfuscation','Enabled from high level upward',()=>SET('o_comma',false));
+  }
+
+  // ── BRACKET ACCESS ────────────────────────────────────────
+  on('Bracket Access','obj.foo → obj["foo"]',()=>SET('o_prop',true));
+
+  // ── PROTECTION LAYER ──────────────────────────────────────
+  if(level==='light'){
+    off('Self-Defending','Not needed at light level',()=>SET('o_self',false));
+    off('Anti-Beautifier','Not needed at light level',()=>SET('o_antib',false));
+  } else if(level==='medium'){
+    on('Self-Defending','Infinite loop if reformatted/beautified',()=>SET('o_self',true));
+    off('Anti-Beautifier','Using Self-Defending instead (overlap warning suppressed)',()=>SET('o_antib',false));
+  } else {
+    on('Anti-Beautifier','Whitespace ratio + length trap (stronger than Self-Defending alone)',()=>{SET('o_antib',true);SET('o_self',false);});
+  }
+
+  if(s.detectedTarget!=='node'&&s.detectedTarget!=='tampermonkey'){
+    if(level==='high'||level==='max'){
+      on('Debug Protection','DevTools freeze via setInterval',()=>{SET('o_dbg',true);showSub('dbg-sub',true);});
+    } else {
+      off('Debug Protection','Enabled from high level upward',()=>{SET('o_dbg',false);showSub('dbg-sub',false);});
+    }
+  } else {
+    off('Debug Protection — skipped','Not compatible with '+s.detectedTarget+' target',()=>{SET('o_dbg',false);showSub('dbg-sub',false);});
+  }
+
+  // ── TAMPER DETECTION ──────────────────────────────────────
+  if(level==='high'||level==='max'){
+    on('Tamper Detection','Runtime sentinel variable guard',()=>SET('o_tamp',true));
+  } else {
+    off('Tamper Detection','Enabled from high level upward',()=>SET('o_tamp',false));
+  }
+
+  // ── NATIVE FN CHECK ───────────────────────────────────────
+  if(s.detectedTarget==='tampermonkey'||s.detectedTarget==='node'){
+    off('Native Fn Check — skipped','TM/Node wrap native APIs; check would false-positive',()=>SET('o_native',false));
+  } else if(level==='high'||level==='max'){
+    on('Native Fn Check','Detects hooked/wrapped native functions',()=>SET('o_native',true));
+  } else {
+    off('Native Fn Check','Enabled from high level upward',()=>SET('o_native',false));
+  }
+
+  // ── BYTECODE VM ───────────────────────────────────────────
+  if(s.evalRisk){
+    if(level==='max'){
+      on('Bytecode VM — WARNING','Code already uses eval/new Function; VM nests another new Function call — test thoroughly',()=>{
+        SET('o_bc',true);showSub('bc-sub',true);
+        SET('o_bc_arrenc',true);SET('o_bc_jmpenc',true);SET('o_bc_stackenc',true);
+        SET('o_bc_dynop',true);SET('o_bc_stateful',true);SET('o_bc_decoy',true);
+        SET('o_bc_dead',true);SET('o_bc_macro',true);
+      });
+    } else {
+      off('Bytecode VM — skipped','Code already uses eval/new Function; adding VM would nest another new Function call',()=>{
+        SET('o_bc',false);showSub('bc-sub',false);
+      });
+    }
+  } else if(level==='light'||level==='medium'){
+    off('Bytecode VM','Enabled from high level upward',()=>{SET('o_bc',false);showSub('bc-sub',false);});
+  } else {
+    const bcopts=level==='max';
+    on('Bytecode VM'+(bcopts?' (full suite)':''),'Source → int[] + custom VM dispatcher',()=>{
+      SET('o_bc',true);showSub('bc-sub',true);
+      SET('o_bc_arrenc',true);SET('o_bc_jmpenc',true);SET('o_bc_stackenc',true);
+      SET('o_bc_dynop',true);SET('o_bc_stateful',true);SET('o_bc_decoy',true);
+      SET('o_bc_dead',true);SET('o_bc_macro',true);
+      if(bcopts){SET('o_chunk',true);showSub('chunk-sub',true);}
+      const tgt=s.detectedTarget;
+      if(tgt!=='node') SET('o_bc_antidebug',true);
+    });
+  }
+
+  // ── MINIFICATION ──────────────────────────────────────────
+  on('Compact Output','Removes whitespace, collapses to single line',()=>SET('o_mini',true));
+  if(level!=='light'){
+    on('Collapse Semicolons','Merges consecutive var declarations',()=>SET('o_semi',true));
+  } else {
+    off('Collapse Semicolons','Not needed at light level',()=>SET('o_semi',false));
+  }
+
+  // ── SPLIT STRINGS ─────────────────────────────────────────
+  if(level==='high'||level==='max'){
+    on('Split Strings (no-array mode only)','Active when String Array is disabled; splits "hello"→"hel"+"lo"',()=>{
+      // Only meaningful without sarr — kept enabled so if user disables sarr it activates
+      SET('o_ssplit',true);showSub('ssplit-sub',true);
+    });
+  } else {
+    off('Split Strings','Enabled from high level upward',()=>{SET('o_ssplit',false);showSub('ssplit-sub',false);});
+  }
+
+  // ── MATH OBFUSCATION ──────────────────────────────────────
+  if(level==='high'||level==='max'){
+    on('Math Expressions','n → Math["floor"](n+0x0)',()=>SET('o_math',true));
+  } else {
+    off('Math Expressions','Enabled from high level upward',()=>SET('o_math',false));
+  }
+
+  // ── STRICT MODE ───────────────────────────────────────────
+  if(s.hasStrictMode){
+    off('Strict Mode — skipped','Code already declares "use strict"',()=>SET('o_strict',false));
+  } else {
+    off('Strict Mode','Not added automatically (may break code that relies on sloppy mode)',()=>SET('o_strict',false));
+  }
+
+  return recs;
+}
+
+// ── State ────────────────────────────────────────────────────────
+let _acScan=null;
+let _acLevel='high';
+let _acRecs=[];
+
+// ── Render helpers ────────────────────────────────────────────────
+function acRenderRecs(){
+  const el=G('ac-recs');
+  if(!_acScan){el.innerHTML='<span style="color:var(--tx3);font-size:12px;">Paste code in the editor first, then open Auto-Config.</span>';return;}
+  _acRecs=acBuildRecs(_acScan,_acLevel);
+  if(!_acRecs.length){el.innerHTML='<span style="color:var(--tx3);font-size:12px;">No recommendations for this combination.</span>';return;}
+  el.innerHTML=_acRecs.map(r=>`
+    <div class="ac-rec ${r.kind}">
+      <span class="ac-rec-icon">${r.icon}</span>
+      <span class="ac-rec-text"><b>${r.label}</b><small>${r.reason}</small></span>
+    </div>`).join('');
+}
+
+// ── Public API ────────────────────────────────────────────────────
+function openAutoConfig(){
+  const src=(typeof inputEditor!=='undefined'?inputEditor.getValue():'').trim();
+  _acScan=src?scanScript(src):null;
+  // Render badges
+  G('ac-badges').innerHTML=_acScan?acBuildBadges(_acScan):'<span style="color:var(--tx3);font-size:12px;">Editor is empty — paste code first.</span>';
+  // Default level = current preset or 'high'
+  const cur=G('preset').value;
+  _acLevel=['light','medium','high','max'].includes(cur)?cur:'high';
+  document.querySelectorAll('.ac-lvl').forEach(el=>el.classList.toggle('sel',el.dataset.l===_acLevel));
+  acRenderRecs();
+  G('ac-overlay').classList.add('open');
+}
+function closeAutoConfig(){ G('ac-overlay').classList.remove('open'); }
+function acPickLevel(l){
+  _acLevel=l;
+  document.querySelectorAll('.ac-lvl').forEach(el=>el.classList.toggle('sel',el.dataset.l===l));
+  acRenderRecs();
+}
+function applyAutoConfig(){
+  if(!_acScan&&!_acRecs.length){closeAutoConfig();return;}
+  // Reset everything to a clean slate
+  const ALL=['o_html','o_strict','o_mini','o_semi','o_simplify','o_ignimport','o_con',
+    'o_self','o_antib','o_native','o_tamp','o_dbg','o_dom','o_srcmap',
+    'o_sarr','o_srot','o_sshuf','o_calltrans','o_wchain',
+    'o_senc','o_charcode','o_atob','o_tmpl','o_ssplit',
+    'o_ren','o_renglobal','o_renprop','o_prop',
+    'o_hexn','o_nsplit','o_math',
+    'o_cff','o_dead','o_iife','o_comma','o_objkeys',
+    'o_bc','o_bc_arrenc','o_bc_jmpenc','o_bc_stackenc','o_bc_compact',
+    'o_bc_dynop','o_bc_stateful','o_bc_wrapinit','o_bc_decoy','o_bc_dead',
+    'o_bc_macro','o_bc_antidebug','o_bc_sarrbconly','o_chunk'];
+  ALL.forEach(id=>{const e=G(id);if(e){e.disabled=false;e.checked=false;}});
+  // Run every recommendation's action fn
+  _acRecs.forEach(r=>{if(r.fn)r.fn();});
+  // Set detected target
+  if(_acScan) setTarget(_acScan.detectedTarget||'browser');
+  // Mark preset as custom
+  SETV('preset','custom');
+  // Sync all sub-panel visibility
+  showSub('sarr-sub', CHK('o_sarr'));
+  showSub('bc-sub',   CHK('o_bc'));
+  showSub('ct-sub',   CHK('o_calltrans'));
+  showSub('ssplit-sub',CHK('o_ssplit'));
+  showSub('cff-sub',  CHK('o_cff'));
+  showSub('dead-sub', CHK('o_dead'));
+  showSub('dbg-sub',  CHK('o_dbg'));
+  showSub('ren-sub',  CHK('o_ren'));
+  showSub('chunk-sub',CHK('o_chunk'));
+  G('renprop-w').style.display='none';
+  applyTargetConstraints();
+  liveCheck();
+  closeAutoConfig();
+}
 // ── Init ──────────────────────────────────────────────────
 applyPreset();
 initTheme();
