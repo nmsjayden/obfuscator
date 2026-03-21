@@ -431,7 +431,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   <div class="logo">
     <div class="logo-mark"></div>
     Obscura
-    <span class="logo-ver">8.3</span>
+    <span class="logo-ver">8.2</span>
   </div>
 
   <span class="hd"></span>
@@ -1230,7 +1230,8 @@ function buildDecoder(arrName,decName,enc,rk,xk,rotAmt,opts){
   let code='';
   if(enc==='rc4'||enc==='rc4xor'){
     const f=freshId();
-    code+=`function ${f}(k,d){var S=new Uint8Array(256);for(var i=0;i<256;i++)S[i]=i;for(var i=0,j=0;i<256;i++){j=(j+S[i]+k.charCodeAt(i%k.length))&255;var t=S[i];S[i]=S[j];S[j]=t;}var o=new Uint8Array(d.length);for(var n=0,i=0,j=0;n<d.length;n++){i=(i+1)&255;j=(j+S[i])&255;var t=S[i];S[i]=S[j];S[j]=t;o[n]=d[n]^S[(S[i]+S[j])&255];}return o;}\n`;
+    // Use destructuring swap — avoids 'var t' mid-body which the semi-collapse would strip
+    code+=`function ${f}(k,d){var S=new Uint8Array(256);for(var i=0;i<256;i++)S[i]=i;for(var i=0,j=0;i<256;i++){j=(j+S[i]+k.charCodeAt(i%k.length))&255;[S[i],S[j]]=[S[j],S[i]];}var o=new Uint8Array(d.length);for(var n=0,i=0,j=0;n<d.length;n++){i=(i+1)&255;j=(j+S[i])&255;[S[i],S[j]]=[S[j],S[i]];o[n]=d[n]^S[(S[i]+S[j])&255];}return o;}\n`;
     opts._rc4fn=f;
   }
   if(enc==='xor'||enc==='rc4xor'){
@@ -1461,12 +1462,14 @@ const RESERVED=new Set([
   'hostname','fetch','self','top','require','module','exports','process','__dirname',
   '__filename','Buffer','global','globalThis','performance','now','getTime',
 ]);
-function passRename(toks,opts){
+function passRename(toks,opts,extPropSet){
   const extra=new Set(getTags('ta-resname'));
   const ng=opts.namegen||'hexadecimal';
   const pfx=VAL('o_idpfx').trim();
   const dict=getTags('ta-dict');
-  const map={};
+  // Use a null-prototype object so Object.prototype keys (e.g. 'constructor',
+  // 'valueOf', 'isPrototypeOf') don't shadow unset entries with truthy values.
+  const map=Object.create(null);
   let c=0,di=0;
   function make(){
     if(ng==='mangled'){
@@ -1480,12 +1483,53 @@ function passRename(toks,opts){
     }
     return pfx+'_0x'+(c++).toString(16).padStart(4,'0')+RNG.hex(2);
   }
+  // ── Property-access set ──────────────────────────────────
+  // Any identifier that appears as a property access (after '.') must NOT be
+  // renamed — doing so would rename the definition (e.g. class method body)
+  // while the bracket pass has already locked the call-site to a string literal.
+  // extPropSet (if provided) was built before passBracket ran, so it still has
+  // the original dot+identifier patterns that are now invisible in toks.
+  const propAccessSet=extPropSet?new Set(extPropSet):new Set();
+  // Also scan current tokens — catches any dot accesses not yet bracket-converted.
+  for(let i=0;i<toks.length-1;i++){
+    if(toks[i].t==='op'&&toks[i].v==='.'&&toks[i+1].t==='id'){
+      propAccessSet.add(toks[i+1].v);
+    }
+  }
+  // ── with() protected set ─────────────────────────────────
+  // Identifiers that appear as free references inside a with(){} block resolve
+  // against the with-object at runtime and must not be renamed statically.
+  const withProtected=new Set();
+  for(let i=0;i<toks.length;i++){
+    if(toks[i].t!=='id'||toks[i].v!=='with') continue;
+    // skip: with ( expr ) { body }
+    let j=i+1;
+    while(j<toks.length&&toks[j].t==='ws') j++;
+    if(j>=toks.length||toks[j].v!=='(') continue;
+    let depth=1; j++;
+    while(j<toks.length&&depth>0){
+      if(toks[j].v==='(') depth++;
+      else if(toks[j].v===')') depth--;
+      j++;
+    }
+    while(j<toks.length&&toks[j].t==='ws') j++;
+    if(j>=toks.length||toks[j].v!=='{') continue;
+    let bdepth=1; j++;
+    while(j<toks.length&&bdepth>0){
+      if(toks[j].v==='{') bdepth++;
+      else if(toks[j].v==='}') bdepth--;
+      else if(toks[j].t==='id') withProtected.add(toks[j].v);
+      j++;
+    }
+  }
   // ── Build rename map ─────────────────────────────────────
   for(let i=0;i<toks.length;i++){
     const tok=toks[i];
     if(tok.t!=='id') continue;
     if(RESERVED.has(tok.v)||extra.has(tok.v)) continue;
     if(map[tok.v]) continue;
+    if(propAccessSet.has(tok.v)) continue;  // would desync with bracket pass
+    if(withProtected.has(tok.v)) continue;  // free ref inside with() block
     let prev=null;
     for(let j=i-1;j>=0;j--){if(toks[j].t!=='ws'&&toks[j].t!=='comment'){prev=toks[j];break;}}
     let next=null;
@@ -1762,7 +1806,7 @@ function passBytecodeVM(code,opts,st){
   // Array decode (outer layer — run once at VM init)
   if(opts.bc_arrenc){
     out+=`var ${arrKeyV}=[${arrKey.map(hexInt).join(',')}];\n`;
-    out+=`for(var _ai=0;_ai<${joined}.length;_ai++)${joined}[_ai]^=${arrKeyV}[_ai%${hexInt(arrKeyLen)}];\n`;
+    out+=`for(var _ai=0;_ai<${joined}.length;_ai++){${joined}[_ai]^=${arrKeyV}[_ai%${hexInt(arrKeyLen)}];}\n`;
   }
 
   // Dead vars for injection
@@ -1780,11 +1824,11 @@ function passBytecodeVM(code,opts,st){
   if(opts.bc_stackenc){
     const td=freshId(),sv=hexInt(stackSeed);
     buildBody=`var ${td}=[];`
-      +`for(var _si=0;_si<${joined}.length;_si++)${td}.push(${joined}[_si]^((${sv}+_si)&${hexInt(0xff)}));`
+      +`for(var _si=0;_si<${joined}.length;_si++){${td}.push(${joined}[_si]^((${sv}+_si)&${hexInt(0xff)}));}`
       +`${str}='';`
-      +`for(var _ci=0;_ci<${td}.length;_ci+=${cs})${str}+=String['fromCharCode']['apply'](null,${td}['slice'](_ci,_ci+${cs}));`;
+      +`for(var _ci=0;_ci<${td}.length;_ci+=${cs}){${str}+=String['fromCharCode']['apply'](null,${td}['slice'](_ci,_ci+${cs}));}`;
   } else {
-    buildBody=`${str}='';for(var _ci=0;_ci<${joined}.length;_ci+=${cs})${str}+=String['fromCharCode']['apply'](null,${joined}['slice'](_ci,_ci+${cs}));`;
+    buildBody=`${str}='';for(var _ci=0;_ci<${joined}.length;_ci+=${cs}){${str}+=String['fromCharCode']['apply'](null,${joined}['slice'](_ci,_ci+${cs}));}`;
   }
   const execBody=`var ${fn}=new Function(${str});${fn}();`;
   const macroBody=buildBody+execBody;
@@ -1823,18 +1867,59 @@ function passBytecodeVM(code,opts,st){
     out+=`}\n`;
   }
 
+  // Close the outer IIFE first, THEN optionally wrap in a named init function.
+  // (Moving wrapinit below `})();` fixes: wrapinit was inserting }; before ])();
+  // which left the (function(){ IIFE open inside a paren — Unexpected token ';')
+  out+=`})();`;
+
   // Wrap Top Level Initializers: nest the dispatcher in a named init fn
   if(opts.bc_wrapinit){
     const initFn=freshId();
-    out=`var ${initFn}=function(){\n`+out+`};\n${initFn}();\n`;
+    out=`var ${initFn}=function(){\n`+out+`\n};\n${initFn}();\n`;
   }
 
-  out+=`})();`;
   return out;
 }
+// Strip comments without touching // or /* inside string/template literals.
+function _stripComments(code){
+  let r='',i=0,n=code.length;
+  while(i<n){
+    const ch=code[i];
+    // String literals — copy verbatim including any // or /* inside
+    if(ch==='"'||ch==="'"){
+      const q=ch; r+=ch; i++;
+      while(i<n){ const c=code[i]; r+=c; i++; if(c==='\\'){r+=code[i]||'';i++;}else if(c===q)break; }
+      continue;
+    }
+    // Template literals
+    if(ch==='`'){
+      r+=ch; i++; let depth=0;
+      while(i<n){
+        const c=code[i];
+        if(c==='\\'){r+=c+(code[i+1]||'');i+=2;continue;}
+        if(c==='$'&&code[i+1]==='{'){r+=c;i++;depth++;continue;}
+        if(c==='}'&&depth>0){depth--;r+=c;i++;continue;}
+        r+=c; i++;
+        if(c==='`'&&depth===0) break;
+      }
+      continue;
+    }
+    // Line comment — skip to end of line
+    if(ch==='/'&&code[i+1]==='/'){
+      while(i<n&&code[i]!=='\n') i++;
+      continue;
+    }
+    // Block comment — skip to */
+    if(ch==='/'&&code[i+1]==='*'){
+      i+=2; while(i<n&&!(code[i]==='*'&&code[i+1]==='/')){i++;} i+=2;
+      continue;
+    }
+    r+=ch; i++;
+  }
+  return r;
+}
 function minify(code,opts){
-  code=code.replace(/([^:])\/\/[^\n]*/g,'$1');
-  code=code.replace(/\/\*[\s\S]*?\*\//g,'');
+  code=_stripComments(code);
   code=code.replace(/[ \t\r\n]+/g,' ');
   code=code.replace(/ ?([\{\}\[\]\(\);,]) ?/g,'$1');
   code=code.replace(/([\)\]\}0-9]) ([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:])/g,'$1$2');
@@ -1844,9 +1929,15 @@ function minify(code,opts){
   ['return','typeof','instanceof','in','of','new','delete','void','throw','case','var','let',
    'const','function','class','extends','else','if','do','while','for','switch','try','catch',
    'finally','async','await','yield','export','import'].forEach(k=>{
-    code=code.replace(new RegExp('\\b('+k+')\\b([^\\s])', 'g'),'$1 $2');
+    code=code.replace(new RegExp('\\b('+k+')\\b([^\\s])','g'),'$1 $2');
   });
-  if(opts.semi){code=code.replace(/;var /g,',');code=code.replace(/^,/,'var ');}
+  if(opts.semi){
+    // Safely collapse only consecutive var declarations whose initialisers
+    // contain no blocks ({}) — prevents stripping 'var' from declarations
+    // that follow non-var statements like void(), for-loop bodies, etc.
+    let prev;
+    do{prev=code;code=code.replace(/\bvar ((?:[^{};])+);\s*var /g,'var $1,');}while(code!==prev);
+  }
   return code.trim();
 }
 
@@ -1888,8 +1979,15 @@ function obfuscate(src,opts){
   else if(opts.tmpl){ toks=passTemplate(toks); }
   else if(opts.senc){ toks=passEscape(toks,st); }
   if(opts.ssplit&&!opts.sarr) toks=passStrSplit(toks,INT('o_sschunk',10));
+  // Build property-access set from original tokens BEFORE passBracket runs.
+  // passBracket converts .foo → ["foo"], which makes the .+id pattern invisible
+  // to passRename's own scanner.  We collect it here and pass it in explicitly.
+  const _prePropSet=new Set();
+  for(let i=0;i<toks.length-1;i++){
+    if(toks[i].t==='op'&&toks[i].v==='.'&&toks[i+1].t==='id') _prePropSet.add(toks[i+1].v);
+  }
   if(opts.prop) toks=passBracket(toks);
-  if(opts.ren){const r=passRename(toks,opts);toks=passRenameTemplateLiterals(r.toks,r.map);}
+  if(opts.ren){const r=passRename(toks,opts,_prePropSet);toks=passRenameTemplateLiterals(r.toks,r.map);}
   if(opts.hexn||opts.nsplit||opts.math) toks=passNumbers(toks,opts);
   if(opts.simplify) toks=passSimplify(toks);
   let code=preamble+toks.map(t=>t.v).join('');
