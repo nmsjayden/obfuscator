@@ -254,7 +254,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   </div>
   <div class="hgap"></div>
   <button class="hbtn" onclick="openAutoConfig()">Auto-Config</button>
-  <button class="hbtn" onclick="copyOut()">Copy</button>
+  <button class="hbtn" id="btn-copy" onclick="copyOut()">Copy</button>
   <button class="hbtn" id="btn-map" onclick="dlMap()" disabled>Map</button>
   <button id="btn-run" onclick="runObfuscate()">Run</button>
 </header>
@@ -736,7 +736,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 // ================================================================
 
 function G(id){return document.getElementById(id);}
-function CHK(id){const e=G(id);return e&&!e.disabled?e.checked:false;}
+function CHK(id){const e=G(id);return e?e.checked:false;}
 function VAL(id){const e=G(id);return e?e.value:'';}
 function NUM(id,d){const v=parseFloat(VAL(id));return isNaN(v)?d:v;}
 function INT(id,d){const v=parseInt(VAL(id));return isNaN(v)?d:v;}
@@ -1647,9 +1647,9 @@ function applyTargetConstraints(){
     const chk=row.querySelector('input[type=checkbox]');
     if(chk)chk.disabled=false;
   });
+  // Dim incompatible options visually but don't disable — user can still force them
   (TARGET_OFF[currentTarget]||[]).forEach(id=>{
     const el=G(id);if(!el)return;
-    el.checked=false;el.disabled=true;
     const row=el.closest('.row');if(row)row.classList.add('dim');
   });
 }
@@ -1657,24 +1657,25 @@ function applyTargetConstraints(){
 function liveCheck(){
   const body=G('conflicts-inner');if(!body)return;
   const w=[];
-  if(currentTarget==='browser-no-eval')w.push('Bytecode VM disabled — uses new Function() internally');
-  if(currentTarget==='node')w.push('Domain Lock, Debug Protection, Native Check disabled for Node.js');
-  if(currentTarget==='tampermonkey')w.push('Domain Lock, Native Fn Check, and HTML mode disabled');
-  if(CHK('o_charcode')&&CHK('o_sarr'))w.push('Charcode + String Array — String Array takes priority');
-  if(CHK('o_ssplit')&&CHK('o_sarr'))w.push('Split Strings has no effect when String Array is on');
-  if(CHK('o_objkeys')&&!CHK('o_sarr'))w.push('Object Key Transform may corrupt string literals without String Array');
-  if(CHK('o_self')&&CHK('o_antib'))w.push('Self-Defending + Anti-Beautifier overlap — one is sufficient');
-  if(CHK('o_renprop'))w.push('Rename Properties may break dynamic property access');
-  if(CHK('o_dom')&&domains.length===0)w.push('Domain Lock is on but no domains added');
-  if(CHK('o_calltrans')&&!CHK('o_sarr'))w.push('Calls Transform requires String Array');
-  if(CHK('o_bc_sarrbconly')&&!CHK('o_bc'))w.push('Bytecode Only: String Array skipped (VM is off)');
-  if(CHK('o_bc_antidebug')&&!CHK('o_bc'))w.push('VM Anti-Debug only runs inside Bytecode VM');
-  if(CHK('o_ptrenc')&&!CHK('o_ren'))w.push('Pointer Encoding works best with Rename Variables on');
-  if(CHK('o_unimangle')&&!CHK('o_ren'))w.push('Unicode Mangle requires Rename Variables');
-  if(CHK('o_unimangle')&&CHK('o_bc'))w.push('Unicode Mangle auto-disabled when Bytecode VM is on — \\uNNNN inside new Function() string causes SyntaxError');
+  if(currentTarget==='browser-no-eval'&&CHK('o_bc'))w.push('⚠ Bytecode VM uses new Function() — may not work in no-eval environments');
+  if(currentTarget==='node'&&CHK('o_dom'))w.push('ℹ Domain Lock checks window.location — no-op in Node.js');
+  if(currentTarget==='node'&&CHK('o_dbg'))w.push('ℹ Debug Protection uses DevTools tricks — no-op in Node.js');
+  if(currentTarget==='tampermonkey'&&CHK('o_dom'))w.push('ℹ Domain Lock may not apply in Tampermonkey context');
+  if(CHK('o_charcode')&&CHK('o_sarr'))w.push('ℹ String Array is on — Charcode will apply to remaining strings not in the array');
+  if(CHK('o_ssplit')&&CHK('o_sarr'))w.push('ℹ Split Strings applies to strings not extracted by String Array');
+  if(CHK('o_objkeys')&&!CHK('o_sarr'))w.push('ℹ Object Key Transform without String Array — keep an eye on output correctness');
+  if(CHK('o_self')&&CHK('o_antib'))w.push('ℹ Self-Defending + Anti-Beautifier both active — redundant but harmless');
+  if(CHK('o_renprop'))w.push('⚠ Rename Properties may break dynamic property access (obj[varKey])');
+  if(CHK('o_dom')&&domains.length===0)w.push('⚠ Domain Lock is on but no domains added — will block everywhere');
+  if(CHK('o_calltrans')&&!CHK('o_sarr'))w.push('⚠ Calls Transform has no effect without String Array');
+  if(CHK('o_bc_sarrbconly')&&!CHK('o_bc'))w.push('ℹ Bytecode-Only String Array flag set but VM is off');
+  if(CHK('o_bc_antidebug')&&!CHK('o_bc'))w.push('ℹ VM Anti-Debug only runs inside Bytecode VM');
+  if(CHK('o_ptrenc')&&!CHK('o_ren'))w.push('ℹ Pointer Encoding works best when Rename Variables is also on');
+  if(CHK('o_unimangle')&&!CHK('o_ren'))w.push('⚠ Unicode Mangle needs Rename Variables to have identifiers to mangle');
+  if(CHK('o_unimangle')&&CHK('o_bc'))w.push('⚠ Unicode Mangle + Bytecode VM: \\uNNNN inside new Function() string causes SyntaxError — disable one');
   body.innerHTML=w.length
-    ?w.map(x=>`<div class="ci-item">${x}</div>`).join('')
-    :'<div class="ci-ok">✓ No conflicts</div>';
+    ?w.map(x=>`<div class="ci-item" style="color:${x.startsWith('⚠')?'var(--red)':'var(--amb)'}">${x}</div>`).join('')
+    :'<div class="ci-ok">✓ No issues</div>';
 }
 
 function getOpts(){
@@ -1809,8 +1810,6 @@ function applyPreset(){
   showSub('chunk-sub',CHK('o_chunk'));
   G('renprop-w').style.display='none';
   liveCheck();
-  // Only save if we're past init (editors exist)
-  if(typeof inputEditor!=='undefined')saveSettings();
 }
 
 // Run
@@ -1852,9 +1851,18 @@ function clearInput(){inputEditor.setValue('');}
 function copyOut(){
   const v=outputEditor.getValue();if(!v)return;
   navigator.clipboard.writeText(v).then(()=>{
-    const btn=document.querySelector('#hdr .hbtn[onclick="copyOut()"]');
-    const orig=btn.textContent;btn.textContent='Copied!';
-    setTimeout(()=>btn.textContent=orig,1400);
+    const btn=G('btn-copy');
+    btn.textContent='Copied!';
+    setTimeout(()=>{btn.textContent='Copy';},1400);
+  }).catch(()=>{
+    // Fallback for non-https
+    const ta=document.createElement('textarea');
+    ta.value=v;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');document.body.removeChild(ta);
+    const btn=G('btn-copy');
+    btn.textContent='Copied!';
+    setTimeout(()=>{btn.textContent='Copy';},1400);
   });
 }
 function dlMap(){
@@ -2076,32 +2084,32 @@ function applyAutoConfig(){
 //  PERSISTENCE — save/load all settings + input to localStorage
 // ================================================================
 const PERSIST_KEY='obscura_v1';
-const SLIDER_IDS=['o_thresh','o_idxshift','o_cff_t','o_dead_t','o_dbgint','o_wcount','o_wparams','o_sschunk','o_bcchunk'];
-const DISPLAY_MAP={'o_thresh':'v-thresh','o_idxshift':'v-idxsh','o_cff_t':'v-cff','o_dead_t':'v-dead','o_dbgint':'v-dbg','o_wcount':'v-wc','o_wparams':'v-wp','o_sschunk':'v-ssc','o_bcchunk':'v-bc-chunk'};
-const TEXT_IDS=['seed-val','o_idpfx','o_namegen','o_domredir','o_smap_url','o_smap_root'];
 
 function saveSettings(){
   try{
-    const data={};
-    // Preset + target
+    const data={v:2};
     data.preset=VAL('preset');
     data.target=currentTarget;
-    // All checkboxes
-    document.querySelectorAll('.sbody input[type=checkbox], #msw-enc input[type=checkbox], #msw-idx input[type=checkbox]').forEach(el=>{
-      if(el.id)data['ck_'+el.id]=el.checked;
+    // Every checkbox that has an id
+    document.querySelectorAll('input[type=checkbox][id]').forEach(el=>{
+      data['ck_'+el.id]=el.checked;
     });
-    // Sliders
-    SLIDER_IDS.forEach(id=>{const e=G(id);if(e)data['sl_'+id]=e.value;});
-    // Text inputs + selects
-    TEXT_IDS.forEach(id=>{const e=G(id);if(e)data['tx_'+id]=e.value;});
+    // Every range slider
+    document.querySelectorAll('input[type=range][id]').forEach(el=>{
+      data['sl_'+el.id]=el.value;
+    });
+    // Text inputs / selects
+    ['seed-val','o_idpfx','o_namegen','o_domredir','o_smap_url','o_smap_root'].forEach(id=>{
+      const e=G(id);if(e)data['tx_'+id]=e.value;
+    });
     // Tag inputs
-    ['ta-force','ta-resstr','ta-resname','ta-dict'].forEach(id=>{data['tags_'+id]=getTags(id);});
-    // Domains
+    ['ta-force','ta-resstr','ta-resname','ta-dict'].forEach(id=>{
+      data['tags_'+id]=getTags(id);
+    });
     data.domains=domains;
-    // Input editor content
-    data.inputCode=(typeof inputEditor!=='undefined'&&inputEditor)?inputEditor.getValue():'';
+    data.inputCode=inputEditor?inputEditor.getValue():'';
     localStorage.setItem(PERSIST_KEY,JSON.stringify(data));
-  }catch(e){}
+  }catch(e){console.warn('save failed',e);}
 }
 
 function loadSettings(){
@@ -2109,41 +2117,60 @@ function loadSettings(){
     const raw=localStorage.getItem(PERSIST_KEY);
     if(!raw)return false;
     const data=JSON.parse(raw);
-    // Preset (apply it first to set defaults, then override)
-    if(data.preset){SETV('preset',data.preset);applyPreset();}
-    // Checkboxes
-    Object.keys(data).forEach(k=>{
-      if(k.startsWith('ck_')){
-        const id=k.slice(3);const e=G(id);
-        if(e&&!e.disabled)e.checked=data[k];
+    if(!data||!data.v)return false;
+
+    // Restore preset select value WITHOUT calling applyPreset (that would overwrite everything)
+    if(data.preset){const e=G('preset');if(e)e.value=data.preset;}
+
+    // Restore every checkbox by id — no disabled check, we removed that
+    document.querySelectorAll('input[type=checkbox][id]').forEach(el=>{
+      if(data['ck_'+el.id]!==undefined)el.checked=data['ck_'+el.id];
+    });
+
+    // Restore sliders + their display spans
+    const DISP={'o_thresh':'v-thresh','o_idxshift':'v-idxsh','o_cff_t':'v-cff',
+      'o_dead_t':'v-dead','o_dbgint':'v-dbg','o_wcount':'v-wc','o_wparams':'v-wp',
+      'o_sschunk':'v-ssc','o_bcchunk':'v-bc-chunk'};
+    document.querySelectorAll('input[type=range][id]').forEach(el=>{
+      if(data['sl_'+el.id]!==undefined){
+        el.value=data['sl_'+el.id];
+        const dispId=DISP[el.id];
+        if(dispId){
+          const dv=G(dispId);if(dv){
+            const v=data['sl_'+el.id];
+            dv.textContent=(el.step&&parseFloat(el.step)<1)?parseFloat(v).toFixed(2):v;
+          }
+        }
       }
     });
-    // Sliders
-    SLIDER_IDS.forEach(id=>{
-      if(data['sl_'+id]!==undefined){
-        const e=G(id);if(e){e.value=data['sl_'+id];
-        const disp=DISPLAY_MAP[id];if(disp){
-          const dv=G(disp);
-          if(dv)dv.textContent=id==='o_thresh'?parseFloat(data['sl_'+id]).toFixed(2):
-            id==='o_cff_t'||id==='o_dead_t'?parseFloat(data['sl_'+id]).toFixed(2):data['sl_'+id];
-        }}
-      }
+
+    // Text inputs + selects
+    ['seed-val','o_idpfx','o_namegen','o_domredir','o_smap_url','o_smap_root'].forEach(id=>{
+      if(data['tx_'+id]!==undefined){const e=G(id);if(e)e.value=data['tx_'+id];}
     });
-    // Text + selects
-    TEXT_IDS.forEach(id=>{if(data['tx_'+id]!==undefined){const e=G(id);if(e)e.value=data['tx_'+id];}});
-    // Target
-    if(data.target)setTarget(data.target);
+
+    // Target buttons
+    if(data.target){
+      currentTarget=data.target;
+      document.querySelectorAll('.tp').forEach(p=>p.classList.toggle('active',p.dataset.t===data.target));
+    }
+
     // Tag inputs
     ['ta-force','ta-resstr','ta-resname','ta-dict'].forEach(id=>{
       const tags=data['tags_'+id];
-      if(tags&&tags.length){
-        const iid='ti-'+id.split('-')[1];
+      if(Array.isArray(tags)&&tags.length){
+        // derive input id: ta-force->ti-force, ta-resstr->ti-resstr etc
+        const iid='ti-'+id.slice(3);
         tags.forEach(v=>addTag(id,iid,v));
       }
     });
+
     // Domains
-    if(data.domains&&data.domains.length){domains=data.domains;renderDomains();}
-    // Sub-panels visibility
+    if(Array.isArray(data.domains)&&data.domains.length){
+      domains=data.domains;renderDomains();
+    }
+
+    // Fix sub-panel visibility based on restored checkbox states
     showSub('sarr-sub',CHK('o_sarr'));
     showSub('bc-sub',CHK('o_bc'));
     showSub('ct-sub',CHK('o_calltrans'));
@@ -2154,33 +2181,45 @@ function loadSettings(){
     showSub('ren-sub',CHK('o_ren'));
     showSub('chunk-sub',CHK('o_chunk'));
     showSub('dom-sub',CHK('o_dom'));
-    showSub('dict-sub',VAL('o_namegen')==='dictionary');
+    if(VAL('o_namegen')==='dictionary')showSub('dict-sub',true);
     G('renprop-w').style.display=CHK('o_renprop')?'block':'none';
-    // Multi-select display labels
-    msSync('enc');msSync('idx');
-    // Input code
-    if(data.inputCode&&inputEditor)inputEditor.setValue(data.inputCode);
-    return true;
-  }catch(e){return false;}
-}
 
-// Auto-save on any change
-function _autoSave(){saveSettings();}
+    // Multi-select display text
+    msSync('enc');msSync('idx');
+
+    // Apply visual dimming for target (no disabling)
+    applyTargetConstraints();
+    liveCheck();
+
+    // Input editor — do after a tick so CM is fully ready
+    if(data.inputCode){
+      setTimeout(()=>{if(inputEditor)inputEditor.setValue(data.inputCode);},50);
+    }
+
+    return true;
+  }catch(e){console.warn('load failed',e);return false;}
+}
 
 // Init
 applyPreset();
 document.querySelectorAll('input[type=checkbox]').forEach(el=>el.addEventListener('change',liveCheck));
 
-// Load saved settings (after editors are ready)
-setTimeout(()=>{
-  const loaded=loadSettings();
-  if(!loaded)applyPreset();
-  liveCheck();
-  // Attach auto-save listeners
-  document.querySelectorAll('input,select,textarea').forEach(el=>el.addEventListener('change',_autoSave));
-  document.querySelectorAll('input[type=range]').forEach(el=>el.addEventListener('input',_autoSave));
-  if(inputEditor)inputEditor.on('change',()=>{ clearTimeout(inputEditor._saveTimer); inputEditor._saveTimer=setTimeout(_autoSave,600); });
-},100);
+// Boot: try to load saved state, fall back to default preset
+window.addEventListener('load',()=>{
+  const ok=loadSettings();
+  if(!ok){applyPreset();}
+  // Wire up auto-save after load so save isn't triggered during init
+  document.querySelectorAll('input[id],select[id]').forEach(el=>{
+    el.addEventListener('change',saveSettings);
+    if(el.type==='range')el.addEventListener('input',saveSettings);
+  });
+  if(inputEditor){
+    inputEditor.on('change',()=>{
+      clearTimeout(inputEditor._st);
+      inputEditor._st=setTimeout(saveSettings,800);
+    });
+  }
+});
 </script>
 </body>
 </html>
