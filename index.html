@@ -1062,11 +1062,9 @@ function passClosureFold(toks){
 // that carry side effects they don't model.
 function passPointerEncoding(code){
   const p1=freshId(),p2=freshId(),p3=freshId();
-  // Inject pointer scaffolding vars at top of code as an IIFE side-effect
   const scaffold=`var ${p1},${p2},${p3};\n`;
-  // Replace _0x hex-style calls of form _0xXXXX(0xNN) with pointer-chain form
-  // We apply this to a random ~40% of matching call sites
-  const patched=code.replace(/(_0x[0-9a-f]{6})\(((0x[0-9a-f]+|\([^)]{1,40}\)))\)/g,(m,fn,arg)=>{
+  // Only match simple args: hex literals or simple computed (0xNN ^ 0xNN), no nested parens
+  const patched=code.replace(/(_0x[0-9a-f]{6})\((0x[0-9a-f]+|\([^()]{1,40}\))\)/g,(m,fn,arg)=>{
     if(RNG.next()>0.4)return m;
     const t=freshId();
     return `(${t}=${fn},${t}(${arg}))`;
@@ -1544,12 +1542,13 @@ function minify(code,opts){
   code=_stripComments(code);
   code=code.replace(/[ \t\r\n]+/g,' ');
   code=code.replace(/ ?([\{\}\[\]\(\);,]) ?/g,'$1');
-  code=code.replace(/([\)\]\}0-9]) ([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:])/g,'$1$2');
-  code=code.replace(/([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:]) ([\(\[\{0-9_$])/g,'$1$2');
+  code=code.replace(/([\)\]\}0-9_$a-zA-Z]) ([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:])/g,'$1$2');
+  code=code.replace(/([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:]) ([\(\[\{0-9_$a-zA-Z])/g,'$1$2');
   ['return','typeof','instanceof','in','of','new','delete','void','throw','case','var','let',
    'const','function','class','extends','else','if','do','while','for','switch','try','catch',
    'finally','async','await','yield','export','import'].forEach(k=>{
-    code=code.replace(new RegExp('\\b('+k+')\\b([^\\s])','g'),'$1 $2');
+    const re=new RegExp('\\b('+k+')\\b([^ \\n\\r\\t\\{\\(\\[;,])','g');
+    code=code.replace(re,'$1 $2');
   });
   if(opts.semi){
     let prev;
@@ -1810,6 +1809,8 @@ function applyPreset(){
   showSub('chunk-sub',CHK('o_chunk'));
   G('renprop-w').style.display='none';
   liveCheck();
+  // Only save if we're past init (editors exist)
+  if(typeof inputEditor!=='undefined')saveSettings();
 }
 
 // Run
@@ -1851,8 +1852,8 @@ function clearInput(){inputEditor.setValue('');}
 function copyOut(){
   const v=outputEditor.getValue();if(!v)return;
   navigator.clipboard.writeText(v).then(()=>{
-    const btn=document.querySelector('#hdr .hbtn');
-    const orig=btn.textContent;btn.textContent='Copied';
+    const btn=document.querySelector('#hdr .hbtn[onclick="copyOut()"]');
+    const orig=btn.textContent;btn.textContent='Copied!';
     setTimeout(()=>btn.textContent=orig,1400);
   });
 }
@@ -2068,11 +2069,118 @@ function applyAutoConfig(){
   applyTargetConstraints();
   liveCheck();
   closeAutoConfig();
+  saveSettings();
 }
+
+// ================================================================
+//  PERSISTENCE — save/load all settings + input to localStorage
+// ================================================================
+const PERSIST_KEY='obscura_v1';
+const SLIDER_IDS=['o_thresh','o_idxshift','o_cff_t','o_dead_t','o_dbgint','o_wcount','o_wparams','o_sschunk','o_bcchunk'];
+const DISPLAY_MAP={'o_thresh':'v-thresh','o_idxshift':'v-idxsh','o_cff_t':'v-cff','o_dead_t':'v-dead','o_dbgint':'v-dbg','o_wcount':'v-wc','o_wparams':'v-wp','o_sschunk':'v-ssc','o_bcchunk':'v-bc-chunk'};
+const TEXT_IDS=['seed-val','o_idpfx','o_namegen','o_domredir','o_smap_url','o_smap_root'];
+
+function saveSettings(){
+  try{
+    const data={};
+    // Preset + target
+    data.preset=VAL('preset');
+    data.target=currentTarget;
+    // All checkboxes
+    document.querySelectorAll('.sbody input[type=checkbox], #msw-enc input[type=checkbox], #msw-idx input[type=checkbox]').forEach(el=>{
+      if(el.id)data['ck_'+el.id]=el.checked;
+    });
+    // Sliders
+    SLIDER_IDS.forEach(id=>{const e=G(id);if(e)data['sl_'+id]=e.value;});
+    // Text inputs + selects
+    TEXT_IDS.forEach(id=>{const e=G(id);if(e)data['tx_'+id]=e.value;});
+    // Tag inputs
+    ['ta-force','ta-resstr','ta-resname','ta-dict'].forEach(id=>{data['tags_'+id]=getTags(id);});
+    // Domains
+    data.domains=domains;
+    // Input editor content
+    data.inputCode=(typeof inputEditor!=='undefined'&&inputEditor)?inputEditor.getValue():'';
+    localStorage.setItem(PERSIST_KEY,JSON.stringify(data));
+  }catch(e){}
+}
+
+function loadSettings(){
+  try{
+    const raw=localStorage.getItem(PERSIST_KEY);
+    if(!raw)return false;
+    const data=JSON.parse(raw);
+    // Preset (apply it first to set defaults, then override)
+    if(data.preset){SETV('preset',data.preset);applyPreset();}
+    // Checkboxes
+    Object.keys(data).forEach(k=>{
+      if(k.startsWith('ck_')){
+        const id=k.slice(3);const e=G(id);
+        if(e&&!e.disabled)e.checked=data[k];
+      }
+    });
+    // Sliders
+    SLIDER_IDS.forEach(id=>{
+      if(data['sl_'+id]!==undefined){
+        const e=G(id);if(e){e.value=data['sl_'+id];
+        const disp=DISPLAY_MAP[id];if(disp){
+          const dv=G(disp);
+          if(dv)dv.textContent=id==='o_thresh'?parseFloat(data['sl_'+id]).toFixed(2):
+            id==='o_cff_t'||id==='o_dead_t'?parseFloat(data['sl_'+id]).toFixed(2):data['sl_'+id];
+        }}
+      }
+    });
+    // Text + selects
+    TEXT_IDS.forEach(id=>{if(data['tx_'+id]!==undefined){const e=G(id);if(e)e.value=data['tx_'+id];}});
+    // Target
+    if(data.target)setTarget(data.target);
+    // Tag inputs
+    ['ta-force','ta-resstr','ta-resname','ta-dict'].forEach(id=>{
+      const tags=data['tags_'+id];
+      if(tags&&tags.length){
+        const iid='ti-'+id.split('-')[1];
+        tags.forEach(v=>addTag(id,iid,v));
+      }
+    });
+    // Domains
+    if(data.domains&&data.domains.length){domains=data.domains;renderDomains();}
+    // Sub-panels visibility
+    showSub('sarr-sub',CHK('o_sarr'));
+    showSub('bc-sub',CHK('o_bc'));
+    showSub('ct-sub',CHK('o_calltrans'));
+    showSub('ssplit-sub',CHK('o_ssplit'));
+    showSub('cff-sub',CHK('o_cff'));
+    showSub('dead-sub',CHK('o_dead'));
+    showSub('dbg-sub',CHK('o_dbg'));
+    showSub('ren-sub',CHK('o_ren'));
+    showSub('chunk-sub',CHK('o_chunk'));
+    showSub('dom-sub',CHK('o_dom'));
+    showSub('dict-sub',VAL('o_namegen')==='dictionary');
+    G('renprop-w').style.display=CHK('o_renprop')?'block':'none';
+    // Multi-select display labels
+    msSync('enc');msSync('idx');
+    // Input code
+    if(data.inputCode&&inputEditor)inputEditor.setValue(data.inputCode);
+    return true;
+  }catch(e){return false;}
+}
+
+// Auto-save on any change
+function _autoSave(){saveSettings();}
 
 // Init
 applyPreset();
 document.querySelectorAll('input[type=checkbox]').forEach(el=>el.addEventListener('change',liveCheck));
+
+// Load saved settings (after editors are ready)
+setTimeout(()=>{
+  const loaded=loadSettings();
+  if(!loaded)applyPreset();
+  liveCheck();
+  // Attach auto-save listeners
+  document.querySelectorAll('input,select,textarea').forEach(el=>el.addEventListener('change',_autoSave));
+  document.querySelectorAll('input[type=range]').forEach(el=>el.addEventListener('input',_autoSave));
+  if(inputEditor)inputEditor.on('change',()=>{ clearTimeout(inputEditor._saveTimer); inputEditor._saveTimer=setTimeout(_autoSave,600); });
+},100);
 </script>
 </body>
 </html>
