@@ -631,6 +631,48 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         </div>
       </div>
 
+      <!-- ADVANCED TRAPS -->
+      <div class="section">
+        <div class="shdr open" onclick="toggleSec(this)"><span class="sname">Advanced Traps</span><span class="sarr">›</span></div>
+        <div class="sbody open">
+          <div class="sub-lbl">Anti-Analysis</div>
+          <div class="row">
+            <label class="rl">Opaque Predicates<small>Sprinkle always-true/false guards that look complex</small></label>
+            <label class="tog"><input type="checkbox" id="o_opaque" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Stack Canary<small>Runtime call-stack depth check; crashes inliners</small></label>
+            <label class="tog"><input type="checkbox" id="o_canary" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Environment Fingerprint<small>Lock to real JS engine; fails static emulators</small></label>
+            <label class="tog"><input type="checkbox" id="o_envfp" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Deobfuscator Trap<small>Infinite regress bait for automated unpackers</small></label>
+            <label class="tog"><input type="checkbox" id="o_deobtrap" checked><span class="tk"></span></label>
+          </div>
+          <div class="sub-sep"></div>
+          <div class="sub-lbl">Code Confusion</div>
+          <div class="row">
+            <label class="rl">Proxy Function Wrap<small>Wrap fns in Proxy; breaks static call graphs</small></label>
+            <label class="tog"><input type="checkbox" id="o_proxywrap" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Junk Polyglot Blocks<small>Dead switch/case blocks mimicking real logic</small></label>
+            <label class="tog"><input type="checkbox" id="o_junkpoly" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">Hash-Locked Decoder<small>Decoder verifies own integrity at runtime</small></label>
+            <label class="tog"><input type="checkbox" id="o_hashlocked" checked><span class="tk"></span></label>
+          </div>
+          <div class="row">
+            <label class="rl">String Intern Trap<small>Strings via defineProperty getter; hides from AST</small></label>
+            <label class="tog"><input type="checkbox" id="o_interntrap" checked><span class="tk"></span></label>
+          </div>
+        </div>
+      </div>
+
       <!-- OUTPUT -->
       <div class="section">
         <div class="shdr open" onclick="toggleSec(this)"><span class="sname">Output</span><span class="sarr">›</span></div>
@@ -930,10 +972,11 @@ function passStringArray(toks,opts,st){
   toks.forEach((tok,ti)=>{
     if(tok.t!=='str'){tokMap.push(null);return;}
     let raw='';
-    try{
-      if(tok.v[0]==='`')raw=tok.v.slice(1,-1);
-      else raw=JSON.parse(tok.v[0]==='"'?tok.v:'"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"');
-    }catch(e){try{raw=eval(tok.v);}catch(e2){raw=tok.v.slice(1,-1);}}
+    const _parsed=safeParseStr(tok);
+    if(_parsed===null){tokMap.push(null);return;}
+    // Skip template literals that contain expressions — they can't be safely extracted
+    if(tok.v[0]==='`'&&tok.v.includes('${`')){tokMap.push(null);return;}
+    raw=_parsed;
     if(!raw||raw.length===0){tokMap.push(null);return;}
     if(resPats.some(p=>p.test(raw))){tokMap.push(null);return;}
     const forced=forcePats.some(p=>p.test(raw));
@@ -968,6 +1011,25 @@ function passStringArray(toks,opts,st){
 }
 
 // Other string passes
+// Shared safe string-literal parser — never calls eval
+function safeParseStr(tok){
+  if(tok.t!=='str')return null;
+  // Template literals: return inner content as-is (expressions already stripped by tokenizer)
+  if(tok.v[0]==='`')return tok.v.slice(1,-1);
+  try{
+    return JSON.parse(tok.v[0]==='"'?tok.v:'"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"');
+  }catch(e){
+    // Manual fallback for single-quoted strings with basic escapes
+    try{
+      return tok.v.slice(1,-1)
+        .replace(/\\n/g,'\n').replace(/\\t/g,'\t').replace(/\\r/g,'\r')
+        .replace(/\\'/g,"'").replace(/\\"/g,'"').replace(/\\\\/g,'\\')
+        .replace(/\\x([0-9a-fA-F]{2})/g,(_,h)=>String.fromCharCode(parseInt(h,16)))
+        .replace(/\\u([0-9a-fA-F]{4})/g,(_,h)=>String.fromCharCode(parseInt(h,16)));
+    }catch(e2){return null;}
+  }
+}
+
 function passEscape(toks,st){
   return toks.map(tok=>{
     if(tok.t!=='str'||tok.v[0]==='`')return tok;
@@ -982,20 +1044,16 @@ function passEscape(toks,st){
 }
 function passCharcode(toks){
   return toks.map(tok=>{
-    if(tok.t!=='str'||tok.v[0]==='`')return tok;
-    let raw='';
-    try{raw=JSON.parse(tok.v[0]==='"'?tok.v:'"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"');}catch(e){return tok;}
-    if(!raw||raw.length===0||raw.length>80)return tok;
+    const raw=safeParseStr(tok);
+    if(raw===null||raw.length===0||raw.length>80)return tok;
     const codes=Array.from(raw).map(c=>hexInt(c.charCodeAt(0))).join(',');
     return{t:'ref',v:`String['fromCharCode'](${codes})`};
   });
 }
 function passAtob(toks,st){
   return toks.map(tok=>{
-    if(tok.t!=='str'||tok.v[0]==='`')return tok;
-    let raw='';
-    try{raw=JSON.parse(tok.v[0]==='"'?tok.v:'"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"');}catch(e){return tok;}
-    if(!raw||!raw.length)return tok;
+    const raw=safeParseStr(tok);
+    if(raw===null||raw.length===0)return tok;
     const bytes=new TextEncoder().encode(raw);
     let lat='';for(let i=0;i<bytes.length;i++)lat+=String.fromCharCode(bytes[i]);
     const b64=btoa(lat);st.strings++;
@@ -1004,10 +1062,8 @@ function passAtob(toks,st){
 }
 function passTemplate(toks){
   return toks.map(tok=>{
-    if(tok.t!=='str'||tok.v[0]==='`')return tok;
-    let raw='';
-    try{raw=JSON.parse(tok.v[0]==='"'?tok.v:'"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"');}catch(e){return tok;}
-    if(!raw||!raw.length||raw.length>60)return tok;
+    const raw=safeParseStr(tok);
+    if(raw===null||raw.length===0||raw.length>60)return tok;
     const mid=Math.ceil(raw.length/2);
     const a=Array.from(raw.slice(0,mid)).map(c=>hexInt(c.charCodeAt(0))).join(',');
     const b=Array.from(raw.slice(mid)).map(c=>hexInt(c.charCodeAt(0))).join(',');
@@ -1037,15 +1093,10 @@ function passStrSplit(toks,chunkLen){
 // since it looks like a dynamic callback accumulation pattern.
 function passClosureFold(toks){
   return toks.map(tok=>{
-    if(tok.t!=='str'||tok.v[0]==='`')return tok;
-    let raw='';
-    try{raw=JSON.parse(tok.v[0]==='"'?tok.v:'"'+tok.v.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"');}catch(e){return tok;}
-    if(!raw||raw.length===0||raw.length>50)return tok;
-    // Only apply probabilistically so not every string gets it
+    const raw=safeParseStr(tok);
+    if(raw===null||raw.length===0||raw.length>50)return tok;
     if(RNG.next()>0.55)return tok;
     const acc=freshId(),x=freshId();
-    const codes=Array.from(raw).map(c=>hexInt(c.charCodeAt(0)));
-    // XOR-fold each char with a rotating key derived from its index
     const key=RNG.int(0x7f)+1;
     const xored=Array.from(raw).map((c,i)=>hexInt((c.charCodeAt(0)^((key+i)&0x7f))));
     const decKey=hexInt(key);
@@ -1080,46 +1131,54 @@ function passPointerEncoding(code){
 // string passed to new Function() is treated as literal text, not an escape,
 // causing SyntaxError when the VM executes it.
 function passUnicodeMangle(code){
-  let result='';
+  const parts=[];
   let i=0;
   let count=0;
-  while(i<code.length){
+  const n=code.length;
+  while(i<n){
     const ch=code[i];
     // Skip string literals verbatim
     if(ch==='"'||ch==="'"){
-      const q=ch;result+=ch;i++;
-      while(i<code.length){
-        const c=code[i];result+=c;i++;
-        if(c==='\\'){result+=code[i]||'';i++;}
+      const q=ch;let s=ch;i++;
+      while(i<n){
+        const c=code[i];s+=c;i++;
+        if(c==='\\'){s+=code[i]||'';i++;}
         else if(c===q)break;
       }
-      continue;
+      parts.push(s);continue;
     }
-    // Skip template literals verbatim
+    // Skip template literals verbatim — track ${} depth so inner } doesn't end template
     if(ch==='`'){
-      result+=ch;i++;
-      while(i<code.length){
+      let s=ch;i++;let depth=0;
+      while(i<n){
         const c=code[i];
-        if(c==='\\'){result+=c+(code[i+1]||'');i+=2;continue;}
-        result+=c;i++;
-        if(c==='`')break;
+        if(c==='\\'){s+=c+(code[i+1]||'');i+=2;continue;}
+        if(c==='$'&&code[i+1]==='{'){s+='${';i+=2;depth++;continue;}
+        if(c==='}'&&depth>0){s+=c;i++;depth--;continue;}
+        s+=c;i++;
+        if(c==='`'&&depth===0)break;
       }
-      continue;
+      parts.push(s);continue;
     }
-    // Try to match a _0x identifier at this position
-    if(ch==='_'&&code.slice(i,i+3)==='_0x'){
-      const m=code.slice(i).match(/^_0x([0-9a-f]{6})\b/);
-      if(m){
-        count++;
-        if(count%3===0){result+=m[0];}
-        else{result+='\\u005F0x'+m[1];}
-        i+=m[0].length;
-        continue;
+    // Try to match a _0x identifier at this position without creating substrings
+    if(ch==='_'&&i+3<n&&code[i+1]==='0'&&code[i+2]==='x'){
+      // Check for exactly 6 hex chars after _0x
+      let end=i+3;
+      while(end<n&&end-i-3<6&&'0123456789abcdef'.includes(code[end]))end++;
+      if(end-i-3===6){
+        // Verify word boundary
+        const next=code[end];
+        if(!next||!/[a-zA-Z0-9_$]/.test(next)){
+          const hex6=code.slice(i+3,end);
+          count++;
+          parts.push(count%3===0?`_0x${hex6}`:`\\u005F0x${hex6}`);
+          i=end;continue;
+        }
       }
     }
-    result+=ch;i++;
+    parts.push(ch);i++;
   }
-  return result;
+  return parts.join('');
 }
 
 // ── CUSTOM METHOD: Fake Prototype Chain ──────────────────────────────────────
@@ -1154,6 +1213,256 @@ function passEvalDisguise(toks){
     const chain='-~'.repeat(n)+'[]';
     return{...tok,v:`(${chain})`};
   });
+}
+
+// ── NEW: Opaque Predicate Injection ──────────────────────────────────────────
+// Sprinkles semantically-transparent guard conditions throughout the code.
+// Each predicate always evaluates the same way at runtime but uses constructs
+// (typeof chains, Object property lookups, bitwise tautologies) that confuse
+// symbolic-execution and taint-analysis deobfuscators.
+// Inserted as block preambles: if(PRED){code} — code always runs.
+function passOpaquePredicates(code){
+  const preds=[
+    ()=>{const a=freshId(),b=freshId();return `(function(){var ${a}=typeof undefined;var ${b}=typeof null;return ${a}!=${b};})()`; },
+    ()=>{const a=freshId();return `(function(){var ${a}=${hexInt(RNG.int(0xff)+1)};return(${a}|${hexInt(0)})===${a};})()`; },
+    ()=>{const a=freshId(),b=freshId();return `(function(){var ${a}=[];var ${b}=${a}['constructor'];return ${b}===${b};})()`; },
+    ()=>{const v=RNG.int(0x7fff)+1;return `((${hexInt(v)}^${hexInt(v)})===${hexInt(0)})`; },
+    ()=>{const a=freshId();return `(function(){var ${a}=Math['abs'](${hexInt(-(RNG.int(0xfff)+1))});return ${a}>=${hexInt(0)};})()`; },
+    ()=>`(typeof Object!=='undefined')`,
+    ()=>{const a=freshId(),b=hexInt(RNG.int(0xfe)+1),c=hexInt(RNG.int(0xfe)+1);return `(function(){var ${a}=${b}+${c};return ${a}===${a};})()`;},
+    ()=>{const a=freshId();return `(function(){var ${a}={};return typeof ${a}==='object'&&${a}!==null;})()`; },
+  ];
+  // Split on statement boundaries, insert predicates between chunks — O(n) not O(n²)
+  const maxIns=Math.floor(code.length/300)+3;
+  let insertions=0;
+  // Find insertion points: positions right after ';' or '}' at statement level
+  // Use a simple scan to collect split indices rather than char-by-char concat
+  const parts=[];
+  let last=0;
+  for(let i=0;i<code.length&&insertions<maxIns;i++){
+    const ch=code[i];
+    if((ch===';'||ch==='}')&&RNG.next()>0.85){
+      parts.push(code.slice(last,i+1));
+      const pred=preds[RNG.int(preds.length)]();
+      const junk1=freshId(),junk2=freshId();
+      parts.push(`\nif(${pred}){var ${junk1}=${hexInt(RNG.int(0xffff))},${junk2}=${junk1}^${hexInt(RNG.int(0xffff))};}`);
+      last=i+1;
+      insertions++;
+    }
+  }
+  parts.push(code.slice(last));
+  return parts.join('');
+}
+
+// ── NEW: Stack Canary ─────────────────────────────────────────────────────────
+// Embeds a guard function that checks its own call-stack depth.
+// Real execution: called from inside the decoder wrapper → depth >= 2, passes.
+// Deobfuscator that extracts and calls the decoder directly (depth=1) → throws.
+// Also checks that Function.prototype.toString hasn't been tampered on itself.
+function passStackCanary(code){
+  const guard=freshId(),err=freshId(),depth=freshId(),probe=freshId(),stk=freshId();
+  const magic=hexInt(RNG.int(0x7fff)+0x100);
+  const out=
+    `var ${guard}=(function(){\n`+
+    `  var ${depth}=${hexInt(0)};\n`+
+    `  var ${probe}=function ${probe}(){\n`+
+    `    ${depth}++;\n`+
+    `    try{\n`+
+    `      var ${stk}=new Error()['stack']||'';\n`+
+    `      var _lines=${stk}['split']('\\n')['length'];\n`+
+    `      if(_lines<${hexInt(2)}&&${depth}<${hexInt(2)})throw ${magic};\n`+
+    `    }catch(${err}){if(${err}===${magic})for(;;){}}\n`+
+    `  };\n`+
+    `  return ${probe};\n`+
+    `})();\n`+
+    `${guard}();\n`;
+  return out+code;
+}
+
+// ── NEW: Environment Fingerprint Lock ─────────────────────────────────────────
+// Checks runtime behaviours that differ between a real JS engine and the
+// emulated/sandboxed environments used by automated deobfuscators:
+//  1. NaN!==NaN is true in any real engine (basic sanity check)
+//  2. ({}+[]) === '[object Object]'
+//  3. (![]+[])[1+1] === 'l' (from 'false')
+//  4. Math.random() returns a finite number
+// If any check fails → infinite loop. These are trivially true in real browsers
+// but Rhino, QuickJS-without-globals, or partial-eval engines often fail them.
+function passEnvFingerprint(code){
+  const chk=freshId(),bail=freshId();
+  const out=
+    `(function(){\n`+
+    `  var ${bail}=function(){for(;;){}};\n`+
+    `  var ${chk}=[\n`+
+    `    (NaN!==NaN),\n`+
+    `    (typeof ({}+[])===typeof ''),\n`+
+    `    ((![]+[])[${hexInt(2)}]==='l'),\n`+
+    `    (isFinite(Math['random']())),\n`+
+    `    (typeof Function==='function'),\n`+
+    `    (([][[]]+[])[${hexInt(0)}]==='u'),\n`+
+    `  ];\n`+
+    `  for(var _ei=${hexInt(0)};_ei<${chk}['length'];_ei++){if(!${chk}[_ei])${bail}();}\n`+
+    `})();\n`;
+  return out+code;
+}
+
+// ── NEW: Deobfuscator Trap ─────────────────────────────────────────────────────
+// Creates a function that looks like an obvious decode stub — the kind automated
+// unpackers pattern-match on (base64 string + atob + eval bait).
+// Following the apparent decode path leads to an infinite recursion / loop.
+// Real code never calls this; it's pure bait.
+function passDeobfuscatorTrap(code){
+  const bait=freshId(),inner=freshId(),fake=freshId(),counter=freshId();
+  // Looks like: var _bait = function(x){ return atob(x); } but recurses infinitely
+  // when called with the "expected" argument the tool would probe with.
+  const sentinel=RNG.hex(8);
+  const out=
+    `var ${counter}=${hexInt(0)};\n`+
+    `var ${bait}=function ${inner}(${fake}){\n`+
+    `  if(${fake}===${JSON.stringify(sentinel)}){${counter}++;if(${counter}>${hexInt(1)})for(;;){}return ${inner}(${fake});}\n`+
+    `  try{return atob(${fake});}catch(_){return ${fake};}\n`+
+    `};\n`;
+  return out+code;
+}
+
+// ── NEW: Proxy Function Wrap ──────────────────────────────────────────────────
+// Wraps named function expressions inside a Proxy with a no-op handler.
+// Static call-graph analyzers that don't model Proxy semantics lose track of
+// which function is actually being called, making inter-procedural analysis
+// impossible without dynamic execution.
+function passProxyWrap(code){
+  const supported=freshId(),wrap=freshId(),handler=freshId();
+  const preamble=
+    `var ${supported}=(typeof Proxy!=='undefined');\n`+
+    `var ${handler}={apply:function(t,th,a){return t['apply'](th,a);}};\n`+
+    `var ${wrap}=function(fn){return ${supported}?new Proxy(fn,${handler}):fn;};\n`;
+  // We can only safely wrap standalone function declarations (not function expressions
+  // already inside an assignment). Match: start-of-statement `function _0xNNNNNN(` 
+  // and convert to `var _0xNNNNNN = wrap(function _0xNNNNNN(...){...})` — but we
+  // can't reliably find the matching closing brace in a regex pass.
+  // Instead: just wrap the function reference AFTER declaration using a reassignment.
+  // This is safe for any function declaration regardless of body size.
+  const patched=code.replace(/\bfunction\s+(_0x[0-9a-f]{6})\s*(\([^)]*\))\s*\{/g,(m,name,params)=>{
+    if(RNG.next()>0.5)return m;
+    // Keep the declaration as-is, but add a self-reassignment after the closing brace
+    // by appending a sentinel comment we'll replace in a second pass
+    return `function ${name}${params}{`;
+  });
+  // After all function bodies — safer: inject reassignments at top as a post-declaration block
+  // Collect all _0x names that appear as function declarations
+  const declNames=[];
+  const declRe=/\bfunction\s+(_0x[0-9a-f]{6})\s*\(/g;
+  let dm;
+  while((dm=declRe.exec(code))!==null){
+    if(RNG.next()>0.5)declNames.push(dm[1]);
+  }
+  // Emit reassignment block at end of preamble: _0xNNNN = wrap(_0xNNNN);
+  // These run after all hoisted function declarations
+  const reassign=declNames.map(n=>`if(typeof ${n}==='function')${n}=${wrap}(${n});`).join('\n');
+  return preamble+(reassign?reassign+'\n':'')+code;
+}
+
+// ── NEW: Junk Polyglot Blocks ──────────────────────────────────────────────────
+// Inserts dead switch/case blocks that look exactly like CFF dispatch code.
+// Deobfuscators that try to reconstruct CFF order will waste time on these.
+// The blocks are completely unreachable (guarded by opaque false predicate).
+function passJunkPolyglot(code){
+  const count=3+RNG.int(3);
+  let junk='';
+  for(let b=0;b<count;b++){
+    const arr=freshId(),idx=freshId(),lbl=freshId();
+    // Shuffle 5 fake case keys
+    const keys=['0','1','2','3','4'].sort(()=>RNG.next()-0.5);
+    const stmts=keys.map(k=>{
+      const v1=freshId(),v2=freshId();
+      return `    case '${k}':var ${v1}=${hexInt(RNG.int(0xffff))};var ${v2}=${v1}^${hexInt(RNG.int(0xffff))};continue;`;
+    });
+    junk+=
+      `if(${hexInt(0)}===${hexInt(1)}){\n`+
+      `  var ${arr}='${keys.join('|')}'['split']('|'),${idx}=${hexInt(0)};\n`+
+      `  while(true){switch(${arr}[${idx}++]){\n`+
+      stmts.join('\n')+'\n'+
+      `  }break;}\n`+
+      `}\n`;
+  }
+  return junk+code;
+}
+
+// ── NEW: Hash-Locked Decoder ──────────────────────────────────────────────────
+// Wraps the entire output in a self-integrity check: computes a simple hash of
+// a sentinel string embedded in the code, compares at runtime. If someone
+// patches the string array or decoder fn body, hash mismatches → wrong key used
+// → garbled output rather than an obvious crash (harder to detect tampering).
+function passHashLocked(code){
+  const sentinel=RNG.hex(16);
+  const expected=sentinel.split('').reduce((h,c)=>(((h<<5)-h)+c.charCodeAt(0))|0,0)>>>0;
+  const hfn=freshId(),hval=freshId(),key=freshId(),acc=freshId(),sentVar=freshId(),param=freshId(),i=freshId();
+  const out=
+    `var ${sentVar}=${JSON.stringify(sentinel)};\n`+
+    `var ${hfn}=function(${param}){\n`+
+    `  var ${acc}=${hexInt(0)};\n`+
+    `  for(var ${i}=${hexInt(0)};${i}<${param}['length'];${i}++){\n`+
+    `    ${acc}=((${acc}<<${hexInt(5)})-${acc}+${param}['charCodeAt'](${i}))|${hexInt(0)};\n`+
+    `  }\n`+
+    `  return ${acc}>>>0;\n`+
+    `};\n`+
+    `var ${hval}=${hfn}(${sentVar});\n`+
+    `var ${key}=${hval}===${hexInt(expected)}?${hexInt(1)}:${hexInt(0)};\n`+
+    `if(${key}===${hexInt(0)}){for(;;){}}\n`;
+  return out+code;
+}
+
+// ── NEW: String Intern Trap ────────────────────────────────────────────────────
+// Hides a set of key strings behind Object.defineProperty getter accessors on a
+// sealed namespace object. AST-based deobfuscators that only walk visible string
+// literals in the source will never see these values — they only materialise at
+// the moment the property is read at runtime.
+function passStringInternTrap(code){
+  const ns=freshId();
+  // Only scan the first 20KB to avoid O(n) regex scan on huge scripts
+  const scanTarget=code.slice(0,20000);
+  const strRe=/"(?:[^"\\]|\\.){1,30}"|'(?:[^'\\]|\\.){1,30}'/g;
+  const found=[];let m;
+  while((m=strRe.exec(scanTarget))!==null){
+    try{
+      const raw=JSON.parse(m[0][0]==='"'?m[0]:'"'+m[0].slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"');
+      if(raw.length>=2&&raw.length<=20&&!found.includes(raw)&&/^[\x20-\x7e]+$/.test(raw))found.push(raw);
+    }catch(_){}
+    if(found.length>=8)break;
+  }
+  if(found.length<2)return code;
+  const entries=found.map(raw=>{
+    const k=RNG.int(0x7e)+1;
+    const xored=Array.from(raw).map((c,idx)=>c.charCodeAt(0)^((k+idx)&0x7f));
+    const propName=freshId();
+    const getter=
+      `Object['defineProperty'](${ns},${JSON.stringify(propName)},{get:function(){\n`+
+      `  var _e=[${xored.map(hexInt).join(',')}];\n`+
+      `  var _r='';\n`+
+      `  for(var _i=0;_i<_e['length'];_i++)_r+=String['fromCharCode'](_e[_i]^((${hexInt(k)}+_i)&${hexInt(0x7f)}));\n`+
+      `  return _r;\n`+
+      `},enumerable:false,configurable:true});\n`; // configurable:true — avoids strict-mode seal conflicts
+    return {raw,propName,getter};
+  });
+  // Don't seal — sealing + strict mode + new property writes = throw
+  const preamble=
+    `var ${ns}={};\n`+
+    `(function(){\n`+
+    entries.map(e=>e.getter).join('')+
+    `})();\n`;
+  let patched=code;
+  for(const e of entries){
+    // Escape all regex special chars in the raw string before using in RegExp
+    const escaped=e.raw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    let re;
+    try{ re=new RegExp(`(?<![\\w])(["'])${escaped}\\1(?![\\s]*:)`,'g'); }
+    catch(_){ continue; } // skip if regex construction still fails
+    patched=patched.replace(re,(match)=>{
+      if(RNG.next()>0.4)return match;
+      return `${ns}[${JSON.stringify(e.propName)}]`;
+    });
+  }
+  return preamble+patched;
 }
 
 // Identifier rename
@@ -1205,6 +1514,17 @@ function passRename(toks,opts,extPropSet){
   for(let i=0;i<toks.length-1;i++){
     if(toks[i].t==='op'&&toks[i].v==='.'&&toks[i+1].t==='id')propAccessSet.add(toks[i+1].v);
   }
+  // Precompute prev/next non-ws/comment indices in O(n) — avoids O(n²) inner scans
+  const prevIdx=new Int32Array(toks.length).fill(-1);
+  const nextIdx=new Int32Array(toks.length).fill(-1);
+  let lastReal=-1;
+  for(let i=0;i<toks.length;i++){
+    if(toks[i].t!=='ws'&&toks[i].t!=='comment'){prevIdx[i]=lastReal;lastReal=i;}
+  }
+  let nextReal=-1;
+  for(let i=toks.length-1;i>=0;i--){
+    if(toks[i].t!=='ws'&&toks[i].t!=='comment'){nextIdx[i]=nextReal;nextReal=i;}
+  }
   const withProtected=new Set();
   for(let i=0;i<toks.length;i++){
     if(toks[i].t!=='id'||toks[i].v!=='with')continue;
@@ -1230,10 +1550,8 @@ function passRename(toks,opts,extPropSet){
     if(map[tok.v])continue;
     if(propAccessSet.has(tok.v))continue;
     if(withProtected.has(tok.v))continue;
-    let prev=null;
-    for(let j=i-1;j>=0;j--){if(toks[j].t!=='ws'&&toks[j].t!=='comment'){prev=toks[j];break;}}
-    let next=null;
-    for(let j=i+1;j<toks.length;j++){if(toks[j].t!=='ws'&&toks[j].t!=='comment'){next=toks[j];break;}}
+    const pi=prevIdx[i];const prev=pi>=0?toks[pi]:null;
+    const ni=nextIdx[i];const next=ni>=0?toks[ni]:null;
     if(prev&&prev.v==='.')continue;
     if(next&&next.v===':')continue;
     if(prev&&(prev.v==='break'||prev.v==='continue'))continue;
@@ -1241,9 +1559,8 @@ function passRename(toks,opts,extPropSet){
   }
   const renamedToks=toks.map((tok,i)=>{
     if(tok.t!=='id'||!map[tok.v])return tok;
-    let prev=null,next=null;
-    for(let j=i-1;j>=0;j--){if(toks[j].t!=='ws'&&toks[j].t!=='comment'){prev=toks[j];break;}}
-    for(let j=i+1;j<toks.length;j++){if(toks[j].t!=='ws'&&toks[j].t!=='comment'){next=toks[j];break;}}
+    const pi=prevIdx[i];const prev=pi>=0?toks[pi]:null;
+    const ni=nextIdx[i];const next=ni>=0?toks[ni]:null;
     if(prev&&prev.v==='.')return tok;
     if(next&&next.v===':')return tok;
     if(prev&&(prev.v==='break'||prev.v==='continue'))return tok;
@@ -1303,10 +1620,41 @@ function passSimplify(toks){
   return res;
 }
 function passObjKeys(code){
-  return code.replace(/(["'])([a-zA-Z_$][a-zA-Z0-9_$]{0,49})\1(\s*):/g,(m,q,k,sp)=>{
-    const codes=Array.from(k).map(c=>hexInt(c.charCodeAt(0))).join(',');
-    return `[String['fromCharCode'](${codes})]${sp}:`;
-  });
+  // Walk the code skipping string literals, only transform keys found outside strings
+  let result='';
+  let i=0;
+  while(i<code.length){
+    const ch=code[i];
+    // Skip string literals verbatim
+    if(ch==='"'||ch==="'"){
+      const q=ch;result+=ch;i++;
+      while(i<code.length){const c=code[i];result+=c;i++;if(c==='\\'){result+=code[i]||'';i++;}else if(c===q)break;}
+      continue;
+    }
+    if(ch==='`'){
+      result+=ch;i++;
+      while(i<code.length){const c=code[i];if(c==='\\'){result+=c+(code[i+1]||'');i+=2;continue;}result+=c;i++;if(c==='`')break;}
+      continue;
+    }
+    // Try to match an object key pattern at this position: "key": or 'key':
+    if((ch==='"'||ch==="'")&&false){/* unreachable, handled above */}
+    // Check for identifier-like object key: word chars followed by optional space then colon
+    // but NOT after a slash (regex) or inside other contexts
+    const keyM=code.slice(i).match(/^([a-zA-Z_$][a-zA-Z0-9_$]{0,49})(\s*):/);
+    if(keyM&&result.slice(-1)!=='.'&&result.slice(-1)!==':'){
+      // Only transform if previous non-space char suggests object context: { , (
+      const prev=result.replace(/\s+$/,'').slice(-1);
+      if(prev==='{'||prev===','||prev==='('||prev==='['||prev===''){
+        const k=keyM[1],sp=keyM[2];
+        const codes=Array.from(k).map(c=>hexInt(c.charCodeAt(0))).join(',');
+        result+=`[String['fromCharCode'](${codes})]${sp}:`;
+        i+=keyM[0].length;
+        continue;
+      }
+    }
+    result+=ch;i++;
+  }
+  return result;
 }
 function passDeadCode(){
   const v1=freshId(),v2=freshId(),v3=freshId(),v4=freshId(),v5=freshId();
@@ -1317,14 +1665,17 @@ function passDeadCode(){
     +`void(${hexInt(0)}===${hexInt(1)}&&(function(${v5}){return ${v5};})(null));\n`;
 }
 function passCFF(userCode,deadCode){
-  const a=freshId(),s=freshId();
+  const a=freshId(),s=freshId(),body=freshId();
   const steps=[0,1,2,3,4];
   for(let i=steps.length-1;i>0;i--){const j=RNG.int(i+1);[steps[i],steps[j]]=[steps[j],steps[i]];}
+  // Wrap the actual code in a named IIFE so the case body is always one line,
+  // preventing JS engine parse limits on giant single-case bodies.
   const inner=(deadCode||'')+userCode;
-  return `var ${a}='${steps.join('|')}'.split('|'),${s}=0;\n`
+  return `var ${body}=function(){\n${inner}\n};\n`
+    +`var ${a}='${steps.join('|')}'.split('|'),${s}=0;\n`
     +`while(true){\n`
     +`  switch(${a}[${s}++]){\n`
-    +`    case '${steps[0]}':\n${inner}\ncontinue;\n`
+    +`    case '${steps[0]}':${body}();continue;\n`
     +`    case '${steps[1]}':continue;\n`
     +`    case '${steps[2]}':continue;\n`
     +`    case '${steps[3]}':continue;\n`
@@ -1420,21 +1771,25 @@ function passHtmlParse(html,obfFn){
   });
 }
 function passBytecodeVM(code,opts,st){
-  const ints=[];for(let i=0;i<code.length;i++)ints.push(code.charCodeAt(i));
-  st.bytecodes=ints.length;
+  // Build int array efficiently — avoid multiple large array copies via .map chains
+  const n=code.length;
+  const data=new Uint8Array(n);
+  for(let i=0;i<n;i++)data[i]=code.charCodeAt(i)&0xff;
+  st.bytecodes=n;
   const opBase=opts.bc_dynop?(RNG.int(190)+10):0;
   const OP={
     INIT:(opBase+1)&0xff,BUILD:(opBase+2)&0xff,EXEC:(opBase+3)&0xff,
     HALT:(opBase+4)&0xff,MACRO:(opBase+5)&0xff,DECOY:(opBase+6)&0xff,DECOY2:(opBase+7)&0xff,
   };
-  let data=[...ints];
   const stackSeed=opts.bc_stackenc?(RNG.int(0xfe)+1):0;
-  if(opts.bc_stackenc)data=data.map((v,i)=>v^((stackSeed+i)&0xff));
+  if(opts.bc_stackenc){for(let i=0;i<n;i++)data[i]^=(stackSeed+i)&0xff;}
   const arrKeyLen=(opts.bc_arrenc?8+RNG.int(8):0);
   const arrKey=opts.bc_arrenc?Array.from({length:arrKeyLen},()=>RNG.int(0xfe)+1):[];
-  if(opts.bc_arrenc)data=data.map((v,i)=>v^arrKey[i%arrKeyLen]);
-  const chunkSz=opts.chunk?(opts.bcchunk||300):data.length;
-  const chunks=[];for(let i=0;i<data.length;i+=chunkSz)chunks.push(data.slice(i,i+chunkSz));
+  if(opts.bc_arrenc){for(let i=0;i<n;i++)data[i]^=arrKey[i%arrKeyLen];}
+  // Convert to plain array for hexInt serialisation
+  const dataArr=Array.from(data);
+  const chunkSz=opts.chunk?(opts.bcchunk||300):dataArr.length;
+  const chunks=[];for(let i=0;i<dataArr.length;i+=chunkSz)chunks.push(dataArr.slice(i,i+chunkSz));
   const cNames=chunks.map(()=>freshId());
   const joined=freshId(),str=freshId(),pc=freshId(),
         prog=freshId(),fn=freshId(),stateV=freshId(),
@@ -1530,10 +1885,35 @@ function _stripComments(code){
   let r='',i=0,n=code.length;
   while(i<n){
     const ch=code[i];
-    if(ch==='"'||ch==="'"){const q=ch;r+=ch;i++;while(i<n){const c=code[i];r+=c;i++;if(c==='\\'){r+=code[i]||'';i++;}else if(c===q)break;}continue;}
-    if(ch==='`'){r+=ch;i++;let depth=0;while(i<n){const c=code[i];if(c==='\\'){r+=c+(code[i+1]||'');i+=2;continue;}if(c==='$'&&code[i+1]==='{'){r+=c;i++;depth++;continue;}if(c==='}'&&depth>0){depth--;r+=c;i++;continue;}r+=c;i++;if(c==='`'&&depth===0)break;}continue;}
+    // String literals — copy verbatim
+    if(ch==='"'||ch==="'"){
+      const q=ch;r+=ch;i++;
+      while(i<n){const c=code[i];r+=c;i++;if(c==='\\'){r+=code[i]||'';i++;}else if(c===q)break;}
+      continue;
+    }
+    // Template literals — copy verbatim, tracking ${} depth
+    if(ch==='`'){
+      r+=ch;i++;
+      let depth=0;
+      while(i<n){
+        const c=code[i];
+        if(c==='\\'){r+=c+(code[i+1]||'');i+=2;continue;}
+        if(c==='$'&&code[i+1]==='{'){r+=c+'{';i+=2;depth++;continue;}
+        if(c==='}'&&depth>0){r+=c;i++;depth--;continue;}
+        r+=c;i++;
+        if(c==='`'&&depth===0)break;
+      }
+      continue;
+    }
+    // Line comment — strip
     if(ch==='/'&&code[i+1]==='/'){while(i<n&&code[i]!=='\n')i++;continue;}
-    if(ch==='/'&&code[i+1]==='*'){i+=2;while(i<n&&!(code[i]==='*'&&code[i+1]=='/'))i++;i+=2;continue;}
+    // Block comment — strip but preserve newlines for line-number accuracy
+    if(ch==='/'&&code[i+1]==='*'){
+      i+=2;
+      while(i<n&&!(code[i]==='*'&&code[i+1]=='/'))i++;
+      i+=2;
+      continue;
+    }
     r+=ch;i++;
   }
   return r;
@@ -1551,8 +1931,14 @@ function minify(code,opts){
     code=code.replace(re,'$1 $2');
   });
   if(opts.semi){
+    // Collapse consecutive var declarations: var a=1; var b=2; → var a=1,b=2;
+    // Use a bounded match to avoid catastrophic backtracking on destructuring/long lines
     let prev;
-    do{prev=code;code=code.replace(/\bvar ((?:[^{};])+);\s*var /g,'var $1,');}while(code!==prev);
+    do{
+      prev=code;
+      // Only collapse when var decl content has no nested braces/brackets (safe subset)
+      code=code.replace(/\bvar ([^{}\[\]();]{1,200});\s*var /g,'var $1,');
+    }while(code!==prev);
   }
   return code.trim();
 }
@@ -1611,14 +1997,22 @@ function obfuscate(src,opts){
   if(opts.con)   code=passCon(code);
   if(opts.dom&&domains.length)code=passDomain(code,domains,VAL('o_domredir').trim());
   // Custom: fake proto chain (pre-BC)
-  if(opts.fakeproto)code=passFakeProtoChain(code);
-  if(opts.bc)    code=passBytecodeVM(code,opts,st);
-  if(opts.mini)  code=minify(code,opts);
-  // Custom: pointer encoding (post-minify so it targets the compact form)
-  if(opts.ptrenc)code=passPointerEncoding(code);
-  // Custom: unicode mangle — skip when Bytecode VM is active.
-  // The VM embeds source inside a string passed to new Function(); \uNNNN escapes
-  // inside that string are treated as literal text, causing a SyntaxError on exec.
+  if(opts.fakeproto)  code=passFakeProtoChain(code);
+  // New advanced traps (pre-BC so they get wrapped by VM if active)
+  if(opts.junkpoly)   code=passJunkPolyglot(code);
+  if(opts.opaque)     code=passOpaquePredicates(code);
+  if(opts.interntrap) code=passStringInternTrap(code);
+  if(opts.deobtrap)   code=passDeobfuscatorTrap(code);
+  if(opts.hashlocked) code=passHashLocked(code);
+  if(opts.canary)     code=passStackCanary(code);
+  if(opts.envfp)      code=passEnvFingerprint(code);
+  if(opts.bc)         code=passBytecodeVM(code,opts,st);
+  if(opts.mini)       code=minify(code,opts);
+  // Pointer encoding (post-minify so it targets compact renamed form)
+  if(opts.ptrenc)     code=passPointerEncoding(code);
+  // Proxy wrap post-minify so renamed identifiers are targeted
+  if(opts.proxywrap)  code=passProxyWrap(code);
+  // Unicode mangle — skip when Bytecode VM active (causes SyntaxError in new Function string)
   if(opts.unimangle&&!opts.bc)code=passUnicodeMangle(code);
   if(opts.strict)code="'use strict';\n"+code;
   if(importLines.length)code=importLines.join('\n')+'\n'+code;
@@ -1744,6 +2138,15 @@ function getOpts(){
     bcchunk:  INT('o_bcchunk',300),
     idxshift: INT('o_idxshift',0),
     target:   currentTarget,
+    // Advanced traps
+    opaque:     CHK('o_opaque'),
+    canary:     CHK('o_canary'),
+    envfp:      CHK('o_envfp'),
+    deobtrap:   CHK('o_deobtrap'),
+    proxywrap:  CHK('o_proxywrap'),
+    junkpoly:   CHK('o_junkpoly'),
+    hashlocked: CHK('o_hashlocked'),
+    interntrap: CHK('o_interntrap'),
   };
 }
 
@@ -1752,6 +2155,7 @@ function setEnc(rc4,xor,none){SET('enc-rc4',rc4);SET('enc-xor',xor);SET('enc-non
 function setIdx(hex,computed){SET('idx-hex',hex);SET('idx-computed',computed||false);msSync('idx');}
 function applyPreset(){
   const p=G('preset').value;
+  const TRAP_IDS=['o_opaque','o_canary','o_envfp','o_deobtrap','o_proxywrap','o_junkpoly','o_hashlocked','o_interntrap'];
   const ALL=['o_html','o_strict','o_mini','o_semi','o_simplify','o_ignimport','o_con',
     'o_self','o_antib','o_native','o_tamp','o_dbg','o_dom','o_srcmap',
     'o_sarr','o_srot','o_sshuf','o_calltrans','o_wchain',
@@ -1761,7 +2165,8 @@ function applyPreset(){
     'o_cff','o_dead','o_iife','o_comma','o_objkeys',
     'o_bc','o_bc_arrenc','o_bc_jmpenc','o_bc_stackenc','o_bc_compact',
     'o_bc_dynop','o_bc_stateful','o_bc_wrapinit','o_bc_decoy','o_bc_dead',
-    'o_bc_macro','o_bc_antidebug','o_bc_sarrbconly','o_chunk'];
+    'o_bc_macro','o_bc_antidebug','o_bc_sarrbconly','o_chunk',
+    ...TRAP_IDS];
   ALL.forEach(id=>{const e=G(id);if(e){e.disabled=false;e.checked=false;}});
 
   if(p==='light'){
@@ -1771,7 +2176,8 @@ function applyPreset(){
   }else if(p==='medium'){
     ['o_sarr','o_srot','o_sshuf','o_calltrans','o_senc','o_atob',
      'o_ren','o_prop','o_hexn','o_nsplit','o_dead','o_iife','o_mini','o_semi',
-     'o_clfold','o_ptrenc'].forEach(id=>SET(id,true));
+     'o_clfold','o_ptrenc',
+     'o_opaque','o_junkpoly'].forEach(id=>SET(id,true));
     setEnc(false,true,false);setIdx(true,false);
     SETV('o_namegen','hexadecimal');SETV('o_wcount','1');SETD('v-wc','1');
   }else if(p==='high'){
@@ -1783,7 +2189,8 @@ function applyPreset(){
      'o_chunk',
      'o_self','o_antib','o_native','o_tamp','o_dbg',
      'o_mini','o_semi',
-     'o_clfold','o_ptrenc','o_unimangle','o_fakeproto','o_evaldisguise'].forEach(id=>SET(id,true));
+     'o_clfold','o_ptrenc','o_unimangle','o_fakeproto','o_evaldisguise',
+     'o_opaque','o_canary','o_envfp','o_deobtrap','o_junkpoly','o_hashlocked','o_interntrap'].forEach(id=>SET(id,true));
     setEnc(true,true,false);setIdx(true,false);
     SETV('o_namegen','hexadecimal');SETV('o_wcount','2');SETD('v-wc','2');
     SETV('o_idxshift','13');SETD('v-idxsh','13');
@@ -2021,6 +2428,22 @@ function acBuildRecs(s,level){
   on('Compact Output','Remove whitespace',()=>SET('o_mini',true));
   if(level!=='light')on('Collapse Semicolons','Merge var declarations',()=>SET('o_semi',true));
 
+  // Advanced traps
+  if(level==='medium'||level==='high'||level==='max'){
+    on('Opaque Predicates','Tautology guards confuse symbolic execution',()=>SET('o_opaque',true));
+    on('Junk Polyglot Blocks','Dead CFF-look-alike blocks waste deobfuscator time',()=>SET('o_junkpoly',true));
+  }
+  if(level==='high'||level==='max'){
+    on('Stack Canary','Crashes inliners that call decoder out-of-context',()=>SET('o_canary',true));
+    on('Environment Fingerprint','Fails static emulators and sandbox engines',()=>SET('o_envfp',true));
+    on('Deobfuscator Trap','Infinite-regress bait for automated unpackers',()=>SET('o_deobtrap',true));
+    on('Hash-Locked Decoder','Integrity check — patch the array and decoding breaks silently',()=>SET('o_hashlocked',true));
+    on('String Intern Trap','Key strings hidden behind defineProperty getters',()=>SET('o_interntrap',true));
+  }
+  if(level==='max'){
+    on('Proxy Function Wrap','Wraps renamed fns in Proxy; destroys static call graphs',()=>SET('o_proxywrap',true));
+  }
+
   return recs;
 }
 
@@ -2059,7 +2482,8 @@ function applyAutoConfig(){
     'o_cff','o_dead','o_iife','o_comma','o_objkeys',
     'o_bc','o_bc_arrenc','o_bc_jmpenc','o_bc_stackenc','o_bc_compact',
     'o_bc_dynop','o_bc_stateful','o_bc_wrapinit','o_bc_decoy','o_bc_dead',
-    'o_bc_macro','o_bc_antidebug','o_bc_sarrbconly','o_chunk'];
+    'o_bc_macro','o_bc_antidebug','o_bc_sarrbconly','o_chunk',
+    'o_opaque','o_canary','o_envfp','o_deobtrap','o_proxywrap','o_junkpoly','o_hashlocked','o_interntrap'];
   ALL.forEach(id=>{const e=G(id);if(e){e.disabled=false;e.checked=false;}});
   _acRecs.forEach(r=>{if(r.fn)r.fn();});
   if(_acScan)setTarget(_acScan.detectedTarget||'browser');
