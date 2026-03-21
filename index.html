@@ -351,6 +351,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <button class="tp active" data-t="browser" onclick="setTarget('browser')">Browser</button>
     <button class="tp" data-t="browser-no-eval" onclick="setTarget('browser-no-eval')">No Eval</button>
     <button class="tp" data-t="node" onclick="setTarget('node')">Node.js</button>
+    <button class="tp" data-t="tampermonkey" onclick="setTarget('tampermonkey')">Tampermonkey</button>
   </div>
 
   <div class="h-gap"></div>
@@ -1742,7 +1743,11 @@ const TARGET_OFF={
   'browser-no-eval':['o_bc','o_bc_arrenc','o_bc_jmpenc','o_bc_stackenc','o_bc_compact',
     'o_bc_dynop','o_bc_stateful','o_bc_wrapinit','o_bc_decoy','o_bc_dead',
     'o_bc_macro','o_bc_antidebug','o_bc_sarrbconly','o_chunk'],
-  'node':['o_dom','o_dbg','o_native','o_atob','o_html','o_bc_antidebug']
+  'node':['o_dom','o_dbg','o_native','o_atob','o_html','o_bc_antidebug'],
+  // Tampermonkey: runs in a browser sandbox — domain lock is redundant (@match handles it),
+  // native-fn check trips on TM-wrapped APIs (GM_*, unsafeWindow proxies), and HTML parse
+  // mode doesn't apply to .user.js files.
+  'tampermonkey':['o_dom','o_native','o_html']
 };
 function setTarget(t){
   currentTarget=t;
@@ -1768,6 +1773,7 @@ function liveCheck(){
   const w=[];
   if(currentTarget==='browser-no-eval') w.push('Bytecode VM disabled — uses new Function()');
   if(currentTarget==='node') w.push('Domain Lock, Debug Protection, Native Check, atob, VM Anti-Debug disabled for Node.js');
+  if(currentTarget==='tampermonkey') w.push('Domain Lock, Native Fn Check, and HTML mode disabled — Tampermonkey handles site matching via @match and wraps native APIs');
   if(CHK('o_charcode')&&CHK('o_sarr')) w.push('Charcode + String Array both on — String Array takes priority');
   if(CHK('o_self')&&CHK('o_antib')) w.push('Self-Defending + Anti-Beautifier overlap — one is sufficient');
   if(CHK('o_renprop')) w.push('Rename Properties may break dynamic property access');
