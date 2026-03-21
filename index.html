@@ -1078,15 +1078,50 @@ function passPointerEncoding(code){
 // Replaces renamed hex identifiers with Unicode escape sequences: _0x → \u005F0x
 // This is valid JS but breaks most deobfuscators that use regex-based name
 // detection (they fail to match the \uNNNN-escaped underscore).
+// IMPORTANT: must not touch content inside string literals — \uNNNN inside a
+// string passed to new Function() is treated as literal text, not an escape,
+// causing SyntaxError when the VM executes it.
 function passUnicodeMangle(code){
-  // Replace leading underscore of _0x... hex identifiers with \u005F
-  // Use a replacer that keeps every 3rd occurrence to avoid total saturation
+  let result='';
+  let i=0;
   let count=0;
-  return code.replace(/\b_0x([0-9a-f]{6})\b/g,(m,hex)=>{
-    count++;
-    if(count%3===0)return m; // keep some plain for natural look
-    return '\\u005F0x'+hex;
-  });
+  while(i<code.length){
+    const ch=code[i];
+    // Skip string literals verbatim
+    if(ch==='"'||ch==="'"){
+      const q=ch;result+=ch;i++;
+      while(i<code.length){
+        const c=code[i];result+=c;i++;
+        if(c==='\\'){result+=code[i]||'';i++;}
+        else if(c===q)break;
+      }
+      continue;
+    }
+    // Skip template literals verbatim
+    if(ch==='`'){
+      result+=ch;i++;
+      while(i<code.length){
+        const c=code[i];
+        if(c==='\\'){result+=c+(code[i+1]||'');i+=2;continue;}
+        result+=c;i++;
+        if(c==='`')break;
+      }
+      continue;
+    }
+    // Try to match a _0x identifier at this position
+    if(ch==='_'&&code.slice(i,i+3)==='_0x'){
+      const m=code.slice(i).match(/^_0x([0-9a-f]{6})\b/);
+      if(m){
+        count++;
+        if(count%3===0){result+=m[0];}
+        else{result+='\\u005F0x'+m[1];}
+        i+=m[0].length;
+        continue;
+      }
+    }
+    result+=ch;i++;
+  }
+  return result;
 }
 
 // ── CUSTOM METHOD: Fake Prototype Chain ──────────────────────────────────────
@@ -1582,8 +1617,10 @@ function obfuscate(src,opts){
   if(opts.mini)  code=minify(code,opts);
   // Custom: pointer encoding (post-minify so it targets the compact form)
   if(opts.ptrenc)code=passPointerEncoding(code);
-  // Custom: unicode mangle (post-minify, targets renamed ids)
-  if(opts.unimangle)code=passUnicodeMangle(code);
+  // Custom: unicode mangle — skip when Bytecode VM is active.
+  // The VM embeds source inside a string passed to new Function(); \uNNNN escapes
+  // inside that string are treated as literal text, causing a SyntaxError on exec.
+  if(opts.unimangle&&!opts.bc)code=passUnicodeMangle(code);
   if(opts.strict)code="'use strict';\n"+code;
   if(importLines.length)code=importLines.join('\n')+'\n'+code;
   if(_tmHdr)code=_tmHdr+code;
@@ -1635,6 +1672,7 @@ function liveCheck(){
   if(CHK('o_bc_antidebug')&&!CHK('o_bc'))w.push('VM Anti-Debug only runs inside Bytecode VM');
   if(CHK('o_ptrenc')&&!CHK('o_ren'))w.push('Pointer Encoding works best with Rename Variables on');
   if(CHK('o_unimangle')&&!CHK('o_ren'))w.push('Unicode Mangle requires Rename Variables');
+  if(CHK('o_unimangle')&&CHK('o_bc'))w.push('Unicode Mangle auto-disabled when Bytecode VM is on — \\uNNNN inside new Function() string causes SyntaxError');
   body.innerHTML=w.length
     ?w.map(x=>`<div class="ci-item">${x}</div>`).join('')
     :'<div class="ci-ok">✓ No conflicts</div>';
