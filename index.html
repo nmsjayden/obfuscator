@@ -157,11 +157,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 #panel{
   position:absolute;top:0;right:0;bottom:0;width:var(--panel);
   background:var(--s1);border-left:1px solid var(--ln);
-  display:flex;flex-direction:column;overflow:hidden;
+  display:flex;flex-direction:column;overflow:visible;
   transform:translateX(100%);
   transition:transform .28s cubic-bezier(.4,0,.2,1);
   z-index:40;
 }
+/* Clip only the panel content, not the pull tab */
+#panel-top,#panel-scroll{overflow:hidden;}
+#panel-scroll{overflow-y:auto;overflow-x:hidden;}
 #panel.open{transform:translateX(0);}
 
 /* panel top */
@@ -332,6 +335,59 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 .ci-ok{padding:5px 0;font-size:10.5px;color:var(--grn);display:flex;gap:6px;}
 .ci-ok::before{content:'✓';}
 
+/* ─── PANEL PULL TAB ─── */
+#panel-pull{
+  position:absolute;
+  right:0; top:50%; transform:translateY(-50%);
+  width:24px; height:80px;
+  background:var(--s2);
+  border:1px solid var(--ln); border-right:none;
+  border-radius:8px 0 0 8px;
+  cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  color:var(--mute);
+  transition:background .15s,color .15s,right .28s cubic-bezier(.4,0,.2,1);
+  box-shadow:-3px 0 10px rgba(0,0,0,.35);
+  z-index:45;
+}
+#panel-pull:hover{background:var(--s3);color:var(--hi);}
+#pull-arrow{
+  font-size:12px;line-height:1;
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
+  display:block;
+}
+#panel-pull[data-open='true'] #pull-arrow{transform:rotate(180deg);}
+#pull-label{
+  font-size:8px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;writing-mode:vertical-rl;
+  color:inherit;line-height:1;opacity:.7;
+}
+#panel-pull:hover #pull-label{opacity:1;}
+
+/* ─── SCROLL HINT ─── */
+#scroll-hint{
+  position:absolute;bottom:0;left:0;right:0;
+  height:40px;
+  background:linear-gradient(to bottom,transparent,var(--s1) 80%);
+  display:flex;align-items:flex-end;justify-content:center;
+  padding-bottom:7px;pointer-events:none;
+  opacity:1;transition:opacity .4s;flex-shrink:0;
+}
+.scroll-dots{
+  display:flex;gap:3px;align-items:center;
+}
+.scroll-dots span{
+  width:3px;height:3px;border-radius:50%;
+  background:var(--acc);opacity:.5;
+  animation:scrollbounce 1.4s ease-in-out infinite;
+}
+.scroll-dots span:nth-child(2){animation-delay:.2s;}
+.scroll-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes scrollbounce{
+  0%,100%{opacity:.3;transform:translateY(0);}
+  50%{opacity:.9;transform:translateY(-3px);}
+}
+
 /* ─── STATUS BAR ─── */
 #statusbar{
   flex-shrink:0;height:26px;
@@ -411,10 +467,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
   <button class="txt-btn" id="btn-copy" onclick="copyOut()">Copy</button>
   <button class="txt-btn" id="btn-map" onclick="dlMap()" disabled>Map</button>
   <div class="tsep"></div>
-  <!-- Settings toggle -->
-  <button class="icon-btn" id="settings-toggle" onclick="togglePanel()" title="Settings">
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" fill="currentColor"/></svg>
-  </button>
+
   <button id="btn-run" onclick="runObfuscate()">
     <span class="run-icon">▶</span> Run
   </button>
@@ -422,6 +475,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 
 <!-- ══════════ WORKSPACE ══════════ -->
 <div id="workspace">
+  <button id="panel-pull" onclick="togglePanel()" title="Toggle settings panel">
+    <span id="pull-arrow">❮</span>
+    <span id="pull-label">Settings</span>
+  </button>
 
   <!-- editors -->
   <div id="editors">
@@ -710,6 +767,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
       <div id="tpanel-conflicts"></div>
 
     </div><!-- end panel-scroll -->
+  <div id="scroll-hint">
+    <div class="scroll-dots"><span></span><span></span><span></span></div>
+  </div>
   </div><!-- end panel -->
 
 </div><!-- end workspace -->
@@ -762,9 +822,25 @@ function togglePanel(){
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('open', panelOpen);
   document.getElementById('editors').classList.toggle('shifted', panelOpen);
-  document.getElementById('settings-toggle').classList.toggle('active', panelOpen);
+  const pull = document.getElementById('panel-pull');
+  if(pull){pull.style.right = panelOpen ? 'var(--panel)' : '0';pull.dataset.open=panelOpen;}
   setTimeout(fitEditors, 30);
 }
+
+// Scroll hint — hide when near bottom
+(function(){
+  function updateHint(){
+    const sc=document.getElementById('panel-scroll');
+    const hint=document.getElementById('scroll-hint');
+    if(!sc||!hint)return;
+    const atBottom=sc.scrollHeight-sc.scrollTop-sc.clientHeight<30;
+    hint.style.opacity=atBottom?'0':'1';
+  }
+  window.addEventListener('load',()=>{
+    const sc=document.getElementById('panel-scroll');
+    if(sc){sc.addEventListener('scroll',updateHint);updateHint();}
+  });
+})();
 
 /* ─── TABS ─── */
 function switchTab(name){
@@ -3536,23 +3612,30 @@ window.addEventListener('load',()=>{
   const ok=loadSettings();
   if(!ok){applyPreset();}
   // Force-correct all sub-panel visibility after init
-  // (guards against stale localStorage or timing issues)
   (function fixSubPanels(){
+    // These sub-panels are shown/hidden by their checkbox
     const pairs=[
-      ['sarr-sub', 'o_sarr'], ['ssplit-sub', 'o_ssplit'],
       ['ct-sub','o_calltrans'],['cff-sub','o_cff'],['dead-sub','o_dead'],
       ['dbg-sub','o_dbg'],['ren-sub','o_ren'],['chunk-sub','o_chunk'],
-      ['dom-sub','o_dom'],['smap-sub','o_srcmap'],['dict-sub',null]
+      ['dom-sub','o_dom'],['smap-sub','o_srcmap'],
     ];
     pairs.forEach(([sub,chk])=>{
       const el=document.getElementById(sub);
       if(!el)return;
-      if(chk===null){el.style.display='none';return;}
       const cb=document.getElementById(chk);
       el.style.display=(cb&&cb.checked)?'block':'none';
     });
-    // sarr-sub and ssplit-sub: also show if no checkbox controls them (always-on layout)
-    // sarr-sub is only hidden when o_sarr is off which is correct
+    // sarr-sub shows all String Array options — always block, toggled by o_sarr
+    showSub('sarr-sub',CHK('o_sarr'));
+    // ssplit-sub shows String Encoding options — always block (not toggle-gated in our layout)
+    const ssub=document.getElementById('ssplit-sub');
+    if(ssub)ssub.style.display='block';
+    // dict-sub: only when namegen=dictionary
+    showSub('dict-sub',VAL('o_namegen')==='dictionary');
+    // VM mode
+    const vm=VAL('o_vm_mode')||'bytecode';
+    showSub('bc-sub',vm==='bytecode');
+    showSub('ovm-sub',vm==='opcode');
   })();
   // Wire up auto-save after load so save isn't triggered during init
   document.querySelectorAll('input[id],select[id]').forEach(el=>{
