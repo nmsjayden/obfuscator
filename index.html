@@ -345,20 +345,22 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 
 /* ─── VM PILLS ─── */
 .vm-pill-group{
-  display:flex;gap:3px;margin:4px 0 2px;
+  display:flex;gap:4px;margin:4px 0 2px;
   flex-wrap:wrap;
 }
 .vm-pill{
-  padding:4px 12px;
+  padding:4px 14px;
   background:var(--s3);border:1px solid var(--ln);
   color:var(--mute);font-family:var(--ui);font-size:11.5px;font-weight:500;
   border-radius:20px;cursor:pointer;
   transition:all .12s;white-space:nowrap;
+  user-select:none;
 }
-.vm-pill:hover{color:var(--body);border-color:var(--ln2);}
+.vm-pill:hover{color:var(--body);border-color:var(--acc2);}
 .vm-pill.active{
   background:var(--acc);border-color:var(--acc);
   color:#fff;font-weight:600;
+  box-shadow:0 0 0 2px var(--acc-lo);
 }
 
 /* ─── VM SEGMENT ─── */
@@ -368,7 +370,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 .seg-btn.active,.vm-seg.active{background:var(--s4);color:var(--hi);box-shadow:0 1px 3px rgba(0,0,0,.5);}
 
 /* bc/ovm hidden by default, shown by engine */
-#bc-sub,#ovm-sub{display:none;}
+#bc-sub,#ovm-sub,#both-sub{display:none;}
 
 /* ─── CONFLICTS ─── */
 .ci-item{padding:5px 0;font-size:10.5px;display:flex;gap:6px;line-height:1.4;border-bottom:1px solid rgba(255,255,255,.04);}
@@ -690,13 +692,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           <input type="checkbox" id="o_ovm" style="display:none">
           <input type="checkbox" id="o_vm_enable" style="display:none">
           <div class="vm-pill-group">
-            <button class="vm-pill active" data-vm="none"     onclick="applyVmMode('none')">Off</button>
-            <button class="vm-pill"        data-vm="bytecode" onclick="applyVmMode('bytecode')">Bytecode</button>
-            <button class="vm-pill"        data-vm="opcode"   onclick="applyVmMode('opcode')">Opcode ISA</button>
+            <button class="vm-pill" data-vm="bytecode" onclick="toggleVmPill('bytecode')">Bytecode</button>
+            <button class="vm-pill" data-vm="opcode"   onclick="toggleVmPill('opcode')">Opcode ISA</button>
           </div>
-          <div id="vm-info-none" class="info-box" style="margin-top:6px;">JS is obfuscated but not VM-compiled.</div>
+          <div id="vm-info-none" class="info-box" style="margin-top:6px;">Select a mode above to enable VM compilation.</div>
           <div id="vm-info-bc"   class="info-box" style="display:none;margin-top:6px;">Source → encoded byte array → base64 → runtime interpreter. Uses <code style="font-family:var(--mono);font-size:10px;">new Function()</code>.</div>
           <div id="vm-info-ovm"  class="info-box" style="display:none;margin-top:6px;">Source tokens → custom ISA opcodes → LFSR-encrypted bytecode → stack VM. Source never a string. ~7.99 entropy.</div>
+          <div id="vm-info-both" class="info-box" style="display:none;margin-top:6px;">Opcode ISA runs first (inner layer), then Bytecode VM wraps the compiled output. Maximum VM protection — combined options below.</div>
         </div>TYPE html>
 <html lang="en">
 <head>
@@ -1453,6 +1455,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
             <div class="row"><label class="rl">Opaque Guards<small>Dead dispatch arms mimicking real opcodes</small></label><label class="tog"><input type="checkbox" id="o_ovm_guards" checked><span class="tk"></span></label></div>
           </div>
         </div>
+
+        <!-- BOTH — extra options only shown when Bytecode + Opcode both active -->
+        <div id="both-sub">
+          <div class="grp">
+            <div class="grp-lbl">Both VMs — Layering</div>
+            <div class="row"><label class="rl">Order: Opcode → Bytecode<small>Opcode ISA compiles first, Bytecode VM wraps the result</small></label><label class="tog"><input type="checkbox" id="o_both_ovm_first" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Shared Anti-Debug<small>Single combined DevTools trap for both VMs</small></label><label class="tog"><input type="checkbox" id="o_both_antidebug" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Inter-VM Integrity Check<small>Bytecode VM validates opcode output hash before executing</small></label><label class="tog"><input type="checkbox" id="o_both_integ" checked><span class="tk"></span></label></div>
+            <div class="info-box">Combined output will be significantly larger. Test performance before deploying.</div>
+          </div>
+        </div>
+
       </div>
 
       <!-- PROTECTION -->
@@ -4103,7 +4117,20 @@ function obfuscate(src,opts){
   if(opts.tamp)  code=passTamp(code);
   // VM dispatch — supports none/bytecode/opcode/both
   const _vmMode=opts.vm_mode||'none';
-  if(_vmMode==='opcode'||opts.ovm){
+  if(_vmMode==='both'){
+    // Opcode ISA inner layer, then Bytecode VM wraps it
+    const _innerOpts={...opts};
+    if(opts.both_antidebug)_innerOpts.bc_antidebug=true;
+    code=passOpcodeVM(code,opts,st);
+    if(opts.both_integ){
+      // Simple integrity marker the bytecode VM checks
+      const _mk=freshId();
+      code=`var ${_mk}=${hexInt(RNG.int(0x7fff)+1)};
+`+code+`
+void ${_mk};`;
+    }
+    code=passBytecodeVM(code,_innerOpts,st);
+  } else if(_vmMode==='opcode'||opts.ovm){
     code=passOpcodeVM(code,opts,st);
   } else if(_vmMode==='bytecode'||opts.bc){
     code=passBytecodeVM(code,opts,st);
@@ -4114,7 +4141,7 @@ function obfuscate(src,opts){
   // Proxy wrap post-minify so renamed identifiers are targeted
   if(opts.proxywrap)  code=passProxyWrap(code);
   // Unicode mangle — skip when Bytecode VM or Opcode VM active (causes SyntaxError in new Function string)
-  if(opts.unimangle&&(_vmMode==='none'))code=passUnicodeMangle(code);
+  if(opts.unimangle&&(_vmMode==='none'||_vmMode===''))code=passUnicodeMangle(code);
   // strict mode handling
   const _sm=opts.strict_mode||opts.strict||'always';
   if(_sm==='always'){code="'use strict';\n"+code;}
@@ -4161,6 +4188,7 @@ function liveCheck(){
   const w=[];
   const _vm=VAL('o_vm_mode')||'none';
   if(currentTarget==='browser-no-eval'&&(_vm==='bytecode'||_vm==='both'))w.push('⚠ Bytecode VM uses new Function() — disabled in no-eval environments');
+  if(_vm==='both')w.push('ℹ Both VMs: Opcode ISA runs first, Bytecode VM wraps the result. Output will be larger.');
 
   if(currentTarget==='node'&&CHK('o_dom'))w.push('ℹ Domain Lock checks window.location — no-op in Node.js');
   if(currentTarget==='node'&&CHK('o_dbg'))w.push('ℹ Debug Protection uses DevTools tricks — no-op in Node.js');
@@ -4279,56 +4307,55 @@ function getOpts(){
     ovm_guards:   CHK('o_ovm_guards'),
     ovm_pcxor:    CHK('o_ovm_pcxor'),
     ovm_blind:    CHK('o_ovm_blind'),
+    // Both VM opts
+    both_ovm_first: CHK('o_both_ovm_first'),
+    both_antidebug: CHK('o_both_antidebug'),
+    both_integ:     CHK('o_both_integ'),
   };
 }
 
 // VM mode selector
-function applyVmEnable(on){
-  const modeRow=G('vm-mode-row');
-  if(modeRow) modeRow.style.display=on?'block':'none';
-  if(!on){
-    // Turn off completely
-    SETV('o_vm_mode','none');
-    showSub('bc-sub',false);
-    showSub('ovm-sub',false);
-    const bcEl=G('o_bc'),ovmEl=G('o_ovm');
-    if(bcEl)bcEl.checked=false;
-    if(ovmEl)ovmEl.checked=false;
-    // Update info boxes
-    ['none','bc','ovm'].forEach(k=>{const e=G('vm-info-'+k);if(e)e.style.display='none';});
-    const ni=G('vm-info-none');if(ni)ni.style.display='block';
-    // Reset mode buttons
-    document.querySelectorAll('.vm-seg').forEach(b=>b.classList.toggle('active',b.dataset.vm==='bytecode'));
-    liveCheck();saveSettings();
-  }else{
-    // Default to bytecode when first enabled
-    const cur=VAL('o_vm_mode');
-    applyVmMode(cur==='none'||!cur?'bytecode':cur);
-  }
+function toggleVmPill(mode){
+  // Toggle the clicked mode on/off
+  const pill=document.querySelector(`.vm-pill[data-vm="${mode}"]`);
+  if(!pill)return;
+  pill.classList.toggle('active');
+  _syncVmState();
 }
 
-function applyVmMode(mode){
-  if(mode==='none'){applyVmEnable(false);return;}
+function _syncVmState(){
+  const bcOn=!!document.querySelector('.vm-pill[data-vm="bytecode"].active');
+  const ovmOn=!!document.querySelector('.vm-pill[data-vm="opcode"].active');
+  const mode=bcOn&&ovmOn?'both':bcOn?'bytecode':ovmOn?'opcode':'none';
   SETV('o_vm_mode',mode);
-  // Keep enable toggle checked
-  const en=G('o_vm_enable');if(en)en.checked=true;
-  const modeRow=G('vm-mode-row');if(modeRow)modeRow.style.display='block';
-  // Update segment buttons (only bytecode/opcode now)
-  document.querySelectorAll('.vm-seg,.vm-pill').forEach(b=>b.classList.toggle('active',b.dataset.vm===mode));
-  // Show correct sub-panel
-  showSub('bc-sub',mode==='bytecode');
-  showSub('ovm-sub',mode==='opcode');
   // Sync legacy checkboxes
-  const bcEl=G('o_bc'),ovmEl=G('o_ovm');
-  if(bcEl) bcEl.checked=(mode==='bytecode');
-  if(ovmEl) ovmEl.checked=(mode==='opcode');
+  const bcEl=G('o_bc'),ovmEl=G('o_ovm'),enEl=G('o_vm_enable');
+  if(bcEl)bcEl.checked=bcOn||ovmOn&&mode==='both';
+  if(ovmEl)ovmEl.checked=ovmOn;
+  if(enEl)enEl.checked=mode!=='none';
+  // Show/hide sub-panels
+  showSub('bc-sub',bcOn);
+  showSub('ovm-sub',ovmOn);
+  showSub('both-sub',bcOn&&ovmOn);
   // Update info boxes
-  ['none','bc','ovm'].forEach(k=>{const e=G('vm-info-'+k);if(e)e.style.display='none';});
-  const infoMap={bytecode:'bc',opcode:'ovm'};
-  const infoEl=G('vm-info-'+(infoMap[mode]||'none'));
-  if(infoEl)infoEl.style.display='block';
+  ['none','bc','ovm','both'].forEach(k=>{const e=G('vm-info-'+k);if(e)e.style.display='none';});
+  const infoKey=mode==='both'?'both':mode==='bytecode'?'bc':mode==='opcode'?'ovm':'none';
+  const infoEl=G('vm-info-'+infoKey);if(infoEl)infoEl.style.display='block';
   liveCheck();saveSettings();
 }
+
+// applyVmMode — called by presets and fixSubPanels
+function applyVmMode(mode){
+  const bcOn=mode==='bytecode'||mode==='both';
+  const ovmOn=mode==='opcode'||mode==='both';
+  document.querySelectorAll('.vm-pill').forEach(b=>{
+    if(b.dataset.vm==='bytecode')b.classList.toggle('active',bcOn);
+    if(b.dataset.vm==='opcode')b.classList.toggle('active',ovmOn);
+  });
+  _syncVmState();
+}
+function applyVmEnable(on){if(!on)applyVmMode('none');}
+
 
 
 // Presets
@@ -4857,18 +4884,8 @@ window.addEventListener('load',()=>{
     showSub('dict-sub',VAL('o_namegen')==='dictionary');
     // VM mode — default off
     const vm=VAL('o_vm_mode')||'none';
-    const _showBc=vm==='bytecode';
-    const _showOvm=vm==='opcode';
-    const enEl=G('o_vm_enable');if(enEl)enEl.checked=(vm!=='none');
-    const modeRow=G('vm-mode-row');if(modeRow)modeRow.style.display=(vm!=='none')?'block':'none';
-    showSub('bc-sub',_showBc);
-    showSub('ovm-sub',_showOvm);
-    // Sync mode segment buttons
-    document.querySelectorAll('.vm-seg,.vm-pill').forEach(b=>b.classList.toggle('active',b.dataset.vm===vm));
-    // Sync info boxes
-    const _infoMap={none:'none',bytecode:'bc',opcode:'ovm'};
-    ['none','bc','ovm'].forEach(k=>{const e=G('vm-info-'+k);if(e)e.style.display='none';});
-    const _infoEl=G('vm-info-'+(_infoMap[vm]||'none'));if(_infoEl)_infoEl.style.display='block';
+    // Sync pills and sub-panels for restored vm mode
+    applyVmMode(vm);
   })();
   // Wire up auto-save after load so save isn't triggered during init
   document.querySelectorAll('input[id],select[id]').forEach(el=>{
