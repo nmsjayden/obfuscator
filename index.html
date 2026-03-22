@@ -414,13 +414,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 /* ─── STATUS BAR ─── */
 #statusbar{
   flex-shrink:0;height:26px;
-  background:var(--s2);border-top:1px solid var(--ln);
-  display:flex;align-items:center;padding:0 14px;gap:16px;
+  background:var(--s1);border-top:1px solid var(--ln);
+  display:flex;align-items:center;padding:0 14px;gap:8px;
 }
-.sb-st{font-size:10px;color:var(--mute);}
-.sb-st b{color:var(--soft);font-family:var(--mono);font-weight:600;}
+.sb-logo{
+  font-family:var(--mono);font-size:11px;font-weight:600;
+  color:var(--dim);letter-spacing:.08em;
+}
+.sb-logo em{color:var(--acc);font-style:normal;}
+.sb-sep{width:1px;height:12px;background:var(--ln);flex-shrink:0;}
+.sb-item{font-size:10px;color:var(--dim);white-space:nowrap;}
 .sb-gap{flex:1;}
-.sb-hint{font-size:10px;color:var(--dim);}
+#sb-target-display,#sb-preset-display{color:var(--mute);}
 
 /* ─── MODAL ─── */
 #ac-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:900;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
@@ -735,10 +740,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           <div class="dlist" id="dom-list"></div>
           <div class="fld"><div class="fld-lbl">Redirect URL</div><input class="fi" id="o_domredir" type="text" placeholder="https://example.com/blocked"></div>
         </div>
-      </div>
 
-      <!-- TRAPS -->
-      <div class="tpanel" id="tpanel-traps">
         <div class="grp">
           <div class="grp-lbl">Anti-Analysis</div>
           <div class="row"><label class="rl">Opaque Predicates<small>Fool symbolic execution engines</small></label><label class="tog"><input type="checkbox" id="o_opaque" checked><span class="tk"></span></label></div>
@@ -754,6 +756,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           <div class="row"><label class="rl">String Intern Trap<small>defineProperty getter strings</small></label><label class="tog"><input type="checkbox" id="o_interntrap" checked><span class="tk"></span></label></div>
         </div>
       </div>
+
+
 
       <!-- OUTPUT -->
       <div class="tpanel" id="tpanel-output">
@@ -804,15 +808,23 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 </div><!-- end workspace -->
 
 <!-- STATUS BAR -->
+<!-- Hidden spans kept for engine compat -->
+<span id="s-in" style="display:none"></span>
+<span id="s-out" style="display:none"></span>
+<span id="s-ratio" style="display:none"></span>
+<span id="s-str" style="display:none"></span>
+<span id="s-bc" style="display:none"></span>
+<span id="s-time" style="display:none"></span>
 <div id="statusbar">
-  <span class="sb-st">In <b id="s-in">—</b></span>
-  <span class="sb-st">Out <b id="s-out">—</b></span>
-  <span class="sb-st">× <b id="s-ratio">—</b></span>
-  <span class="sb-st">Strings <b id="s-str">—</b></span>
-  <span class="sb-st">Bytecodes <b id="s-bc">—</b></span>
-  <span class="sb-st">Time <b id="s-time">—</b></span>
+  <span class="sb-logo">Obs<em>cu</em>ra</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item">v2.0</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item">100% client-side · no data leaves your browser</span>
   <div class="sb-gap"></div>
-  <span class="sb-hint" id="sb-hint">Paste JS · pick preset · click Run</span>
+  <span class="sb-item" id="sb-target-display">Target: Browser</span>
+  <span class="sb-sep"></span>
+  <span class="sb-item" id="sb-preset-display">Preset: High</span>
 </div>
 
 </div><!-- end app -->
@@ -959,8 +971,6 @@ function showRunStats(){
   const oh=document.getElementById('out-hint');
   if(rs) rs.style.display='flex';
   if(oh) oh.style.display='none';
-  const hint=document.getElementById('sb-hint');
-  if(hint) hint.style.display='none';
 }
 
 /* ─── BOOT ─── */
@@ -3052,6 +3062,8 @@ function setTarget(t){
   currentTarget=t;
   document.querySelectorAll('.tp').forEach(p=>p.classList.toggle('active',p.dataset.t===t));
   applyTargetConstraints();liveCheck();
+  const d=document.getElementById('sb-target-display');
+  if(d)d.textContent='Target: '+({browser:'Browser','browser-no-eval':'No Eval',node:'Node.js',tampermonkey:'Tampermonkey'}[t]||t);
 }
 function applyTargetConstraints(){
   document.querySelectorAll('.sbody .row').forEach(row=>{
@@ -3272,6 +3284,8 @@ function applyPreset(){
   showSub('chunk-sub',CHK('o_chunk'));
   G('renprop-w').style.display='none';
   liveCheck();
+  const pd=document.getElementById('sb-preset-display');
+  if(pd){const p=document.getElementById('preset');if(p)pd.textContent='Preset: '+p.options[p.selectedIndex].text;}
 }
 
 // Run
