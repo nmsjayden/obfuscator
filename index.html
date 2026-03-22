@@ -621,8 +621,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
             <div class="row"><label class="rl">Charcode Arrays<small>"hi" → fromCharCode(104,105)</small></label><label class="tog"><input type="checkbox" id="o_charcode"><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Inline atob<small>str → atob(b64) + TextDecoder</small></label><label class="tog"><input type="checkbox" id="o_atob" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Template Obfuscation<small>str → fromCharCode concat</small></label><label class="tog"><input type="checkbox" id="o_tmpl" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Split Strings<small>"hello" → "hel"+"lo"</small></label><label class="tog"><input type="checkbox" id="o_ssplit" checked onchange="showSub('ssplit-sub',this.checked)"><span class="tk"></span></label></div>
-            <div class="sl"><div class="sl-head"><span class="sl-name">Chunk Length</span><span class="sv" id="v-ssc">10</span></div><div class="srow"><input type="range" id="o_sschunk" min="3" max="60" step="1" value="10" oninput="SETD('v-ssc',this.value)"></div></div>
+            <div class="row"><label class="rl">Split Strings<small>"hello" → "hel"+"lo"</small></label><label class="tog"><input type="checkbox" id="o_ssplit" checked onchange="showSub('ssplit-chunk-sub',this.checked)"><span class="tk"></span></label></div>
+            <div id="ssplit-chunk-sub"><div class="sl"><div class="sl-head"><span class="sl-name">Chunk Length</span><span class="sv" id="v-ssc">10</span></div><div class="srow"><input type="range" id="o_sschunk" min="3" max="60" step="1" value="10" oninput="SETD('v-ssc',this.value)"></div></div></div>
             <div class="row"><label class="rl">Closure Trap Fold<small>IIFE reduce-based encoding</small></label><label class="tog"><input type="checkbox" id="o_clfold" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Pointer Encoding<small>Indirection chain on decoder refs</small></label><label class="tog"><input type="checkbox" id="o_ptrenc" checked><span class="tk"></span></label></div>
           </div>
@@ -698,12 +698,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
             <div class="fld-lbl" style="margin-bottom:4px;">Mode</div>
             <div class="seg-ctrl" style="margin-bottom:6px;">
               <button class="seg-btn vm-seg active" data-vm="bytecode" onclick="applyVmMode('bytecode')">Bytecode</button>
-              <button class="seg-btn vm-seg"         data-vm="shadow"   onclick="applyVmMode('shadow')">Cipher VM</button>
+              <button class="seg-btn vm-seg"         data-vm="cyphervm"   onclick="applyVmMode('cyphervm')">Cipher VM</button>
             </div>
           </div>
           <div id="vm-info-none" class="info-box">VM is off. JS is obfuscated but not wrapped in a virtual machine.</div>
           <div id="vm-info-bc"   class="info-box" style="display:none">Source → ChaCha8-encrypted fragments → shuffled base64 vars → runtime reassembles &amp; executes via aliased constructor chain. No <code style="font-family:var(--mono);font-size:10px;">new Function</code> string visible.</div>
-          <div id="vm-info-shadow" class="info-box" style="display:none">Source compiled to a custom bytecode ISA. A generated interpreter executes opcodes directly — no source string ever reconstructed. Opcodes shuffled per run, LFSR-encrypted, string constants blind-XOR’d.</div>
+          <div id="vm-info-cyphervm" class="info-box" style="display:none">Source compiled to a custom bytecode ISA. A generated interpreter executes opcodes directly — no source string ever reconstructed. Opcodes shuffled per run, LFSR-encrypted, string constants blind-XOR’d.</div>
           <div id="vm-info-both" class="info-box" style="display:none">Cipher VM compiles source to bytecode (inner). Bytecode VM wraps the interpreter+bytecode with ChaCha8 (outer). Cracking the outer reveals only the interpreter — never the original source.</div>
         </div>
 
@@ -728,7 +728,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           </div>
         </div>
 
-        <!-- SHADOW VM options -->
+        <!-- CYPHERVM options -->
         <div id="ovm-sub">
           <div class="grp">
             <div class="grp-lbl">Cipher VM — Compiler</div>
@@ -745,7 +745,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           </div>
         </div>
 
-        <!-- BOTH — extra options shown when Bytecode + Shadow both active -->
+        <!-- BOTH — extra options shown when Bytecode + CypherVM both active -->
         <div id="both-sub">
           <div class="grp">
             <div class="grp-lbl">Both VMs — Layering</div>
@@ -1021,7 +1021,6 @@ function showRunStats(){
 
 /* ─── BOOT ─── */
 window.addEventListener('load',()=>{
-  initSliders();
   setTimeout(fitEditors,80);
 });
 
@@ -1043,8 +1042,8 @@ function SETV(id,v){
 }
 function SETD(id,v){const e=G(id);if(e)e.textContent=v;}
 function showSub(id,show){
-  // sarr-sub and ssplit-sub are always visible in this layout
-  if(id==='sarr-sub'||id==='ssplit-sub'){
+  // sarr-sub is always visible (contains the sarr enable toggle itself)
+  if(id==='sarr-sub'){
     const e=G(id);if(e)e.style.display='block';return;
   }
   const e=G(id);if(e)e.style.display=show?'block':'none';
@@ -3591,7 +3590,7 @@ function obfuscate(src,opts){
   if(opts.native)code=passNativeCheck(code);
   if(opts.dbg)   code=passDbg(code,INT('o_dbgint',2000));
   if(opts.tamp)  code=passTamp(code);
-  // VM dispatch — none / bytecode / shadow / both
+  // VM dispatch — none / bytecode / cyphervm / both
   const _vmMode=opts.vm_mode||'none';
   if(_vmMode==='both'){
     // Shadow VM (inner) first, then Bytecode VM wraps its output
@@ -3607,7 +3606,7 @@ function obfuscate(src,opts){
 void ${_mk};`;
     }
     code=passBytecodeVM(code,_bcOpts,st);
-  } else if(_vmMode==='shadow'||opts.ovm){
+  } else if(_vmMode==='cyphervm'||opts.ovm){
     code=passCipherVM(code,opts,st);
   } else if(_vmMode==='bytecode'||opts.bc){
     code=passBytecodeVM(code,opts,st);
@@ -3798,8 +3797,8 @@ function toggleVmPill(mode){
 
 function _syncVmState(){
   const bcOn=!!document.querySelector('.seg-btn.vm-seg[data-vm="bytecode"].active');
-  const ovmOn=!!document.querySelector('.seg-btn.vm-seg[data-vm="shadow"].active');
-  const mode=bcOn&&ovmOn?'both':bcOn?'bytecode':ovmOn?'shadow':'none';
+  const ovmOn=!!document.querySelector('.seg-btn.vm-seg[data-vm="cyphervm"].active');
+  const mode=bcOn&&ovmOn?'both':bcOn?'bytecode':ovmOn?'cyphervm':'none';
   SETV('o_vm_mode',mode);
   // Sync legacy checkboxes
   const bcEl=G('o_bc'),ovmEl=G('o_ovm'),enEl=G('o_vm_enable');
@@ -3814,36 +3813,34 @@ function _syncVmState(){
   showSub('ovm-sub',ovmOn);
   showSub('both-sub',bcOn&&ovmOn);
   // Update info boxes
-  ['none','bc','shadow','both'].forEach(k=>{const e=G('vm-info-'+k);if(e)e.style.display='none';});
-  const infoKey=mode==='both'?'both':mode==='bytecode'?'bc':mode==='shadow'?'shadow':'none';
+  ['none','bc','cyphervm','both'].forEach(k=>{const e=G('vm-info-'+k);if(e)e.style.display='none';});
+  const infoKey=mode==='both'?'both':mode==='bytecode'?'bc':mode==='cyphervm'?'cyphervm':'none';
   const infoEl=G('vm-info-'+infoKey);if(infoEl)infoEl.style.display='block';
   liveCheck();saveSettings();
 }
 
 // applyVmMode — called by presets, fixSubPanels, seg-btn onclick, and applyVmEnable
-// mode = 'none' | 'bytecode' | 'opcode' | 'both'
-// When called from a seg-btn onclick (single mode), toggle that mode on/off;
-// when called from preset/load, set the mode absolutely.
-function applyVmMode(mode){
-  // If called from a seg-btn onclick with a single mode, toggle it
-  // (allows both to be active when clicking each separately)
+// mode = 'none' | 'bytecode' | 'cyphervm' | 'both'
+// When absolute=false (default, UI button click), toggle single-mode buttons.
+// When absolute=true (presets, loadSettings), force-set buttons to exact state.
+function applyVmMode(mode, absolute){
   const bcBtn=document.querySelector('.seg-btn.vm-seg[data-vm="bytecode"]');
-  const ovmBtn=document.querySelector('.seg-btn.vm-seg[data-vm="shadow"]');
-  if(mode==='bytecode'||mode==='shadow'){
-    // Toggle the clicked button
+  const ovmBtn=document.querySelector('.seg-btn.vm-seg[data-vm="cyphervm"]');
+  if(!absolute && (mode==='bytecode'||mode==='cyphervm')){
+    // Toggle the clicked button (UI interaction only)
     const btn=mode==='bytecode'?bcBtn:ovmBtn;
     if(btn)btn.classList.toggle('active');
   } else {
-    // Absolute set (presets, load, 'none', 'both')
+    // Absolute set (presets, load, 'none', 'both', or explicit absolute=true)
     const bcOn=mode==='bytecode'||mode==='both';
-    const ovmOn=mode==='opcode'||mode==='both';
+    const ovmOn=mode==='cyphervm'||mode==='both';
     if(bcBtn)bcBtn.classList.toggle('active',bcOn);
     if(ovmBtn)ovmBtn.classList.toggle('active',ovmOn);
   }
   // Sync enable checkbox + mode-row visibility based on resulting state
   const nowBcOn=!!(bcBtn&&bcBtn.classList.contains('active'));
   const nowOvmOn=!!(ovmBtn&&ovmBtn.classList.contains('active'));
-  const nowMode=nowBcOn&&nowOvmOn?'both':nowBcOn?'bytecode':nowOvmOn?'shadow':'none';
+  const nowMode=nowBcOn&&nowOvmOn?'both':nowBcOn?'bytecode':nowOvmOn?'cyphervm':'none';
   const enEl=G('o_vm_enable');
   if(enEl)enEl.checked=nowMode!=='none';
   const modeRow=G('vm-mode-row');
@@ -3854,12 +3851,12 @@ function applyVmEnable(on){
   const modeRow=G('vm-mode-row');
   if(modeRow)modeRow.style.display=on?'block':'none';
   if(!on){
-    applyVmMode('none');
+    applyVmMode('none',true);
   } else {
     // Default to bytecode when enabling for the first time
     const cur=VAL('o_vm_mode');
-    if(!cur||cur==='none') applyVmMode('bytecode');
-    else applyVmMode(cur);
+    if(!cur||cur==='none') applyVmMode('bytecode',true);
+    else applyVmMode(cur,true);
   }
 }
 
@@ -3871,7 +3868,9 @@ function setIdx(hex,computed){SET('idx-hex',hex);SET('idx-computed',computed||fa
 function applyPreset(){
   const p=G('preset').value;
   const TRAP_IDS=['o_opaque','o_canary','o_envfp','o_deobtrap','o_proxywrap','o_junkpoly','o_hashlocked','o_interntrap'];
-  const OVM_IDS=['o_ovm','o_ovm_xorop','o_ovm_shuffle','o_ovm_lfsr','o_ovm_indirect','o_ovm_regmap','o_ovm_guards'];// shadow vm checkboxes
+  const ADV_IDS=['o_scopefog','o_tdztrap','o_protguard','o_timingcanary','o_callmutate','o_homoglyph','o_cfhash'];
+  const OVM_IDS=['o_ovm','o_ovm_xorop','o_ovm_shuffle','o_ovm_lfsr','o_ovm_indirect','o_ovm_regmap','o_ovm_guards'];// cyphervm checkboxes
+  const BOTH_IDS=['o_both_antidebug','o_both_integ'];
   const ALL=['o_html','o_strict','o_mini','o_semi','o_simplify','o_ignimport','o_con',
     'o_self','o_antib','o_native','o_tamp','o_dbg','o_dom','o_srcmap',
     'o_sarr','o_srot','o_sshuf','o_calltrans','o_wchain',
@@ -3882,25 +3881,34 @@ function applyPreset(){
     'o_bc','o_bc_arrenc','o_bc_jmpenc','o_bc_stackenc','o_bc_compact',
     'o_bc_dynop','o_bc_stateful','o_bc_wrapinit','o_bc_decoy','o_bc_dead',
     'o_bc_rc4','o_bc_macro','o_bc_antidebug','o_bc_sarrbconly','o_chunk',
-    ...TRAP_IDS,...OVM_IDS];
+    ...TRAP_IDS,...ADV_IDS,...OVM_IDS,...BOTH_IDS];
   ALL.forEach(id=>{const e=G(id);if(e){e.disabled=false;e.checked=false;}});
 
   if(p==='light'){
-    SETV('o_vm_mode','none');applyVmMode('none');
+    SETV('o_vm_mode','none');applyVmMode('none',true);
+    // Minimal: basic string escaping, rename, compact output — no traps
     ['o_senc','o_ren','o_hexn','o_mini'].forEach(id=>SET(id,true));
     setEnc(false,false,false);setIdx(true,false);
     SETV('o_namegen','hexadecimal');SETV('o_wcount','1');SETD('v-wc','1');
+
   }else if(p==='medium'){
-    SETV('o_vm_mode','none');applyVmMode('none');
-    ['o_sarr','o_srot','o_sshuf','o_calltrans','o_senc','o_atob',
-     'o_ren','o_prop','o_hexn','o_nsplit','o_dead','o_iife','o_mini','o_semi',
+    SETV('o_vm_mode','none');applyVmMode('none',true);
+    // Solid obfuscation, no VM — string array, renaming, dead code, basic traps
+    ['o_sarr','o_srot','o_sshuf','o_calltrans',
+     'o_senc','o_atob',
+     'o_ren','o_prop','o_hexn','o_nsplit',
+     'o_dead','o_iife',
+     'o_mini','o_semi',
      'o_clfold','o_ptrenc',
      'o_opaque','o_junkpoly'].forEach(id=>SET(id,true));
     setEnc(false,true,false);setIdx(true,false);
     SETV('o_namegen','hexadecimal');SETV('o_wcount','1');SETD('v-wc','1');
+
   }else if(p==='high'){
-    SETV('o_vm_mode','bytecode');applyVmMode('bytecode');
-    ['o_sarr','o_srot','o_sshuf','o_calltrans','o_senc','o_atob','o_tmpl','o_ssplit',
+    SETV('o_vm_mode','bytecode');applyVmMode('bytecode',true);
+    // Strong: full string obfuscation, Bytecode VM, all runtime defenses, most traps
+    ['o_sarr','o_srot','o_sshuf','o_calltrans',
+     'o_senc','o_atob','o_tmpl','o_ssplit',
      'o_ren','o_prop','o_hexn','o_nsplit','o_math',
      'o_cff','o_dead','o_iife','o_comma',
      'o_bc','o_bc_arrenc','o_bc_jmpenc','o_bc_stackenc','o_bc_rc4',
@@ -3909,14 +3917,20 @@ function applyPreset(){
      'o_self','o_antib','o_native','o_tamp','o_dbg',
      'o_mini','o_semi',
      'o_clfold','o_ptrenc','o_unimangle','o_fakeproto','o_evaldisguise',
+     // Standard traps (no proxywrap — reserved for max)
      'o_opaque','o_canary','o_envfp','o_deobtrap','o_junkpoly','o_hashlocked','o_interntrap',
-     'o_scopefog','o_tdztrap','o_protguard','o_timingcanary','o_callmutate'].forEach(id=>SET(id,true));
+     // Advanced traps (all except homoglyph + cfhash which are experimental)
+     'o_scopefog','o_tdztrap','o_protguard','o_timingcanary','o_callmutate',
+    ].forEach(id=>SET(id,true));
     setEnc(true,true,false);setIdx(true,false);
     SETV('o_namegen','hexadecimal');SETV('o_wcount','2');SETD('v-wc','2');
     SETV('o_idxshift','13');SETD('v-idxsh','13');
+
   }else if(p==='max'){
-    SETV('o_vm_mode','both');applyVmMode('both');
-    const skip=['o_html','o_dom','o_con','o_charcode','o_srcmap','o_renprop','o_renglobal','o_simplify','o_bc_sarrbconly','o_bc_wrapinit','o_bc_compact'];
+    SETV('o_vm_mode','both');applyVmMode('both',true);
+    // Max: everything on except a small safe-skip list
+    const skip=['o_html','o_dom','o_con','o_charcode','o_srcmap','o_renprop','o_renglobal',
+                'o_simplify','o_bc_sarrbconly','o_bc_wrapinit','o_bc_compact'];
     ALL.filter(id=>!skip.includes(id)).forEach(id=>SET(id,true));
     setEnc(true,true,false);setIdx(true,true);
     SETV('o_namegen','hexadecimal');
@@ -3944,7 +3958,7 @@ function applyPreset(){
   showSub('bc-sub',CHK('o_bc'));
   showSub('ovm-sub',CHK('o_ovm'));
   showSub('ct-sub',CHK('o_calltrans'));
-  showSub('ssplit-sub',CHK('o_ssplit'));
+  showSub('ssplit-chunk-sub',CHK('o_ssplit'));
   showSub('cff-sub',CHK('o_cff'));
   showSub('dead-sub',CHK('o_dead'));
   showSub('dbg-sub',CHK('o_dbg'));
@@ -4232,7 +4246,7 @@ function applyAutoConfig(){
   showSub('bc-sub',CHK('o_bc'));
   showSub('ovm-sub',CHK('o_ovm'));
   showSub('ct-sub',CHK('o_calltrans'));
-  showSub('ssplit-sub',CHK('o_ssplit'));
+  showSub('ssplit-chunk-sub',CHK('o_ssplit'));
   showSub('cff-sub',CHK('o_cff'));
   showSub('dead-sub',CHK('o_dead'));
   showSub('dbg-sub',CHK('o_dbg'));
@@ -4248,11 +4262,11 @@ function applyAutoConfig(){
 // ================================================================
 //  PERSISTENCE — save/load all settings + input to localStorage
 // ================================================================
-const PERSIST_KEY='obscura_v3'; // v3: fixed boot order (no early applyPreset)
+const PERSIST_KEY='obscura_v5'; // v5: cyphervm rename, fixed preset ALL array, both_antidebug/integ in ALL
 
 function saveSettings(){
   try{
-    const data={v:3};
+    const data={v:5};
     data.preset=VAL('preset');
     data.target=currentTarget;
     // Every checkbox that has an id
@@ -4282,7 +4296,7 @@ function loadSettings(){
     const raw=localStorage.getItem(PERSIST_KEY);
     if(!raw)return false;
     const data=JSON.parse(raw);
-    if(!data||data.v!==3)return false;// reject stale saves from older versions
+    if(!data||data.v!==5)return false;// reject stale saves from older versions
 
     // Restore preset select value WITHOUT calling applyPreset (that would overwrite everything)
     if(data.preset){const e=G('preset');if(e)e.value=data.preset;}
@@ -4340,12 +4354,12 @@ function loadSettings(){
 
     // Fix sub-panel visibility based on restored checkbox states
     const _restoredVmMode=data['tx_o_vm_mode']||VAL('o_vm_mode')||'none';
-    applyVmMode(_restoredVmMode);
+    applyVmMode(_restoredVmMode, true);
     showSub('sarr-sub',CHK('o_sarr'));
     showSub('bc-sub',CHK('o_bc'));
     showSub('ovm-sub',CHK('o_ovm'));
     showSub('ct-sub',CHK('o_calltrans'));
-    showSub('ssplit-sub',CHK('o_ssplit'));
+    showSub('ssplit-chunk-sub',CHK('o_ssplit'));
     showSub('cff-sub',CHK('o_cff'));
     showSub('dead-sub',CHK('o_dead'));
     showSub('dbg-sub',CHK('o_dbg'));
@@ -4361,6 +4375,15 @@ function loadSettings(){
     // Apply visual dimming for target (no disabling)
     applyTargetConstraints();
     liveCheck();
+
+    // Update status bar displays to match restored state
+    const sbPreset=G('sb-preset-display');
+    if(sbPreset){
+      const presetEl=G('preset');
+      if(presetEl)sbPreset.textContent='Preset: '+presetEl.options[presetEl.selectedIndex].text;
+    }
+    const sbTarget=G('sb-target-display');
+    if(sbTarget)sbTarget.textContent='Target: '+({browser:'Browser','browser-no-eval':'No Eval',node:'Node.js',tampermonkey:'Tampermonkey'}[currentTarget]||currentTarget);
 
     // Input editor — do after a tick so CM is fully ready
     if(data.inputCode){
@@ -4388,7 +4411,7 @@ window.addEventListener('load',()=>{
     const pairs=[
       ['ct-sub','o_calltrans'],['cff-sub','o_cff'],['dead-sub','o_dead'],
       ['dbg-sub','o_dbg'],['ren-sub','o_ren'],['chunk-sub','o_chunk'],
-      ['dom-sub','o_dom'],['smap-sub','o_srcmap'],
+      ['dom-sub','o_dom'],['smap-sub','o_srcmap'],['ssplit-chunk-sub','o_ssplit'],
     ];
     pairs.forEach(([sub,chk])=>{
       const el=document.getElementById(sub);
@@ -4398,15 +4421,12 @@ window.addEventListener('load',()=>{
     });
     // sarr-sub shows all String Array options — always block, toggled by o_sarr
     showSub('sarr-sub',CHK('o_sarr'));
-    // ssplit-sub shows String Encoding options — always block (not toggle-gated in our layout)
-    const ssub=document.getElementById('ssplit-sub');
-    if(ssub)ssub.style.display='block';
     // dict-sub: only when namegen=dictionary
     showSub('dict-sub',VAL('o_namegen')==='dictionary');
     // VM mode — default off
     const vm=VAL('o_vm_mode')||'none';
     // Sync pills and sub-panels for restored vm mode
-    applyVmMode(vm);
+    applyVmMode(vm, true);
   })();
   // Wire up auto-save after load so save isn't triggered during init
   // Checkboxes and ranges that are NOT the preset select itself: also mark as "custom"
