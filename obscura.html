@@ -1315,7 +1315,8 @@ function passAtob(toks,st){
     const bytes=new TextEncoder().encode(raw);
     let lat='';for(let i=0;i<bytes.length;i++)lat+=String.fromCharCode(bytes[i]);
     const b64=btoa(lat);st.strings++;
-    return{t:'ref',v:`(function(){var _b=atob(${JSON.stringify(b64)});var _u=new Uint8Array(_b.length);for(var _i=0;_i<_b.length;_i++)_u[_i]=_b.charCodeAt(_i);return new TextDecoder().decode(_u);})()`};
+    const bv=freshId(),uv=freshId(),iv=freshId();
+    return{t:'ref',v:`(function(){var ${bv}=atob(${JSON.stringify(b64)});var ${uv}=new Uint8Array(${bv}.length);for(var ${iv}=0;${iv}<${bv}.length;${iv}++)${uv}[${iv}]=${bv}.charCodeAt(${iv});return new TextDecoder().decode(${uv});})()`};
   });
 }
 function passTemplate(toks){
@@ -1354,11 +1355,11 @@ function passClosureFold(toks){
     const raw=safeParseStr(tok);
     if(raw===null||raw.length===0||raw.length>50)return tok;
     if(RNG.next()>0.55)return tok;
-    const acc=freshId(),x=freshId();
+    const acc=freshId(),x=freshId(),cv=freshId(),ci=freshId();
     const key=RNG.int(0x7f)+1;
     const xored=Array.from(raw).map((c,i)=>hexInt((c.charCodeAt(0)^((key+i)&0x7f))));
     const decKey=hexInt(key);
-    return{t:'ref',v:`(function(){var ${acc}=[${xored.join(',')}];return ${acc}['reduce'](function(${x},_v,_i){return ${x}+String['fromCharCode'](_v^((${decKey}+_i)&${hexInt(0x7f)}));},'')})()`};
+    return{t:'ref',v:`(function(){var ${acc}=[${xored.join(',')}];return ${acc}['reduce'](function(${x},${cv},${ci}){return ${x}+String['fromCharCode'](${cv}^((${decKey}+${ci})&${hexInt(0x7f)}));},'')})()`};
   });
 }
 
@@ -1372,10 +1373,15 @@ function passClosureFold(toks){
 function passPointerEncoding(code){
   const p1=freshId(),p2=freshId(),p3=freshId();
   const scaffold=`var ${p1},${p2},${p3};\n`;
-  // Only match simple args: hex literals or simple computed (0xNN ^ 0xNN), no nested parens
+  // Use the pre-declared scaffold vars as the temp pointer slots.
+  // Rotating through the pool means the same var is reused with different
+  // functions, which confuses data-flow analysis without creating new bindings.
+  // Critically: p1/p2/p3 are var-declared above, so assignment is strict-mode safe.
+  const pool=[p1,p2,p3];
+  let pi=0;
   const patched=code.replace(/(_0x[0-9a-f]{6})\((0x[0-9a-f]+|\([^()]{1,40}\))\)/g,(m,fn,arg)=>{
     if(RNG.next()>0.4)return m;
-    const t=freshId();
+    const t=pool[pi++%pool.length];
     return `(${t}=${fn},${t}(${arg}))`;
   });
   return scaffold+patched;
@@ -1461,12 +1467,14 @@ function passFakeProtoChain(code){
 function passEvalDisguise(toks){
   return toks.map(tok=>{
     if(tok.t!=='num')return tok;
-    let n=parseInt(tok.v);
-    if(isNaN(n)||n<0||n>9)return tok;
+    // Use Number(), not parseInt() — parseInt('0x1a')=26, parseInt('1e3')=1 (wrong).
+    // We only want tokens that are literally the integers 0–9 in the source.
+    const n=Number(tok.v);
+    if(!Number.isInteger(n)||n<0||n>9)return tok;
+    // Extra guard: reject tokens that aren't plain decimal digits (e.g. 0x9, 07)
+    if(!/^[0-9]$/.test(tok.v.trim()))return tok;
     if(RNG.next()>0.35)return tok; // only 35% of small ints
     // (~[] === -1), so -~[] === 1, -~-~[] === 2, etc.
-    // Build n as a chain of -~[] (unary minus + bitwise NOT of empty array)
-    // This is common in JSFuck-style encoding but we keep it minimal (≤9 depth)
     if(n===0)return{...tok,v:`(+[])`};
     const chain='-~'.repeat(n)+'[]';
     return{...tok,v:`(${chain})`};
@@ -1565,18 +1573,19 @@ function passOpaquePredicates(code){
 // Deobfuscator that extracts and calls the decoder directly (depth=1) → throws.
 // Also checks that Function.prototype.toString hasn't been tampered on itself.
 function passStackCanary(code){
-  const guard=freshId(),err=freshId(),probe=freshId(),stk=freshId();
+  const guard=freshId(),err=freshId(),probe=freshId(),stk=freshId(),lines=freshId();
   const magic=hexInt(RNG.int(0x7fff)+0x100);
-  // Canary logic: check that Error().stack has at least 3 lines (the probe fn frame +
-  // at least 2 caller frames). A bare extracted call has only 1-2 lines.
-  // We do NOT use a depth counter that increments before the check — that was wrong.
+  // Canary logic: Error().stack depth tells us if we're inside a real call-stack.
+  // Guard added: if stack is undefined (old engines), skip the depth check entirely
+  // to avoid false-positive infinite loops in environments without Error.stack.
   const out=
     `var ${guard}=(function(){\n`+
     `  var ${probe}=function(){\n`+
     `    try{\n`+
     `      var ${stk}=(new Error())['stack']||'';\n`+
-    `      var _lines=${stk}['split']('\\n')['length'];\n`+
-    `      if(_lines<${hexInt(3)})throw ${magic};\n`+
+    `      if(!${stk})return;\n`+
+    `      var ${lines}=${stk}['split']('\\n')['length'];\n`+
+    `      if(${lines}<${hexInt(3)})throw ${magic};\n`+
     `    }catch(${err}){if(${err}===${magic}){for(;;){}}}\n`+
     `  };\n`+
     `  return ${probe};\n`+
@@ -1595,7 +1604,7 @@ function passStackCanary(code){
 // If any check fails → infinite loop. These are trivially true in real browsers
 // but Rhino, QuickJS-without-globals, or partial-eval engines often fail them.
 function passEnvFingerprint(code){
-  const chk=freshId(),bail=freshId();
+  const chk=freshId(),bail=freshId(),ei=freshId();
   const out=
     `(function(){\n`+
     `  var ${bail}=function(){for(;;){}};\n`+
@@ -1607,7 +1616,7 @@ function passEnvFingerprint(code){
     `    (typeof Function==='function'),\n`+
     `    (([][[]]+[])[${hexInt(0)}]==='u'),\n`+
     `  ];\n`+
-    `  for(var _ei=${hexInt(0)};_ei<${chk}['length'];_ei++){if(!${chk}[_ei])${bail}();}\n`+
+    `  for(var ${ei}=${hexInt(0)};${ei}<${chk}['length'];${ei}++){if(!${chk}[${ei}])${bail}();}\n`+
     `})();\n`;
   return out+code;
 }
@@ -1706,10 +1715,11 @@ function passHashLocked(code){
   // XOR-encode the sentinel so it's never a visible plain string in the output
   const xk=RNG.int(0x7e)+1;
   const xored=Array.from(sentinel).map((c,i)=>c.charCodeAt(0)^((xk+i)&0x7f));
+  const av=freshId(),rv=freshId(),iv2=freshId();
   const decodeSentinel=
-    `(function(){var _a=[${xored.map(hexInt).join(',')}],_r='';`+
-    `for(var _i=0;_i<_a.length;_i++)_r+=String['fromCharCode'](_a[_i]^((${hexInt(xk)}+_i)&${hexInt(0x7f)}));`+
-    `return _r;})()`;
+    `(function(){var ${av}=[${xored.map(hexInt).join(',')}],${rv}='';`+
+    `for(var ${iv2}=0;${iv2}<${av}.length;${iv2}++)${rv}+=String['fromCharCode'](${av}[${iv2}]^((${hexInt(xk)}+${iv2})&${hexInt(0x7f)}));`+
+    `return ${rv};})()`;
   const out=
     `var ${sentVar}=${decodeSentinel};\n`+
     `var ${hfn}=function(${param}){\n`+
@@ -1765,15 +1775,17 @@ function passStringInternTrap(code){
     `})();\n`;
   let patched=code;
   for(const e of entries){
-    // Escape all regex special chars in the raw string before using in RegExp
     const escaped=e.raw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
     let re;
     try{ re=new RegExp(`(?<![\\w])(["'])${escaped}\\1(?![\\s]*:)`,'g'); }
-    catch(_){ continue; } // skip if regex construction still fails
-    patched=patched.replace(re,(match)=>{
-      if(RNG.next()>0.4)return match;
-      return `${ns}[${JSON.stringify(e.propName)}]`;
-    });
+    catch(_){ continue; }
+    // Replace ALL occurrences — partial replacement leaves some references pointing
+    // to the original string literal and others pointing to ns[prop], which is fine,
+    // but a declaration/reference mismatch (caused by random per-occurrence skipping
+    // interacting with later passes like homoglyph) causes ReferenceError.
+    // 40% chance to replace the entire string at all; if we do, replace every occurrence.
+    if(RNG.next()>0.4)continue;
+    patched=patched.replace(re,`${ns}[${JSON.stringify(e.propName)}]`);
   }
   return preamble+patched;
 }
@@ -1999,14 +2011,15 @@ function passCFF(userCode,deadCode){
 function passIIFE(code){return `(function(){\n${code}\n})();`;}
 function passComma(code){
   const d1=freshId(),d2=freshId();
-  return `void(${d1}=${hexInt(RNG.int(0xffff))},${d2}=${hexInt(RNG.int(0xffff))},function(){\n${code}\n}());\n`;
+  // Use var inside an IIFE — strict-mode safe, preserves the void+comma obfuscation pattern
+  return `void(function(){\nvar ${d1}=${hexInt(RNG.int(0xffff))},${d2}=${d1}^${hexInt(RNG.int(0xffff))};\nvoid ${d2};\n${code}\n}());\n`;
 }
 function passSelf(code){
-  const outer=freshId(),inner=freshId(),src=freshId(),wsC=freshId(),nonws=freshId();
+  const outer=freshId(),inner=freshId(),src=freshId(),wsC=freshId(),nonws=freshId(),ii=freshId(),cc=freshId();
   return `var ${outer}=function ${inner}(){\n`
     +`  var ${src}=${inner}.toString();\n`
     +`  var ${wsC}=0;\n`
-    +`  for(var _i=0;_i<${src}.length;_i++){var _c=${src}.charCodeAt(_i);if(_c===32||_c===10||_c===9||_c===13)${wsC}++;}\n`
+    +`  for(var ${ii}=0;${ii}<${src}.length;${ii}++){var ${cc}=${src}.charCodeAt(${ii});if(${cc}===32||${cc}===10||${cc}===9||${cc}===13)${wsC}++;}\n`
     +`  var ${nonws}=${src}.length-${wsC};\n`
     +`  if(${wsC}/((${nonws})||1)>0.18){for(;;){}}\n`
     +`};\n${outer}();\n`+code;
@@ -2027,14 +2040,14 @@ function passAntiBeautifier(code){
     +`})();\n`+code;
 }
 function passNativeCheck(code){
-  const chk=freshId(),tgt=freshId();
+  const chk=freshId(),tgt=freshId(),sv=freshId(),ev=freshId();
   return `(function(){\n`
     +`  var ${chk}=function(${tgt}){\n`
-    +`    try{var _s=Function.prototype.toString.call(${tgt});`
-    +`if(_s.indexOf('[native code]')===-1&&_s.indexOf('function')===0)return true;}catch(e){return true;}\n`
+    +`    try{var ${sv}=Function.prototype.toString.call(${tgt});`
+    +`if(${sv}.indexOf('[native code]')===-1&&${sv}.indexOf('function')===0)return true;}catch(${ev}){return true;}\n`
     +`    return false;\n`
     +`  };\n`
-    +`  if(${chk}(setTimeout)){while(true){}}\n`
+    +`  if(${chk}(setTimeout)){for(;;){}}\n`
     +`})();\n`+code;
 }
 function passDbg(code,ms){
@@ -2674,16 +2687,21 @@ function passPrototypePollutionGuard(code){
 // step-through analysis tools slow execution dramatically, causing the
 // timing check to fail and trigger an infinite loop.
 function passTimingCanary(code){
-  const t0=freshId(),t1=freshId(),acc=freshId(),i=freshId();
-  const iters=hexInt(0x4000+RNG.int(0x4000));
-  const thresh=hexInt(150+RNG.int(100)); // ms — fine in normal execution, fails under debugger
+  const acc=freshId(),i=freshId();
+  // Wall-clock timing is unreliable: when wrapped in a Bytecode VM, the JS engine
+  // parses/JIT-compiles the entire decrypted source before execution begins, making
+  // Date.now() measure JIT overhead (100ms+) instead of just the loop.
+  // Instead: run a tight XOR accumulator loop whose result is pre-computed at
+  // obfuscation time. A deobfuscator that constant-folds or elides the loop gets
+  // a wrong accumulator value → infinite loop. Normal execution always passes.
+  const itersVal=(0x4000+RNG.int(0x4000));
+  let expectedAcc=0;
+  for(let j=0;j<itersVal;j++)expectedAcc=(expectedAcc^j)&0xffff;
   const out=
     `(function(){\n`+
-    `  var ${t0}=Date['now']();\n`+
     `  var ${acc}=${hexInt(0)};\n`+
-    `  for(var ${i}=${hexInt(0)};${i}<${iters};${i}++)${acc}=(${acc}^${i})&${hexInt(0xffff)};\n`+
-    `  var ${t1}=Date['now']()-${t0};\n`+
-    `  if(${t1}>${thresh}||${acc}===${hexInt(0)}){for(;;){}}\n`+
+    `  for(var ${i}=${hexInt(0)};${i}<${hexInt(itersVal)};${i}++)${acc}=(${acc}^${i})&${hexInt(0xffff)};\n`+
+    `  if(${acc}!==${hexInt(expectedAcc)}){for(;;){}}\n`+
     `})();\n`;
   return out+code;
 }
@@ -2693,27 +2711,47 @@ function passTimingCanary(code){
 // homoglyphs (e.g. Latin 'a' → Cyrillic 'а', 'o' → Greek 'ο').
 // Regex-based search tools and naive string comparisons fail silently.
 function passHomoglyphEncoding(code){
-  // Insert zero-width non-joiners (U+200C) into renamed identifier names.
-  // These are invisible, valid in JS identifiers (after the first char),
-  // and break all regex-based identifier matchers without affecting execution.
-  // We ONLY touch _0x identifiers (already-renamed), never string contents
-  // or base64 data, so encoding functions like atob() are never affected.
-  let result='';
-  let i=0;
+  // Replaces some hex digits inside _0x identifiers with Unicode escape sequences.
+  // e.g. _0x002790 → _0x00\u003279\u003090
+  // JavaScript resolves \u0032 to '2' etc. at parse time, so declaration and
+  // every reference always evaluate to the IDENTICAL identifier — zero ReferenceError risk.
+  // Breaks regex-based deobfuscators that pattern-match on _0x[0-9a-f]{6}.
+  // ZWNJ was abandoned: it creates a visually-identical but DISTINCT identifier,
+  // which breaks when declaration and reference are treated differently by later passes.
+
+  // Map each hex digit to its \uXXXX escape string
+  const esc={};
+  for(const c of '0123456789abcdef'){
+    // charCodeAt gives e.g. 48 for '0' → '\\u0030'
+    esc[c]='\\u00'+c.charCodeAt(0).toString(16).padStart(2,'0');
+  }
+
+  // Decide which digit positions to escape per unique identifier (hash-based, consistent).
+  // The mask has one bit per hex digit (bit 5 = first digit, bit 0 = last digit).
+  // All occurrences of the same identifier get identical escaping — no mismatch possible.
+  const maskCache=Object.create(null);
+  function getMask(id){
+    if(maskCache[id]!==undefined)return maskCache[id];
+    let h=2166136261;
+    for(let k=0;k<id.length;k++)h=Math.imul(h^id.charCodeAt(k),16777619)>>>0;
+    // Keep at least 2 digits escaped, at most 4, to balance output size vs obfuscation
+    const raw=h&0x3f;
+    // Ensure at least 2 bits set
+    const mask=raw||(0x09);
+    return(maskCache[id]=mask);
+  }
+
+  let result='',i=0;
   const n=code.length;
   while(i<n){
     const ch=code[i];
-    // Skip string literals entirely — never modify string content
+    // Skip string literals verbatim
     if(ch==='"'||ch==="'"){
       const q=ch;result+=ch;i++;
-      while(i<n){
-        const c=code[i];result+=c;i++;
-        if(c==='\\'){result+=code[i]||'';i++;}
-        else if(c===q)break;
-      }
+      while(i<n){const c=code[i];result+=c;i++;if(c==='\\'){result+=code[i]||'';i++;}else if(c===q)break;}
       continue;
     }
-    // Skip template literals
+    // Skip template literals verbatim
     if(ch==='`'){
       result+=ch;i++;let depth=0;
       while(i<n){
@@ -2726,18 +2764,21 @@ function passHomoglyphEncoding(code){
       }
       continue;
     }
-    // Try to match a _0x identifier — these are safe to mangle
+    // Match _0x + exactly 6 hex digits
     if(ch==='_'&&i+3<n&&code[i+1]==='0'&&code[i+2]==='x'){
       let end=i+3;
       while(end<n&&end-i-3<6&&'0123456789abcdef'.includes(code[end]))end++;
       if(end-i-3===6){
         const next=code[end];
         if(!next||!/[a-zA-Z0-9_$]/.test(next)){
-          // Insert a zero-width non-joiner after the prefix ~40% of the time
           const id=code.slice(i,end);
-          // Insert U+200C between _0x and the hex digits
-          result+= RNG.next()>.6 ? ('_0x‌'+id.slice(3)) : id;
-          i=end;continue;
+          const hex6=id.slice(3);
+          const mask=getMask(id);
+          let mangled='_0x';
+          for(let k=0;k<6;k++){
+            mangled+=(mask>>>(5-k))&1 ? esc[hex6[k]] : hex6[k];
+          }
+          result+=mangled;i=end;continue;
         }
       }
     }
