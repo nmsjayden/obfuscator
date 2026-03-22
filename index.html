@@ -343,6 +343,723 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 .sub-sep{height:1px;background:var(--ln);margin:8px 0;}
 .sub-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin:8px 0 4px;}
 
+/* ─── VM PILLS ─── */
+.vm-pill-group{
+  display:flex;gap:3px;margin:4px 0 2px;
+  flex-wrap:wrap;
+}
+.vm-pill{
+  padding:4px 12px;
+  background:var(--s3);border:1px solid var(--ln);
+  color:var(--mute);font-family:var(--ui);font-size:11.5px;font-weight:500;
+  border-radius:20px;cursor:pointer;
+  transition:all .12s;white-space:nowrap;
+}
+.vm-pill:hover{color:var(--body);border-color:var(--ln2);}
+.vm-pill.active{
+  background:var(--acc);border-color:var(--acc);
+  color:#fff;font-weight:600;
+}
+
+/* ─── VM SEGMENT ─── */
+.seg-ctrl{display:flex;gap:2px;background:var(--bg);border:1px solid var(--ln);border-radius:var(--r);padding:2px;margin-bottom:10px;}
+.seg-btn,.vm-seg{flex:1;padding:5px 0;background:none;border:none;color:var(--mute);font-family:var(--ui);font-size:11.5px;font-weight:500;cursor:pointer;border-radius:5px;transition:all .12s;text-align:center;}
+.seg-btn:hover,.vm-seg:hover{color:var(--body);}
+.seg-btn.active,.vm-seg.active{background:var(--s4);color:var(--hi);box-shadow:0 1px 3px rgba(0,0,0,.5);}
+
+/* bc/ovm hidden by default, shown by engine */
+#bc-sub,#ovm-sub{display:none;}
+
+/* ─── CONFLICTS ─── */
+.ci-item{padding:5px 0;font-size:10.5px;display:flex;gap:6px;line-height:1.4;border-bottom:1px solid rgba(255,255,255,.04);}
+.ci-item::before{content:'!';flex-shrink:0;font-weight:700;}
+.ci-ok{padding:5px 0;font-size:10.5px;color:var(--grn);display:flex;gap:6px;}
+.ci-ok::before{content:'✓';}
+
+/* ─── PANEL PULL TAB ─── */
+#panel-pull{
+  position:absolute;
+  right:0; top:50%; transform:translateY(-50%);
+  width:24px; height:80px;
+  background:var(--s2);
+  border:1px solid var(--ln); border-right:none;
+  border-radius:8px 0 0 8px;
+  cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  color:var(--mute);
+  transition:background .15s,color .15s,right .28s cubic-bezier(.4,0,.2,1);
+  box-shadow:-3px 0 10px rgba(0,0,0,.35);
+  z-index:45;
+}
+#panel-pull:hover{background:var(--s3);color:var(--hi);}
+#pull-arrow{
+  font-size:12px;line-height:1;
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
+  display:block;
+}
+#panel-pull[data-open='true'] #pull-arrow{transform:rotate(180deg);}
+#pull-label{
+  font-size:8px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;writing-mode:vertical-rl;
+  color:inherit;line-height:1;opacity:.7;
+}
+#panel-pull:hover #pull-label{opacity:1;}
+
+/* ─── SCROLL HINT ─── */
+#scroll-hint{
+  position:absolute;bottom:0;left:0;right:0;
+  height:48px;
+  background:linear-gradient(to bottom,transparent,var(--s1) 70%);
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+  padding-bottom:8px;gap:2px;pointer-events:none;
+  opacity:1;transition:opacity .4s;
+}
+.scroll-hint-text{
+  font-size:9.5px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--mute);
+  animation:hint-pulse 2.2s ease-in-out infinite;
+}
+.scroll-hint-arrow{
+  font-size:13px;color:var(--acc);opacity:.8;
+  animation:hint-bounce 2.2s ease-in-out infinite;
+}
+@keyframes hint-pulse{0%,100%{opacity:.4;}50%{opacity:.9;}}
+@keyframes hint-bounce{
+  0%,100%{opacity:.5;transform:translateY(0);}
+  50%{opacity:1;transform:translateY(3px);}
+}
+
+/* ─── STATUS BAR ─── */
+#statusbar{
+  flex-shrink:0;height:26px;
+  background:var(--s1);border-top:1px solid var(--ln);
+  display:flex;align-items:center;padding:0 14px;gap:8px;
+}
+.sb-logo{
+  font-family:var(--mono);font-size:11px;font-weight:600;
+  color:var(--dim);letter-spacing:.08em;
+}
+.sb-logo em{color:var(--acc);font-style:normal;}
+.sb-sep{width:1px;height:12px;background:var(--ln);flex-shrink:0;}
+.sb-item{font-size:10px;color:var(--dim);white-space:nowrap;}
+.sb-gap{flex:1;}
+#sb-target-display,#sb-preset-display{color:var(--mute);}
+
+/* ─── MODAL ─── */
+#ac-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:900;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+#ac-overlay.open{display:flex;}
+#ac-modal{background:var(--s1);border:1px solid var(--ln2);border-radius:12px;width:520px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 40px 100px rgba(0,0,0,.7);overflow:hidden;}
+#ac-head{display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--ln);gap:10px;flex-shrink:0;}
+#ac-head h2{font-size:14px;font-weight:700;flex:1;color:var(--hi);}
+.ac-close{background:none;border:none;font-size:18px;color:var(--dim);cursor:pointer;padding:2px 5px;border-radius:4px;transition:color .1s;}
+.ac-close:hover{color:var(--body);}
+#ac-body{flex:1;overflow-y:auto;padding:16px 18px;}
+#ac-body::-webkit-scrollbar{width:3px;}
+#ac-body::-webkit-scrollbar-thumb{background:var(--ln);border-radius:2px;}
+.ac-section{margin-bottom:16px;}
+.ac-section-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin-bottom:8px;}
+.ac-badges{display:flex;flex-wrap:wrap;gap:5px;}
+.ac-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:500;border:1px solid transparent;}
+.ac-badge.ok {background:#052e16;border-color:#166534;color:#4ade80;}
+.ac-badge.warn{background:#2d1f0a;border-color:#854d0e;color:#fcd34d;}
+.ac-badge.info{background:#0b1f33;border-color:#1e3a5f;color:#7cbaf7;}
+.ac-badge.neu {background:var(--s3);border-color:var(--ln);color:var(--soft);}
+.ac-levels{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.ac-lvl{padding:10px 5px;background:var(--s2);border:1.5px solid var(--ln);border-radius:7px;cursor:pointer;text-align:center;transition:all .12s;}
+.ac-lvl:hover{border-color:var(--ln2);}
+.ac-lvl.sel{border-color:var(--acc);background:var(--acco);}
+.ac-lvl-name{font-size:12px;font-weight:700;color:var(--body);display:block;margin-bottom:2px;}
+.ac-lvl.sel .ac-lvl-name{color:var(--acc);}
+.ac-lvl-desc{font-size:9.5px;color:var(--mute);display:block;}
+.ac-rec-list{display:flex;flex-direction:column;gap:4px;}
+.ac-rec{display:flex;align-items:flex-start;gap:8px;padding:8px 9px;border-radius:6px;font-size:11px;line-height:1.4;background:var(--s2);border:1px solid var(--ln);}
+.ac-rec-icon{flex-shrink:0;font-size:13px;margin-top:1px;}
+.ac-rec-text{color:var(--body);flex:1;}
+.ac-rec-text b{font-weight:600;}
+.ac-rec-text small{display:block;color:var(--mute);font-size:10px;margin-top:1px;}
+.ac-rec.on {background:#052e16;border-color:#166534;}
+.ac-rec.off{background:#1a0505;border-color:#4a1515;}
+.ac-rec.set{background:#0b1220;border-color:#1a2a50;}
+#ac-foot{display:flex;align-items:center;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--ln);gap:8px;flex-shrink:0;}
+#ac-apply{padding:6px 20px;background:var(--acc);border:none;color:#fff;font-family:var(--ui);font-size:12px;font-weight:600;border-radius:var(--r);cursor:pointer;transition:opacity .12s;}
+#ac-apply:hover{opacity:.84;}
+#ac-cancel{padding:6px 13px;background:none;border:1px solid var(--ln);color:var(--soft);font-family:var(--ui);font-size:12px;border-radius:var(--r);cursor:pointer;transition:all .12s;}
+#ac-cancel:hover{color:var(--hi);border-color:var(--ln2);}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══════════ TOPBAR ══════════ -->
+<div id="topbar">
+  <div class="logo">Obs<em>cu</em>ra</div>
+  <div class="tsep"></div>
+  <div class="tpg">
+    <button class="tp active" data-t="browser"         onclick="setTarget('browser')">Browser</button>
+    <button class="tp"        data-t="browser-no-eval"  onclick="setTarget('browser-no-eval')">No Eval</button>
+    <button class="tp"        data-t="node"             onclick="setTarget('node')">Node</button>
+    <button class="tp"        data-t="tampermonkey"     onclick="setTarget('tampermonkey')">TM</button>
+  </div>
+  <div class="tsep"></div>
+  <select id="preset" onchange="applyPreset()">
+    <option value="light">Light</option>
+    <option value="medium">Medium</option>
+    <option value="high" selected>High</option>
+    <option value="max">Max</option>
+    <option value="custom">Custom</option>
+  </select>
+  <div class="tgap"></div>
+  <button class="txt-btn" onclick="openAutoConfig()">Auto-Config</button>
+  <button class="txt-btn" id="btn-copy" onclick="copyOut()">Copy</button>
+  <button class="txt-btn" id="btn-map" onclick="dlMap()" disabled>Map</button>
+  <div class="tsep"></div>
+
+  <button id="btn-run" onclick="runObfuscate()">
+    <span class="run-icon">▶</span> Run
+  </button>
+</div>
+
+<!-- ══════════ WORKSPACE ══════════ -->
+<div id="workspace">
+  <button id="panel-pull" onclick="togglePanel()" title="Toggle settings panel">
+    <span id="pull-arrow">❮</span>
+    <span id="pull-label">Settings</span>
+  </button>
+
+  <!-- editors -->
+  <div id="editors">
+
+    <div id="in-wrap">
+      <div class="ed-header">
+        <span class="ed-label">Input</span>
+        <span class="ed-gap"></span>
+        <button class="ed-act" onclick="clearInput()">Clear</button>
+      </div>
+      <div class="ed-body" id="in-editor"></div>
+    </div>
+
+    <div id="out-wrap">
+      <div class="ed-header">
+        <span class="ed-label">Output</span>
+        <span class="ed-gap"></span>
+        <div id="run-stats">
+          <span class="st">In <b id="s-in">—</b></span>
+          <span class="st">→ <b id="s-out">—</b></span>
+          <span class="st">×<b id="s-ratio">—</b></span>
+          <span class="st">Str <b id="s-str">—</b></span>
+          <span class="st">BC <b id="s-bc">—</b></span>
+          <span class="st"><b id="s-time">—</b></span>
+        </div>
+        <span id="out-hint">Run to see output</span>
+      </div>
+      <div class="ed-body" id="out-editor"></div>
+    </div>
+
+  </div>
+
+  <!-- ══════════ SLIDE PANEL ══════════ -->
+  <div id="panel">
+    <div id="panel-top-wrap">
+    <div id="panel-top">
+      <button class="stab active" onclick="switchTab('strings')">Strings</button>
+      <button class="stab" onclick="switchTab('identifiers')">Idents</button>
+      <button class="stab" onclick="switchTab('flow')">Flow</button>
+      <button class="stab" onclick="switchTab('vm')">VM</button>
+      <button class="stab" onclick="switchTab('protection')">Protect</button>
+      <button class="stab" onclick="switchTab('output')">Output</button>
+      <button class="stab" onclick="switchTab('general')">More</button>
+    </div><!-- end panel-top -->
+    <div id="tab-scroll-hint">
+      <span id="tab-scroll-arrow">›</span>
+    </div>
+  </div><!-- end panel-top-wrap -->
+    <div id="panel-scroll">
+
+      <!-- STRINGS -->
+      <div class="tpanel active" id="tpanel-strings">
+        <div class="grp">
+          <div class="grp-lbl">String Array</div>
+          <div id="sarr-sub">
+            <div class="row"><label class="rl">Enable<small>Extract all strings into encrypted pool</small></label><label class="tog"><input type="checkbox" id="o_sarr" checked onchange="showSub('sarr-sub',this.checked);liveCheck()"><span class="tk"></span></label></div>
+            <div class="fld"><div class="fld-lbl">Encoding</div>
+              <div class="msw" id="msw-enc">
+                <button class="ms-btn" type="button" onclick="msToggle('enc')"><span class="ms-text" id="ms-enc-text">RC4 + XOR</span><span class="ms-arrow">▾</span></button>
+                <div class="ms-panel" id="ms-panel-enc">
+                  <label class="ms-item"><input type="checkbox" id="enc-rc4" checked onchange="msSync('enc');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">RC4<span class="ms-desc">Stream cipher</span></span></label>
+                  <label class="ms-item"><input type="checkbox" id="enc-xor" checked onchange="msSync('enc');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">XOR<span class="ms-desc">Byte-mask layer</span></span></label>
+                  <label class="ms-item"><input type="checkbox" id="enc-none" onchange="msSync('enc');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">None<span class="ms-desc">Plain strings</span></span></label>
+                </div>
+              </div>
+            </div>
+            <div class="fld"><div class="fld-lbl">Index Type</div>
+              <div class="msw" id="msw-idx">
+                <button class="ms-btn" type="button" onclick="msToggle('idx')"><span class="ms-text" id="ms-idx-text">Hex Integer</span><span class="ms-arrow">▾</span></button>
+                <div class="ms-panel" id="ms-panel-idx">
+                  <label class="ms-item"><input type="checkbox" id="idx-hex" checked onchange="msSync('idx');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">Hex integer<span class="ms-desc">0x1a2b</span></span></label>
+                  <label class="ms-item"><input type="checkbox" id="idx-computed" onchange="msSync('idx');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">XOR computed<span class="ms-desc">(0xab ^ 0x11)</span></span></label>
+                </div>
+              </div>
+            </div>
+            <div class="sl"><div class="sl-head"><span class="sl-name">Threshold</span><span class="sv" id="v-thresh">1.00</span></div><div class="srow"><input type="range" id="o_thresh" min="0" max="1" step=".05" value="1" oninput="SETD('v-thresh',parseFloat(this.value).toFixed(2))"></div></div>
+            <div class="sl"><div class="sl-head"><span class="sl-name">Index Shift</span><span class="sv" id="v-idxsh">0</span></div><div class="srow"><input type="range" id="o_idxshift" min="0" max="200" step="1" value="0" oninput="SETD('v-idxsh',this.value)"></div></div>
+            <div class="row"><label class="rl">Rotate Array<small>Shift + self-correcting decoder</small></label><label class="tog"><input type="checkbox" id="o_srot" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Shuffle Array<small>Fisher-Yates randomize order</small></label><label class="tog"><input type="checkbox" id="o_sshuf" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Calls Transform<small>Wrap decoder calls in proxy fns</small></label><label class="tog"><input type="checkbox" id="o_calltrans" checked onchange="showSub('ct-sub',this.checked)"><span class="tk"></span></label></div>
+            <div id="ct-sub">
+              <div class="sl"><div class="sl-head"><span class="sl-name">Wrappers</span><span class="sv" id="v-wc">2</span></div><div class="srow"><input type="range" id="o_wcount" min="1" max="5" step="1" value="2" oninput="SETD('v-wc',this.value)"></div></div>
+              <div class="sl"><div class="sl-head"><span class="sl-name">Params</span><span class="sv" id="v-wp">2</span></div><div class="srow"><input type="range" id="o_wparams" min="1" max="5" step="1" value="2" oninput="SETD('v-wp',this.value)"></div></div>
+              <div class="row"><label class="rl">Chained Calls<small>decoder(decoder(i)) nesting</small></label><label class="tog"><input type="checkbox" id="o_wchain"><span class="tk"></span></label></div>
+            </div>
+            <div class="fld"><div class="fld-lbl">Force Extract (regex)</div><div class="tagw" id="ta-force" onclick="G('ti-force').focus()"><input class="ti" id="ti-force" placeholder="pattern, Enter…" onkeydown="tagKey(event,'ta-force','ti-force')"></div></div>
+            <div class="fld"><div class="fld-lbl">Never Extract (regex)</div><div class="tagw" id="ta-resstr" onclick="G('ti-resstr').focus()"><input class="ti" id="ti-resstr" placeholder="pattern, Enter…" onkeydown="tagKey(event,'ta-resstr','ti-resstr')"></div></div>
+          </div>
+        </div>
+        <div class="grp">
+          <div class="grp-lbl">String Encoding</div>
+          <div id="ssplit-sub">
+            <div class="row"><label class="rl">Escape Encoding<small>\x61\u0062 hex/unicode escapes</small></label><label class="tog"><input type="checkbox" id="o_senc" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Charcode Arrays<small>"hi" → fromCharCode(104,105)</small></label><label class="tog"><input type="checkbox" id="o_charcode"><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Inline atob<small>str → atob(b64) + TextDecoder</small></label><label class="tog"><input type="checkbox" id="o_atob" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Template Obfuscation<small>str → fromCharCode concat</small></label><label class="tog"><input type="checkbox" id="o_tmpl" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Split Strings<small>"hello" → "hel"+"lo"</small></label><label class="tog"><input type="checkbox" id="o_ssplit" checked onchange="showSub('ssplit-sub',this.checked)"><span class="tk"></span></label></div>
+            <div class="sl"><div class="sl-head"><span class="sl-name">Chunk Length</span><span class="sv" id="v-ssc">10</span></div><div class="srow"><input type="range" id="o_sschunk" min="3" max="60" step="1" value="10" oninput="SETD('v-ssc',this.value)"></div></div>
+            <div class="row"><label class="rl">Closure Trap Fold<small>IIFE reduce-based encoding</small></label><label class="tog"><input type="checkbox" id="o_clfold" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Pointer Encoding<small>Indirection chain on decoder refs</small></label><label class="tog"><input type="checkbox" id="o_ptrenc" checked><span class="tk"></span></label></div>
+          </div>
+        </div>
+        <div class="grp">
+          <div class="grp-lbl">String Intern Table</div>
+          <div class="row"><label class="rl">Intern Table Obfuscation<small>Hide key strings behind Object.defineProperty getters — invisible to AST walkers</small></label><label class="tog"><input type="checkbox" id="o_interntrap" checked><span class="tk"></span></label></div>
+        </div>
+      </div>
+
+      <!-- IDENTIFIERS -->
+      <div class="tpanel" id="tpanel-identifiers">
+        <div class="grp">
+          <div class="grp-lbl">Renaming</div>
+          <div id="ren-sub">
+            <div class="row"><label class="rl">Rename Variables<small>Replace all local identifier names</small></label><label class="tog"><input type="checkbox" id="o_ren" checked onchange="showSub('ren-sub',this.checked)"><span class="tk"></span></label></div>
+            <div class="fld"><div class="fld-lbl">Generator</div><select class="fsel" id="o_namegen" onchange="showSub('dict-sub',this.value==='dictionary')"><option value="hexadecimal">Hexadecimal (_0x…)</option><option value="mangled">Mangled (a,b,c…)</option><option value="dictionary">Dictionary</option></select></div>
+            <div class="fld"><div class="fld-lbl">Prefix</div><input class="fi" id="o_idpfx" type="text" placeholder="e.g. _x (optional)"></div>
+            <div id="dict-sub"><div class="fld"><div class="fld-lbl">Dictionary Words</div><div class="tagw" id="ta-dict" onclick="G('ti-dict').focus()"><input class="ti" id="ti-dict" placeholder="word, Enter…" onkeydown="tagKey(event,'ta-dict','ti-dict')"></div></div></div>
+          </div>
+          <div class="row"><label class="rl">Bracket Access<small>obj.foo → obj['foo']</small></label><label class="tog"><input type="checkbox" id="o_prop" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Rename Globals</label><label class="tog"><input type="checkbox" id="o_renglobal"><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Rename Properties<small>All object property keys</small></label><label class="tog"><input type="checkbox" id="o_renprop" onchange="G('renprop-w').style.display=this.checked?'block':'none';liveCheck()"><span class="tk"></span></label></div>
+          <div class="warn-box" id="renprop-w" style="display:none;">⚠ May break dynamic property access or external APIs.</div>
+          <div class="fld"><div class="fld-lbl">Reserved Names</div><div class="tagw" id="ta-resname" onclick="G('ti-resname').focus()"><input class="ti" id="ti-resname" placeholder="identifier, Enter…" onkeydown="tagKey(event,'ta-resname','ti-resname')"></div></div>
+        </div>
+        <div class="grp">
+          <div class="grp-lbl">Numbers</div>
+          <div class="row"><label class="rl">Hex Literals<small>97 → 0x61</small></label><label class="tog"><input type="checkbox" id="o_hexn" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Number Splitting<small>0x61 → (0x21+0x40)</small></label><label class="tog"><input type="checkbox" id="o_nsplit" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Math Expressions<small>n → Math['floor'](n+0x0)</small></label><label class="tog"><input type="checkbox" id="o_math" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Eval Disguise<small>0–9 → -~[] arithmetic chain</small></label><label class="tog"><input type="checkbox" id="o_evaldisguise" checked><span class="tk"></span></label></div>
+        </div>
+        <div class="grp">
+          <div class="grp-lbl">Custom</div>
+          <div class="row"><label class="rl">Unicode Mangle<small>→ \u005F0x identifiers</small></label><label class="tog"><input type="checkbox" id="o_unimangle" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Fake Proto Chain<small>Phantom prototype assignments</small></label><label class="tog"><input type="checkbox" id="o_fakeproto" checked><span class="tk"></span></label></div>
+        </div>
+      </div>
+
+      <!-- CONTROL FLOW -->
+      <div class="tpanel" id="tpanel-flow">
+        <div class="grp">
+          <div class="grp-lbl">Flow Obfuscation</div>
+          <div id="cff-sub">
+            <div class="row"><label class="rl">Control Flow Flattening<small>Shuffle into while/switch dispatch</small></label><label class="tog"><input type="checkbox" id="o_cff" checked onchange="showSub('cff-sub',this.checked)"><span class="tk"></span></label></div>
+            <div class="sl"><div class="sl-head"><span class="sl-name">CFF Threshold</span><span class="sv" id="v-cff">0.75</span></div><div class="srow"><input type="range" id="o_cff_t" min="0" max="1" step=".05" value=".75" oninput="SETD('v-cff',parseFloat(this.value).toFixed(2))"></div></div>
+          </div>
+          <div id="dead-sub">
+            <div class="row"><label class="rl">Dead Code Injection<small>Opaque always-false branches</small></label><label class="tog"><input type="checkbox" id="o_dead" checked onchange="showSub('dead-sub',this.checked)"><span class="tk"></span></label></div>
+            <div class="sl"><div class="sl-head"><span class="sl-name">Dead Code Threshold</span><span class="sv" id="v-dead">0.40</span></div><div class="srow"><input type="range" id="o_dead_t" min="0" max="1" step=".05" value=".4" oninput="SETD('v-dead',parseFloat(this.value).toFixed(2))"></div></div>
+          </div>
+          <div class="row"><label class="rl">IIFE Wrap<small>(function(){…})()</small></label><label class="tog"><input type="checkbox" id="o_iife" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Comma Obfuscation<small>void(a=…,b=…,fn())</small></label><label class="tog"><input type="checkbox" id="o_comma" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Object Key Transform<small>Keys → fromCharCode exprs</small></label><label class="tog"><input type="checkbox" id="o_objkeys"><span class="tk"></span></label></div>
+        </div>
+      </div>
+
+      <!-- VM -->
+      <div class="tpanel" id="tpanel-vm">
+        <div class="grp">
+          <div class="grp-lbl">VM Mode</div>
+          <input type="hidden" id="o_vm_mode" value="none">
+          <input type="checkbox" id="o_bc"  style="display:none">
+          <input type="checkbox" id="o_ovm" style="display:none">
+          <input type="checkbox" id="o_vm_enable" style="display:none">
+          <div class="vm-pill-group">
+            <button class="vm-pill active" data-vm="none"     onclick="applyVmMode('none')">Off</button>
+            <button class="vm-pill"        data-vm="bytecode" onclick="applyVmMode('bytecode')">Bytecode</button>
+            <button class="vm-pill"        data-vm="opcode"   onclick="applyVmMode('opcode')">Opcode ISA</button>
+          </div>
+          <div id="vm-info-none" class="info-box" style="margin-top:6px;">JS is obfuscated but not VM-compiled.</div>
+          <div id="vm-info-bc"   class="info-box" style="display:none;margin-top:6px;">Source → encoded byte array → base64 → runtime interpreter. Uses <code style="font-family:var(--mono);font-size:10px;">new Function()</code>.</div>
+          <div id="vm-info-ovm"  class="info-box" style="display:none;margin-top:6px;">Source tokens → custom ISA opcodes → LFSR-encrypted bytecode → stack VM. Source never a string. ~7.99 entropy.</div>
+        </div>TYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Obscura</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.css">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ─── TOKENS ─── */
+:root{
+  --bg:    #0d0d10;
+  --s1:    #121216;
+  --s2:    #18181d;
+  --s3:    #1f1f26;
+  --s4:    #27272f;
+  --s5:    #2f2f38;
+  --ln:    #2e2e38;
+  --ln2:   #3e3e4a;
+  --dim:   #4a4a58;
+  --mute:  #6c6c80;
+  --soft:  #9494aa;
+  --body:  #c8c8da;
+  --hi:    #eeeef6;
+  --acc:   #7c6ef7;
+  --acc2:  #5b50c8;
+  --acco:  rgba(124,110,247,.08);
+  --accb:  rgba(124,110,247,.16);
+  --grn:   #3fb950;
+  --red:   #f85149;
+  --amb:   #d29922;
+  --r:     6px;
+  --panel: 320px;
+  --mono:  'JetBrains Mono', monospace;
+  --ui:    'Inter', system-ui, sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);font-family:var(--ui);font-size:12.5px;-webkit-font-smoothing:antialiased;}
+
+/* ─── APP ─── */
+#app{display:flex;flex-direction:column;height:100vh;}
+
+/* ─── TOPBAR ─── */
+#topbar{
+  flex-shrink:0;height:46px;
+  background:var(--s1);border-bottom:1px solid var(--ln);
+  display:flex;align-items:center;padding:0 14px;gap:8px;z-index:50;
+}
+.logo{
+  font-family:var(--mono);font-size:13px;font-weight:600;
+  letter-spacing:.1em;color:var(--hi);flex-shrink:0;
+}
+.logo em{color:var(--acc);font-style:normal;}
+.tsep{width:1px;height:18px;background:var(--ln);flex-shrink:0;margin:0 2px;}
+/* preset select */
+#preset{
+  background:var(--s3);border:1px solid var(--ln);color:var(--body);
+  font-family:var(--ui);font-size:11.5px;font-weight:500;
+  padding:4px 8px;border-radius:var(--r);outline:none;cursor:pointer;
+}
+#preset:focus{border-color:var(--acc2);}
+/* target pill */
+.tpg{display:flex;gap:1px;background:var(--bg);border:1px solid var(--ln);border-radius:var(--r);padding:2px;}
+.tp{
+  padding:3px 10px;background:none;border:none;
+  color:var(--mute);font-family:var(--ui);font-size:11px;font-weight:500;
+  cursor:pointer;border-radius:5px;transition:all .12s;white-space:nowrap;
+}
+.tp:hover{color:var(--body);}
+.tp.active{background:var(--s4);color:var(--hi);box-shadow:0 1px 4px rgba(0,0,0,.4);}
+.tgap{flex:1;}
+/* icon buttons */
+.icon-btn{
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  background:none;border:1px solid var(--ln);border-radius:var(--r);
+  color:var(--mute);cursor:pointer;transition:all .12s;flex-shrink:0;font-size:14px;
+}
+.icon-btn:hover{color:var(--hi);border-color:var(--ln2);background:var(--s3);}
+.icon-btn.active{color:var(--acc);border-color:var(--acc2);background:var(--acco);}
+.icon-btn:disabled{opacity:.25;cursor:not-allowed;}
+/* text buttons */
+.txt-btn{
+  padding:5px 12px;background:none;border:1px solid var(--ln);
+  color:var(--soft);font-family:var(--ui);font-size:11.5px;font-weight:500;
+  border-radius:var(--r);cursor:pointer;transition:all .12s;white-space:nowrap;
+}
+.txt-btn:hover{color:var(--hi);border-color:var(--ln2);background:var(--s3);}
+.txt-btn:disabled{opacity:.25;cursor:not-allowed;}
+/* run button */
+#btn-run{
+  padding:6px 18px;
+  background:var(--acc);border:none;
+  color:#fff;font-family:var(--ui);font-size:12px;font-weight:600;
+  border-radius:var(--r);cursor:pointer;
+  display:flex;align-items:center;gap:7px;
+  transition:opacity .12s,transform .08s;letter-spacing:.01em;
+}
+#btn-run:hover{opacity:.86;}
+#btn-run:active{transform:scale(.96);}
+.run-icon{font-size:10px;}
+
+/* ─── WORKSPACE ─── */
+#workspace{flex:1;display:flex;overflow:hidden;min-height:0;position:relative;}
+
+/* ─── EDITORS ─── */
+#editors{flex:1;display:flex;overflow:hidden;min-height:0;transition:margin-right .28s cubic-bezier(.4,0,.2,1);}
+#editors.shifted{margin-right:var(--panel);}
+
+/* vertical split */
+#in-wrap,#out-wrap{display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0;}
+#in-wrap{border-right:1px solid var(--ln);}
+
+.ed-header{
+  flex-shrink:0;height:36px;
+  background:var(--s2);border-bottom:1px solid var(--ln);
+  display:flex;align-items:center;padding:0 12px;gap:8px;
+}
+.ed-label{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);}
+.ed-gap{flex:1;}
+.ed-act{
+  background:none;border:none;color:var(--dim);
+  font-family:var(--ui);font-size:11px;cursor:pointer;
+  padding:2px 7px;border-radius:4px;transition:all .1s;
+}
+.ed-act:hover{color:var(--body);background:var(--s3);}
+
+/* stats strip */
+#run-stats{display:none;align-items:center;gap:9px;}
+.st{font-size:10px;color:var(--mute);white-space:nowrap;}
+.st b{color:var(--soft);font-family:var(--mono);font-size:10px;font-weight:600;}
+#out-hint{font-size:10.5px;color:var(--dim);}
+
+.ed-body{flex:1;overflow:hidden;min-height:0;position:relative;}
+.ed-body .CodeMirror,.ed-body .CodeMirror-wrap{
+  height:100%;font-family:var(--mono);font-size:12.5px;line-height:1.7;
+  background:var(--s1);color:var(--hi);border:none;
+}
+.ed-body .CodeMirror-scroll{height:100%;}
+#out-wrap .ed-body .CodeMirror{background:var(--bg);}
+.CodeMirror-gutters{background:rgba(0,0,0,.2)!important;border-right:1px solid var(--ln)!important;}
+.CodeMirror-linenumber{color:var(--dim)!important;font-size:10.5px;padding:0 8px 0 6px!important;}
+.CodeMirror-cursor{border-left:2px solid var(--acc)!important;}
+.CodeMirror-selected{background:rgba(124,110,247,.14)!important;}
+.CodeMirror-focused .CodeMirror-selected{background:rgba(124,110,247,.18)!important;}
+.cm-keyword  {color:#bb9af7!important;font-weight:600;}
+.cm-def      {color:#e0af68!important;}
+.cm-variable {color:var(--hi)!important;}
+.cm-variable-2{color:#7dcfff!important;}
+.cm-string,.cm-string-2{color:#9ece6a!important;}
+.cm-number   {color:#ff9e64!important;}
+.cm-comment  {color:var(--dim)!important;font-style:italic;}
+.cm-operator {color:var(--soft)!important;}
+.cm-atom,.cm-builtin{color:#e0af68!important;}
+
+/* ─── SLIDE PANEL ─── */
+#panel{
+  position:absolute;top:0;right:0;bottom:0;width:var(--panel);
+  background:var(--s1);border-left:1px solid var(--ln);
+  display:flex;flex-direction:column;overflow:visible;
+  transform:translateX(100%);
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
+  z-index:40;
+}
+/* Clip only the panel content, not the pull tab */
+#panel-top,#panel-scroll{overflow:hidden;}
+#panel-scroll{overflow-y:auto;overflow-x:hidden;}
+#panel.open{transform:translateX(0);}
+
+/* panel top */
+#panel-top-wrap{
+  position:relative;flex-shrink:0;
+}
+#panel-top{
+  flex-shrink:0;height:36px;
+  background:var(--s2);border-bottom:1px solid var(--ln);
+  display:flex;align-items:stretch;gap:0;
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+#panel-top::-webkit-scrollbar{display:none;}
+
+/* Tab scroll hint — fades out when scrolled to end */
+#tab-scroll-hint{
+  position:absolute;right:0;top:0;height:36px;
+  display:flex;align-items:center;
+  background:linear-gradient(to right, transparent, var(--s2) 55%);
+  padding-left:20px;padding-right:6px;
+  pointer-events:none;
+  transition:opacity .25s;
+  border-bottom:1px solid var(--ln);
+}
+#tab-scroll-hint.hidden{opacity:0;}
+#tab-scroll-arrow{
+  font-size:14px;color:var(--acc);font-weight:400;
+  animation:tab-hint-pulse 2s ease-in-out infinite;
+}
+@keyframes tab-hint-pulse{0%,100%{opacity:.5;}50%{opacity:1;}}
+.stab{
+  padding:0 12px;background:none;border:none;border-bottom:2px solid transparent;
+  color:var(--mute);font-family:var(--ui);font-size:10.5px;font-weight:600;
+  cursor:pointer;white-space:nowrap;letter-spacing:.03em;text-transform:uppercase;
+  transition:color .12s,border-color .12s;flex-shrink:0;
+}
+.stab:hover{color:var(--body);}
+.stab.active{color:var(--hi);border-bottom-color:var(--acc);}
+.conflict-badge{
+  display:none;width:7px;height:7px;background:var(--amb);
+  border-radius:50%;margin-left:4px;vertical-align:middle;
+  display:inline-block;
+}
+.conflict-badge.on{background:var(--red);}
+
+/* panel scroll */
+#panel-scroll{flex:1;overflow-y:auto;overflow-x:hidden;}
+#panel-scroll::-webkit-scrollbar{width:3px;}
+#panel-scroll::-webkit-scrollbar-thumb{background:var(--ln);border-radius:2px;}
+
+/* tab panels */
+.tpanel{display:none;padding:12px 14px 24px;}
+.tpanel.active{display:block;}
+#tpanel-conflicts{display:none;padding:12px 14px;}
+#tpanel-conflicts.active{display:block;}
+
+/* ─── OPTION ROWS ─── */
+.grp{margin-bottom:18px;}
+.grp-lbl{
+  font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:6px;padding-bottom:5px;
+  border-bottom:1px solid var(--ln);
+}
+.row,.sbody .row{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  padding:6px 0;gap:10px;
+}
+.row+.row,.sbody .row+.row{border-top:1px solid rgba(255,255,255,.04);}
+.row.dim,.sbody .row.dim{opacity:.2;pointer-events:none;}
+.rl{flex:1;}
+.rl,label.rl{font-size:11.5px;color:var(--body);font-weight:500;line-height:1.3;cursor:default;}
+.rl small{display:block;font-size:10px;color:var(--mute);margin-top:2px;line-height:1.4;font-weight:400;}
+
+/* ─── TOGGLE ─── */
+.tog{position:relative;width:30px;height:17px;flex-shrink:0;cursor:pointer;margin-top:1px;}
+.tog input{display:none;}
+.tk{position:absolute;inset:0;background:var(--s5);border:1px solid var(--ln2);border-radius:17px;transition:background .15s,border-color .15s;}
+.tk::before{content:'';position:absolute;width:11px;height:11px;left:2px;top:2px;background:var(--mute);border-radius:50%;transition:transform .15s,background .15s;}
+.tog input:checked~.tk{background:var(--acc);border-color:var(--acc2);}
+.tog input:checked~.tk::before{transform:translateX(13px);background:#fff;}
+
+/* ─── SLIDER ─── */
+.sl{margin:7px 0 4px;}
+.sl-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.sl-name{font-size:10.5px;color:var(--soft);font-weight:500;}
+.sv{font-family:var(--mono);font-size:10px;color:var(--acc);font-weight:600;}
+.srow{display:flex;align-items:center;gap:6px;}
+.srow input[type=range]{
+  flex:1;height:3px;cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+  background:var(--s5);
+  border-radius:2px;outline:none;
+}
+.srow input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+  background:var(--acc);border:2px solid var(--bg);
+  box-shadow:0 0 0 1px var(--acc);cursor:pointer;
+  transition:transform .1s,box-shadow .1s;
+}
+.srow input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.22);box-shadow:0 0 0 4px rgba(124,110,247,.22);}
+.srow input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--acc);border:2px solid var(--bg);cursor:pointer;}
+.srow input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:linear-gradient(to right,var(--acc) var(--pct,0%),var(--s5) var(--pct,0%));}
+
+/* ─── FIELD ─── */
+.fld{margin-top:7px;}
+.fld-lbl{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin-bottom:3px;}
+.fi,.fsel{
+  width:100%;background:var(--s3);border:1px solid var(--ln);
+  color:var(--body);font-family:var(--mono);font-size:11px;
+  padding:5px 8px;border-radius:var(--r);outline:none;transition:border-color .12s;
+}
+.fi:focus,.fsel:focus{border-color:var(--acc2);}
+.fsel{font-family:var(--ui);font-size:11.5px;cursor:pointer;}
+.seed-row{display:flex;gap:4px;margin-top:4px;}
+.seed-row .fi{flex:1;}
+.btn-rng{
+  padding:5px 9px;background:var(--s3);border:1px solid var(--ln);
+  color:var(--soft);font-size:14px;border-radius:var(--r);cursor:pointer;
+  transition:all .1s;flex-shrink:0;
+}
+.btn-rng:hover{color:var(--hi);border-color:var(--ln2);}
+
+/* ─── MULTISELECT ─── */
+.msw{position:relative;margin-top:4px;}
+.ms-btn{
+  width:100%;display:flex;align-items:center;justify-content:space-between;
+  background:var(--s3);border:1px solid var(--ln);color:var(--body);
+  font-family:var(--ui);font-size:11.5px;padding:5px 8px;
+  border-radius:var(--r);cursor:pointer;text-align:left;gap:4px;transition:border-color .12s;
+}
+.ms-btn:hover,.ms-btn.open{border-color:var(--ln2);}
+.ms-btn.open{border-radius:var(--r) var(--r) 0 0;}
+.ms-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ms-arrow{font-size:9px;color:var(--dim);transition:transform .12s;}
+.ms-btn.open .ms-arrow{transform:rotate(180deg);}
+.ms-panel{
+  display:none;position:absolute;top:100%;left:0;right:0;z-index:200;
+  background:var(--s3);border:1px solid var(--ln2);border-top:none;
+  border-radius:0 0 var(--r) var(--r);box-shadow:0 10px 30px rgba(0,0,0,.5);
+}
+.ms-panel.open{display:block;}
+.ms-item{
+  display:flex;align-items:center;gap:8px;padding:7px 8px;cursor:pointer;
+  font-size:11.5px;color:var(--body);background:none;border:none;width:100%;text-align:left;transition:background .07s;
+}
+.ms-item:hover{background:var(--s4);}
+.ms-item input{display:none;}
+.ms-ck{width:13px;height:13px;border:1px solid var(--ln2);border-radius:3px;background:var(--s4);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .1s;}
+.ms-item input:checked~.ms-ck{background:var(--acc);border-color:var(--acc);}
+.ms-item input:checked~.ms-ck::after{content:'';display:block;width:6px;height:4px;border-left:1.5px solid #fff;border-bottom:1.5px solid #fff;transform:rotate(-45deg) translateY(-1px);}
+.ms-lbl{line-height:1.3;}
+.ms-desc{font-size:10px;color:var(--mute);display:block;}
+
+/* ─── TAGS ─── */
+.tagw{display:flex;flex-wrap:wrap;gap:3px;padding:3px 5px;margin-top:3px;background:var(--s3);border:1px solid var(--ln);border-radius:var(--r);min-height:28px;cursor:text;transition:border-color .12s;}
+.tagw:focus-within{border-color:var(--acc2);}
+.tg{display:flex;align-items:center;gap:2px;background:var(--s4);border:1px solid var(--ln2);border-radius:3px;padding:1px 5px;font-size:10.5px;color:var(--body);font-family:var(--mono);}
+.tx-btn{background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;line-height:1;transition:color .1s;}
+.tx-btn:hover{color:var(--red);}
+.ti{background:none;border:none;outline:none;font-family:var(--mono);font-size:11px;color:var(--body);min-width:50px;flex:1;padding:1px 2px;}
+
+/* ─── DOMAINS ─── */
+.drow{display:flex;gap:3px;margin-top:5px;}
+.drow .fi{flex:1;}
+.btn-add{padding:5px 9px;background:var(--s3);border:1px solid var(--ln);color:var(--soft);font-size:11px;border-radius:var(--r);cursor:pointer;transition:all .1s;white-space:nowrap;flex-shrink:0;}
+.btn-add:hover{color:var(--hi);border-color:var(--ln2);}
+.dlist{margin-top:3px;display:flex;flex-direction:column;gap:2px;max-height:70px;overflow-y:auto;}
+.di{display:flex;align-items:center;justify-content:space-between;background:var(--s3);border:1px solid var(--ln);border-radius:var(--r);padding:3px 8px;font-size:11px;font-family:var(--mono);color:var(--body);}
+.dx{background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px;transition:color .1s;}
+.dx:hover{color:var(--red);}
+
+/* ─── NOTICES ─── */
+.warn-box{margin-top:6px;padding:6px 9px;background:rgba(210,153,34,.07);border:1px solid rgba(210,153,34,.22);border-radius:var(--r);font-size:10.5px;color:var(--amb);line-height:1.5;}
+.info-box{margin-top:6px;padding:6px 9px;background:rgba(124,110,247,.07);border:1px solid rgba(124,110,247,.2);border-radius:var(--r);font-size:10.5px;color:#9b91f8;line-height:1.5;}
+.sub-sep{height:1px;background:var(--ln);margin:8px 0;}
+.sub-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin:8px 0 4px;}
+
+/* ─── VM PILLS ─── */
+.vm-pill-group{
+  display:flex;gap:3px;margin:4px 0 2px;
+  flex-wrap:wrap;
+}
+.vm-pill{
+  padding:4px 12px;
+  background:var(--s3);border:1px solid var(--ln);
+  color:var(--mute);font-family:var(--ui);font-size:11.5px;font-weight:500;
+  border-radius:20px;cursor:pointer;
+  transition:all .12s;white-space:nowrap;
+}
+.vm-pill:hover{color:var(--body);border-color:var(--ln2);}
+.vm-pill.active{
+  background:var(--acc);border-color:var(--acc);
+  color:#fff;font-weight:600;
+}
+
 /* ─── VM SEGMENT ─── */
 .seg-ctrl{display:flex;gap:2px;background:var(--bg);border:1px solid var(--ln);border-radius:var(--r);padding:2px;margin-bottom:10px;}
 .seg-btn,.vm-seg{flex:1;padding:5px 0;background:none;border:none;color:var(--mute);font-family:var(--ui);font-size:11.5px;font-weight:500;cursor:pointer;border-radius:5px;transition:all .12s;text-align:center;}
@@ -790,6 +1507,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
       <div class="tpanel" id="tpanel-output">
         <div class="grp">
           <div class="grp-lbl">Minification</div>
+          <div class="fld" style="margin-bottom:6px;">
+            <div class="fld-lbl">Strict Mode</div>
+            <select class="fsel" id="o_strict_mode">
+              <option value="always" selected>'use strict' — always prepend</option>
+              <option value="auto">Auto — only if source has it</option>
+              <option value="never">Never — strip existing</option>
+            </select>
+          </div>
           <div class="row"><label class="rl">Compact Output<small>Strip whitespace, one line</small></label><label class="tog"><input type="checkbox" id="o_mini" checked><span class="tk"></span></label></div>
           <div class="row"><label class="rl">Collapse Semicolons<small>Merge var declarations</small></label><label class="tog"><input type="checkbox" id="o_semi" checked><span class="tk"></span></label></div>
           <div class="row"><label class="rl">Simplify<small>Pre-evaluate constant expressions</small></label><label class="tog"><input type="checkbox" id="o_simplify"><span class="tk"></span></label></div>
@@ -1510,7 +2235,11 @@ function passOpaquePredicates(code){
     // Check the character AFTER the potential insertion point — if it's ) , ( then
     // we're inside an expression context (comma expr, call args, etc.) — skip.
     if(ch===';'&&RNG.next()>0.85){
-      // ; is always statement-ending — safe to insert after
+      // Skip injection after semicolons that are inside for() heads or for(;;) loops
+      // Check if we're likely in a for(;;) by looking back for an unclosed `for(`
+      const lookback=code.slice(Math.max(0,i-60),i);
+      const inForHead=(lookback.match(/for\s*\(/g)||[]).length>(lookback.match(/\)/g)||[]).length;
+      if(inForHead){i++;continue;}
       parts.push(code.slice(last,i+1));
       const pred=preds[RNG.int(preds.length)]();
       const junk1=freshId(),junk2=freshId();
@@ -1523,8 +2252,10 @@ function passOpaquePredicates(code){
       let j=i+1;
       while(j<n&&(code[j]===' '||code[j]==='\t'))j++;
       const nextNonSpace=code[j]||'';
-      const nextWord=code.slice(j,j+4);
-      if((nextNonSpace==='\n'||nextNonSpace===''||nextNonSpace==='}')&&nextWord!=='else'){
+      const nextWord5=code.slice(j,j+7);
+      const isBadNext=nextWord5.startsWith('else')||nextWord5.startsWith('catch')||
+        nextWord5.startsWith('final')||nextWord5.startsWith('while');
+      if((nextNonSpace==='\n'||nextNonSpace===''||nextNonSpace==='}')&&!isBadNext){
         parts.push(code.slice(last,i+1));
         const pred=preds[RNG.int(preds.length)]();
         const junk1=freshId(),junk2=freshId();
@@ -3100,30 +3831,39 @@ function buildSourceMap(orig){
 // at runtime using a seeded index so static call-graph analysis sees only
 // table lookups, not actual call targets.
 function passCallSiteMutation(code){
-  const table=freshId(),idx=freshId(),seed=freshId();
+  // Find renamed function declarations (_0x style only — safe to mutate)
   const fns=[];
   const declRe=/\bfunction\s+(_0x[0-9a-f]{6})\s*\(/g;
   let m;
   while((m=declRe.exec(code))!==null) fns.push(m[1]);
   if(fns.length<2)return code;
-  const chosen=fns.filter(()=>RNG.next()>.4).slice(0,Math.min(fns.length,12));
+  const chosen=fns.filter(()=>RNG.next()>.5).slice(0,Math.min(fns.length,8));
   if(chosen.length<2)return code;
-  // Build table with shuffled slot assignments
+
+  const tbl=freshId(),dispatch=freshId();
+  // Shuffle slot order
   const slots=chosen.slice().sort(()=>RNG.next()-.5);
-  const tableEntries=slots.map((fn,i)=>`${table}[${hexInt(i)}]=${fn};`).join('\n');
-  // Index map: fn name -> slot
   const slotOf=Object.fromEntries(slots.map((fn,i)=>[fn,i]));
+  const tableLen=slots.length;
+
+  // Build table init — slot → function reference
+  const tableEntries=slots.map((fn,i)=>`${tbl}[${hexInt(i)}]=${fn};`).join('\n');
   const preamble=
-    `var ${seed}=${hexInt(RNG.int(0xffff))};\n`+
-    `var ${table}=new Array(${hexInt(slots.length)});\n`+
+    `var ${tbl}=new Array(${hexInt(tableLen)});\n`+
     `(function(){\n${tableEntries}\n})();\n`+
-    `var ${idx}=function(s,i){return ${table}[(i+s)%${table}.length];};\n`;
-  // Replace chosen call sites: fn(...) → idx(seed, slot)(...)
+    // dispatch(slot) just returns tbl[slot] — simple, no seed math
+    `var ${dispatch}=function(_s){return ${tbl}[_s%${hexInt(tableLen)}];};\n`;
+
+  // Replace call sites: fn(args) → dispatch(SLOT)(args)
+  // Use a word-boundary regex that won't match inside strings or numbers
   let patched=code;
   for(const fn of chosen){
     const slot=slotOf[fn];
-    const re=new RegExp('\\b'+fn+'\\s*\\(','g');
-    patched=patched.replace(re,`${idx}(${seed},${hexInt(slot)})(`);
+    // Escape the identifier for use in a regex
+    const escaped=fn.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    // Only replace when preceded by whitespace, ;, (, {, or start — not . (method access)
+    const re=new RegExp('(?<![.\\w])'+escaped+'\\s*\\(','g');
+    patched=patched.replace(re,`${dispatch}(${hexInt(slot)})(`);
   }
   return preamble+patched;
 }
@@ -3211,35 +3951,57 @@ function passTimingCanary(code){
 // homoglyphs (e.g. Latin 'a' → Cyrillic 'а', 'o' → Greek 'ο').
 // Regex-based search tools and naive string comparisons fail silently.
 function passHomoglyphEncoding(code){
-  // Map of ASCII chars → homoglyphs (selected for JS string safety)
-  const MAP={
-    'a':'\u0430','c':'\u0441','e':'\u0435','o':'\u043e',
-    'p':'\u0440','x':'\u0445','A':'\u0410','B':'\u0412',
-    'C':'\u0421','E':'\u0415','H':'\u041d','K':'\u041a',
-    'M':'\u041c','O':'\u041e','P':'\u0420','T':'\u0422',
-    'X':'\u0425'
-  };
-  const parts=[];let i=0,n=code.length;
+  // Insert zero-width non-joiners (U+200C) into renamed identifier names.
+  // These are invisible, valid in JS identifiers (after the first char),
+  // and break all regex-based identifier matchers without affecting execution.
+  // We ONLY touch _0x identifiers (already-renamed), never string contents
+  // or base64 data, so encoding functions like atob() are never affected.
+  let result='';
+  let i=0;
+  const n=code.length;
   while(i<n){
     const ch=code[i];
-    // Only encode inside string literals
+    // Skip string literals entirely — never modify string content
     if(ch==='"'||ch==="'"){
-      const q=ch;let s=ch;i++;
+      const q=ch;result+=ch;i++;
       while(i<n){
-        const c=code[i];s+=c;i++;
-        if(c==='\\'){s+=code[i]||'';i++;}
+        const c=code[i];result+=c;i++;
+        if(c==='\\'){result+=code[i]||'';i++;}
         else if(c===q)break;
       }
-      // Apply homoglyphs to ~30% of eligible chars inside the string
-      const encoded=s.split('').map((c,idx)=>{
-        if(idx===0||idx===s.length-1)return c; // keep quotes
-        return MAP[c]&&RNG.next()>.7?MAP[c]:c;
-      }).join('');
-      parts.push(encoded);continue;
+      continue;
     }
-    parts.push(ch);i++;
+    // Skip template literals
+    if(ch==='`'){
+      result+=ch;i++;let depth=0;
+      while(i<n){
+        const c=code[i];
+        if(c==='\\'){result+=c+(code[i+1]||'');i+=2;continue;}
+        if(c==='$'&&code[i+1]==='{'){result+='${';i+=2;depth++;continue;}
+        if(c==='}'&&depth>0){result+=c;i++;depth--;continue;}
+        result+=c;i++;
+        if(c==='`'&&depth===0)break;
+      }
+      continue;
+    }
+    // Try to match a _0x identifier — these are safe to mangle
+    if(ch==='_'&&i+3<n&&code[i+1]==='0'&&code[i+2]==='x'){
+      let end=i+3;
+      while(end<n&&end-i-3<6&&'0123456789abcdef'.includes(code[end]))end++;
+      if(end-i-3===6){
+        const next=code[end];
+        if(!next||!/[a-zA-Z0-9_$]/.test(next)){
+          // Insert a zero-width non-joiner after the prefix ~40% of the time
+          const id=code.slice(i,end);
+          // Insert U+200C between _0x and the hex digits
+          result+= RNG.next()>.6 ? ('_0x‌'+id.slice(3)) : id;
+          i=end;continue;
+        }
+      }
+    }
+    result+=ch;i++;
   }
-  return parts.join('');
+  return result;
 }
 
 // ── NEW: Control Flow Hash ─────────────────────────────────────────────────
@@ -3248,15 +4010,18 @@ function passHomoglyphEncoding(code){
 // At the end, the accumulator must equal a precomputed expected value —
 // if the code is patched or blocks are skipped/reordered, the check fails.
 function passControlFlowHash(code){
-  const acc=freshId(),expected=freshId();
-  // Pick 3 random XOR keys
+  // Wrap the user code in an IIFE whose result is XOR'd into an accumulator.
+  // This avoids injecting bare statements that interact with surrounding code.
+  const acc=freshId(),expected=freshId(),inner=freshId(),chkfn=freshId();
   const k1=RNG.int(0x7fff)+1,k2=RNG.int(0x7fff)+1,k3=RNG.int(0x7fff)+1;
   const finalVal=((k1^k2)^k3)>>>0;
+  // The code runs inside a function so our XOR statements are completely isolated
   const out=
     `var ${acc}=${hexInt(0)};\n`+
     `${acc}^=${hexInt(k1)};\n`+
-    code+
-    `\n${acc}^=${hexInt(k2)};\n`+
+    `var ${inner}=function(){\n${code}\n};\n`+
+    `${inner}();\n`+
+    `${acc}^=${hexInt(k2)};\n`+
     `${acc}^=${hexInt(k3)};\n`+
     `var ${expected}=${hexInt(finalVal)};\n`+
     `if(${acc}!==${expected}){for(;;){}}\n`;
@@ -3350,7 +4115,12 @@ function obfuscate(src,opts){
   if(opts.proxywrap)  code=passProxyWrap(code);
   // Unicode mangle — skip when Bytecode VM or Opcode VM active (causes SyntaxError in new Function string)
   if(opts.unimangle&&(_vmMode==='none'))code=passUnicodeMangle(code);
-  if(opts.strict)code="'use strict';\n"+code;
+  // strict mode handling
+  const _sm=opts.strict_mode||opts.strict||'always';
+  if(_sm==='always'){code="'use strict';\n"+code;}
+  else if(_sm==='auto'){if(/['"]use strict['"]/.test(src))code="'use strict';\n"+code;}
+  // 'never' = strip any existing 'use strict'
+  else if(_sm==='never'){code=code.replace(/^['"]use strict['"];?\n?/,'');}
   if(importLines.length)code=importLines.join('\n')+'\n'+code;
   if(_tmHdr)code=_tmHdr+code;
   return{code,st};
@@ -3417,7 +4187,7 @@ function liveCheck(){
 function getOpts(){
   return{
     html:     CHK('o_html'),
-    strict:   true,  // always on
+    strict:   VAL('o_strict_mode')||'always',
     mini:     CHK('o_mini'),
     semi:     CHK('o_semi'),
     simplify: CHK('o_simplify'),
@@ -3544,7 +4314,7 @@ function applyVmMode(mode){
   const en=G('o_vm_enable');if(en)en.checked=true;
   const modeRow=G('vm-mode-row');if(modeRow)modeRow.style.display='block';
   // Update segment buttons (only bytecode/opcode now)
-  document.querySelectorAll('.vm-seg').forEach(b=>b.classList.toggle('active',b.dataset.vm===mode));
+  document.querySelectorAll('.vm-seg,.vm-pill').forEach(b=>b.classList.toggle('active',b.dataset.vm===mode));
   // Show correct sub-panel
   showSub('bc-sub',mode==='bytecode');
   showSub('ovm-sub',mode==='opcode');
@@ -3948,7 +4718,7 @@ function saveSettings(){
       data['sl_'+el.id]=el.value;
     });
     // Text inputs / selects
-    ['seed-val','o_idpfx','o_namegen','o_domredir','o_smap_url','o_smap_root','o_vm_mode'].forEach(id=>{
+    ['seed-val','o_idpfx','o_namegen','o_domredir','o_smap_url','o_smap_root','o_vm_mode','o_strict_mode'].forEach(id=>{
       const e=G(id);if(e)data['tx_'+id]=e.value;
     });
     // Tag inputs
@@ -3994,7 +4764,7 @@ function loadSettings(){
     });
 
     // Text inputs + selects
-    ['seed-val','o_idpfx','o_namegen','o_domredir','o_smap_url','o_smap_root','o_vm_mode'].forEach(id=>{
+    ['seed-val','o_idpfx','o_namegen','o_domredir','o_smap_url','o_smap_root','o_vm_mode','o_strict_mode'].forEach(id=>{
       if(data['tx_'+id]!==undefined){const e=G(id);if(e)e.value=data['tx_'+id];}
     });
 
@@ -4094,7 +4864,7 @@ window.addEventListener('load',()=>{
     showSub('bc-sub',_showBc);
     showSub('ovm-sub',_showOvm);
     // Sync mode segment buttons
-    document.querySelectorAll('.vm-seg').forEach(b=>b.classList.toggle('active',b.dataset.vm===vm));
+    document.querySelectorAll('.vm-seg,.vm-pill').forEach(b=>b.classList.toggle('active',b.dataset.vm===vm));
     // Sync info boxes
     const _infoMap={none:'none',bytecode:'bc',opcode:'ovm'};
     ['none','bc','ovm'].forEach(k=>{const e=G('vm-info-'+k);if(e)e.style.display='none';});
