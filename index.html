@@ -3,1060 +3,730 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Obscura — JS Obfuscator</title>
+<title>Obscura</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.css">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* ═══════════════════════════════════════════════
-   TOKENS
-═══════════════════════════════════════════════ */
-:root {
-  --bg:     #0c0c0e;
-  --s1:     #111114;
-  --s2:     #17171b;
-  --s3:     #1d1d22;
-  --s4:     #242429;
-  --line:   #2c2c34;
-  --line2:  #3a3a44;
-  --dim:    #46464f;
-  --mute:   #68687a;
-  --soft:   #9898aa;
-  --body:   #c8c8d8;
-  --hi:     #eeeef4;
-  --acc:    #7c6ef7;
-  --acc2:   #5b50c8;
-  --acc-lo: rgba(124,110,247,.12);
-  --acc-glo:rgba(124,110,247,.06);
-  --grn:    #3fb950;
-  --red:    #f85149;
-  --amb:    #d29922;
-  --r:      5px;
-  --r2:     9px;
-  --mono:   'JetBrains Mono', monospace;
-  --head:   'Syne', system-ui, sans-serif;
-  --ui:     'DM Sans', system-ui, sans-serif;
+/* ─── TOKENS ─── */
+:root{
+  --bg:    #0d0d10;
+  --s1:    #121216;
+  --s2:    #18181d;
+  --s3:    #1f1f26;
+  --s4:    #27272f;
+  --s5:    #2f2f38;
+  --ln:    #2e2e38;
+  --ln2:   #3e3e4a;
+  --dim:   #4a4a58;
+  --mute:  #6c6c80;
+  --soft:  #9494aa;
+  --body:  #c8c8da;
+  --hi:    #eeeef6;
+  --acc:   #7c6ef7;
+  --acc2:  #5b50c8;
+  --acco:  rgba(124,110,247,.08);
+  --accb:  rgba(124,110,247,.16);
+  --grn:   #3fb950;
+  --red:   #f85149;
+  --amb:   #d29922;
+  --r:     6px;
+  --panel: 320px;
+  --mono:  'JetBrains Mono', monospace;
+  --ui:    'Inter', system-ui, sans-serif;
 }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);font-family:var(--ui);font-size:12.5px;-webkit-font-smoothing:antialiased;}
 
-*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body {
-  background: var(--bg);
-  color: var(--body);
-  font-family: var(--ui);
-  font-size: 13px;
-  -webkit-font-smoothing: antialiased;
-  min-height: 100vh;
-}
+/* ─── APP ─── */
+#app{display:flex;flex-direction:column;height:100vh;}
 
-/* ═══════════════════════════════════════════════
-   NAV
-═══════════════════════════════════════════════ */
-#nav {
-  position: sticky; top: 0; z-index: 100;
-  background: rgba(12,12,14,.85);
-  backdrop-filter: blur(16px) saturate(1.4);
-  border-bottom: 1px solid var(--line);
-  display: flex; align-items: center;
-  padding: 0 28px; height: 52px; gap: 10px;
+/* ─── TOPBAR ─── */
+#topbar{
+  flex-shrink:0;height:46px;
+  background:var(--s1);border-bottom:1px solid var(--ln);
+  display:flex;align-items:center;padding:0 14px;gap:8px;z-index:50;
 }
-.nav-logo {
-  font-family: var(--head);
-  font-size: 17px; font-weight: 800;
-  letter-spacing: -.01em;
-  color: var(--hi); flex-shrink: 0;
+.logo{
+  font-family:var(--mono);font-size:13px;font-weight:600;
+  letter-spacing:.1em;color:var(--hi);flex-shrink:0;
 }
-.nav-logo em { color: var(--acc); font-style: normal; }
-.nav-gap { flex: 1; }
-.nav-links { display: flex; align-items: center; gap: 2px; }
-.nav-link {
-  padding: 5px 12px;
-  background: none; border: none;
-  color: var(--mute); font-family: var(--ui);
-  font-size: 12.5px; font-weight: 500;
-  cursor: pointer; border-radius: var(--r);
-  transition: color .15s, background .15s;
-  text-decoration: none;
+.logo em{color:var(--acc);font-style:normal;}
+.tsep{width:1px;height:18px;background:var(--ln);flex-shrink:0;margin:0 2px;}
+/* preset select */
+#preset{
+  background:var(--s3);border:1px solid var(--ln);color:var(--body);
+  font-family:var(--ui);font-size:11.5px;font-weight:500;
+  padding:4px 8px;border-radius:var(--r);outline:none;cursor:pointer;
 }
-.nav-link:hover { color: var(--body); background: var(--s3); }
-/* target pill group */
-.pill-grp {
-  display: flex; gap: 1px;
-  background: var(--s2); border: 1px solid var(--line);
-  border-radius: var(--r); padding: 2px;
+#preset:focus{border-color:var(--acc2);}
+/* target pill */
+.tpg{display:flex;gap:1px;background:var(--bg);border:1px solid var(--ln);border-radius:var(--r);padding:2px;}
+.tp{
+  padding:3px 10px;background:none;border:none;
+  color:var(--mute);font-family:var(--ui);font-size:11px;font-weight:500;
+  cursor:pointer;border-radius:5px;transition:all .12s;white-space:nowrap;
 }
-.tp {
-  padding: 3px 10px; background: none; border: none;
-  color: var(--mute); font-family: var(--ui);
-  font-size: 11.5px; font-weight: 500;
-  cursor: pointer; border-radius: 4px;
-  transition: all .12s;
+.tp:hover{color:var(--body);}
+.tp.active{background:var(--s4);color:var(--hi);box-shadow:0 1px 4px rgba(0,0,0,.4);}
+.tgap{flex:1;}
+/* icon buttons */
+.icon-btn{
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  background:none;border:1px solid var(--ln);border-radius:var(--r);
+  color:var(--mute);cursor:pointer;transition:all .12s;flex-shrink:0;font-size:14px;
 }
-.tp:hover { color: var(--body); }
-.tp.active { background: var(--s4); color: var(--hi); box-shadow: 0 1px 3px rgba(0,0,0,.5); }
-/* preset */
-#preset {
-  background: var(--s3); border: 1px solid var(--line);
-  color: var(--body); font-family: var(--ui);
-  font-size: 12px; padding: 4px 8px;
-  border-radius: var(--r); outline: none; cursor: pointer;
+.icon-btn:hover{color:var(--hi);border-color:var(--ln2);background:var(--s3);}
+.icon-btn.active{color:var(--acc);border-color:var(--acc2);background:var(--acco);}
+.icon-btn:disabled{opacity:.25;cursor:not-allowed;}
+/* text buttons */
+.txt-btn{
+  padding:5px 12px;background:none;border:1px solid var(--ln);
+  color:var(--soft);font-family:var(--ui);font-size:11.5px;font-weight:500;
+  border-radius:var(--r);cursor:pointer;transition:all .12s;white-space:nowrap;
 }
-#preset:focus { border-color: var(--acc2); }
-.nav-btn {
-  padding: 5px 12px;
-  background: none; border: 1px solid var(--line);
-  color: var(--soft); font-family: var(--ui);
-  font-size: 12px; font-weight: 500;
-  border-radius: var(--r); cursor: pointer;
-  transition: all .12s; white-space: nowrap;
+.txt-btn:hover{color:var(--hi);border-color:var(--ln2);background:var(--s3);}
+.txt-btn:disabled{opacity:.25;cursor:not-allowed;}
+/* run button */
+#btn-run{
+  padding:6px 18px;
+  background:var(--acc);border:none;
+  color:#fff;font-family:var(--ui);font-size:12px;font-weight:600;
+  border-radius:var(--r);cursor:pointer;
+  display:flex;align-items:center;gap:7px;
+  transition:opacity .12s,transform .08s;letter-spacing:.01em;
 }
-.nav-btn:hover { color: var(--hi); border-color: var(--line2); background: var(--s3); }
-.nav-btn:disabled { opacity: .25; cursor: not-allowed; }
-#btn-run {
-  padding: 5px 18px;
-  background: var(--acc); border: 1px solid var(--acc);
-  color: #fff; font-family: var(--head);
-  font-size: 12px; font-weight: 700;
-  border-radius: var(--r); cursor: pointer;
-  transition: opacity .12s, transform .08s;
-  letter-spacing: .02em;
-}
-#btn-run:hover { opacity: .87; }
-#btn-run:active { transform: scale(.96); }
+#btn-run:hover{opacity:.86;}
+#btn-run:active{transform:scale(.96);}
+.run-icon{font-size:10px;}
 
-/* ═══════════════════════════════════════════════
-   HERO
-═══════════════════════════════════════════════ */
-#hero {
-  padding: 72px 28px 56px;
-  display: flex; flex-direction: column;
-  align-items: flex-start; position: relative;
-  overflow: hidden;
-}
-#hero::before {
-  content: '';
-  position: absolute; inset: 0;
-  background:
-    radial-gradient(ellipse 60% 50% at 70% 30%, rgba(124,110,247,.12) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 60% at 20% 80%, rgba(91,80,200,.08) 0%, transparent 60%);
-  pointer-events: none;
-}
-.hero-tag {
-  font-family: var(--mono); font-size: 11px;
-  color: var(--acc); font-weight: 600;
-  letter-spacing: .12em; text-transform: uppercase;
-  border: 1px solid rgba(124,110,247,.3);
-  background: var(--acc-lo);
-  padding: 3px 10px; border-radius: 20px;
-  margin-bottom: 20px;
-}
-.hero-title {
-  font-family: var(--head);
-  font-size: clamp(36px, 5vw, 60px);
-  font-weight: 800; line-height: 1.05;
-  letter-spacing: -.02em;
-  color: var(--hi);
-  max-width: 640px;
-  margin-bottom: 16px;
-}
-.hero-title span { color: var(--acc); }
-.hero-sub {
-  font-size: 15px; color: var(--soft);
-  max-width: 500px; line-height: 1.65;
-  margin-bottom: 32px; font-weight: 300;
-}
-.hero-pills {
-  display: flex; flex-wrap: wrap; gap: 8px;
-}
-.hero-pill {
-  display: flex; align-items: center; gap: 6px;
-  padding: 5px 12px;
-  background: var(--s2); border: 1px solid var(--line);
-  border-radius: 20px; font-size: 11.5px;
-  color: var(--soft); font-weight: 500;
-}
-.hero-pill .dot {
-  width: 5px; height: 5px; border-radius: 50%;
-  background: var(--acc); flex-shrink: 0;
-}
+/* ─── WORKSPACE ─── */
+#workspace{flex:1;display:flex;overflow:hidden;min-height:0;position:relative;}
 
-/* ═══════════════════════════════════════════════
-   MAIN EDITOR WORKSPACE
-═══════════════════════════════════════════════ */
-#workspace {
-  padding: 0 28px 28px;
-  display: flex; flex-direction: column; gap: 0;
-}
+/* ─── EDITORS ─── */
+#editors{flex:1;display:flex;overflow:hidden;min-height:0;transition:margin-right .28s cubic-bezier(.4,0,.2,1);}
+#editors.shifted{margin-right:var(--panel);}
 
-/* editor cards */
-.editor-card {
-  background: var(--s1);
-  border: 1px solid var(--line);
-  border-radius: var(--r2);
-  overflow: hidden;
-}
-.editor-card + .editor-card { margin-top: 12px; }
+/* vertical split */
+#in-wrap,#out-wrap{display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0;}
+#in-wrap{border-right:1px solid var(--ln);}
 
-.ed-toolbar {
-  display: flex; align-items: center;
-  padding: 0 12px; height: 38px; gap: 8px;
-  border-bottom: 1px solid var(--line);
-  background: var(--s2);
+.ed-header{
+  flex-shrink:0;height:36px;
+  background:var(--s2);border-bottom:1px solid var(--ln);
+  display:flex;align-items:center;padding:0 12px;gap:8px;
 }
-.ed-title {
-  font-family: var(--mono); font-size: 10px;
-  font-weight: 600; letter-spacing: .1em;
-  text-transform: uppercase; color: var(--mute);
+.ed-label{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);}
+.ed-gap{flex:1;}
+.ed-act{
+  background:none;border:none;color:var(--dim);
+  font-family:var(--ui);font-size:11px;cursor:pointer;
+  padding:2px 7px;border-radius:4px;transition:all .1s;
 }
-.ed-gap { flex: 1; }
-.ed-btn {
-  padding: 3px 9px; background: none;
-  border: 1px solid transparent; color: var(--dim);
-  font-family: var(--ui); font-size: 11.5px;
-  border-radius: var(--r); cursor: pointer;
-  transition: all .1s;
-}
-.ed-btn:hover { color: var(--body); border-color: var(--line); background: var(--s3); }
+.ed-act:hover{color:var(--body);background:var(--s3);}
 
-/* run stats */
-#run-stats { display: none; align-items: center; gap: 12px; }
-.stat { font-size: 10.5px; color: var(--mute); white-space: nowrap; }
-.stat b { color: var(--soft); font-family: var(--mono); font-weight: 600; }
-#out-hint { font-size: 10.5px; color: var(--dim); }
+/* stats strip */
+#run-stats{display:none;align-items:center;gap:9px;}
+.st{font-size:10px;color:var(--mute);white-space:nowrap;}
+.st b{color:var(--soft);font-family:var(--mono);font-size:10px;font-weight:600;}
+#out-hint{font-size:10.5px;color:var(--dim);}
 
-/* editors — fixed height with CodeMirror inside */
-.ed-body {
-  height: 320px; position: relative; overflow: hidden;
+.ed-body{flex:1;overflow:hidden;min-height:0;position:relative;}
+.ed-body .CodeMirror,.ed-body .CodeMirror-wrap{
+  height:100%;font-family:var(--mono);font-size:12.5px;line-height:1.7;
+  background:var(--s1);color:var(--hi);border:none;
 }
-.ed-body .CodeMirror {
-  height: 100%; font-family: var(--mono); font-size: 12.5px;
-  line-height: 1.7; background: var(--s1); color: var(--hi); border: none;
-}
-.ed-body .CodeMirror-scroll { height: 100%; }
-#out-editor-wrap .CodeMirror { background: var(--bg); }
-.CodeMirror-gutters { background: rgba(0,0,0,.2) !important; border-right: 1px solid var(--line) !important; }
-.CodeMirror-linenumber { color: var(--dim) !important; font-size: 10.5px; padding: 0 8px 0 6px !important; }
-.CodeMirror-cursor { border-left: 2px solid var(--acc) !important; }
-.CodeMirror-selected { background: rgba(124,110,247,.15) !important; }
-.CodeMirror-focused .CodeMirror-selected { background: rgba(124,110,247,.2) !important; }
-.cm-keyword  { color: #bb9af7 !important; font-weight: 600; }
-.cm-def      { color: #e0af68 !important; }
-.cm-variable { color: var(--hi) !important; }
-.cm-variable-2 { color: #7dcfff !important; }
-.cm-string   { color: #9ece6a !important; }
-.cm-string-2 { color: #9ece6a !important; }
-.cm-number   { color: #ff9e64 !important; }
-.cm-comment  { color: var(--dim) !important; font-style: italic; }
-.cm-operator { color: var(--soft) !important; }
-.cm-atom     { color: #ff9e64 !important; }
-.cm-builtin  { color: #e0af68 !important; }
-.cm-bracket  { color: var(--soft) !important; }
+.ed-body .CodeMirror-scroll{height:100%;}
+#out-wrap .ed-body .CodeMirror{background:var(--bg);}
+.CodeMirror-gutters{background:rgba(0,0,0,.2)!important;border-right:1px solid var(--ln)!important;}
+.CodeMirror-linenumber{color:var(--dim)!important;font-size:10.5px;padding:0 8px 0 6px!important;}
+.CodeMirror-cursor{border-left:2px solid var(--acc)!important;}
+.CodeMirror-selected{background:rgba(124,110,247,.14)!important;}
+.CodeMirror-focused .CodeMirror-selected{background:rgba(124,110,247,.18)!important;}
+.cm-keyword  {color:#bb9af7!important;font-weight:600;}
+.cm-def      {color:#e0af68!important;}
+.cm-variable {color:var(--hi)!important;}
+.cm-variable-2{color:#7dcfff!important;}
+.cm-string,.cm-string-2{color:#9ece6a!important;}
+.cm-number   {color:#ff9e64!important;}
+.cm-comment  {color:var(--dim)!important;font-style:italic;}
+.cm-operator {color:var(--soft)!important;}
+.cm-atom,.cm-builtin{color:#e0af68!important;}
 
-/* ═══════════════════════════════════════════════
-   SETTINGS GRID
-═══════════════════════════════════════════════ */
-#settings {
-  padding: 0 28px 60px;
+/* ─── SLIDE PANEL ─── */
+#panel{
+  position:absolute;top:0;right:0;bottom:0;width:var(--panel);
+  background:var(--s1);border-left:1px solid var(--ln);
+  display:flex;flex-direction:column;overflow:hidden;
+  transform:translateX(100%);
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
+  z-index:40;
 }
-.settings-header {
-  padding: 40px 0 24px;
-  display: flex; align-items: baseline; gap: 12px;
-}
-.settings-title {
-  font-family: var(--head);
-  font-size: 22px; font-weight: 700;
-  color: var(--hi); letter-spacing: -.01em;
-}
-.settings-count {
-  font-family: var(--mono); font-size: 11px;
-  color: var(--acc); font-weight: 600;
-}
+#panel.open{transform:translateX(0);}
 
-/* accordion grid */
-.accordion-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 10px;
+/* panel top */
+#panel-top{
+  flex-shrink:0;height:36px;
+  background:var(--s2);border-bottom:1px solid var(--ln);
+  display:flex;align-items:stretch;gap:0;
+  overflow-x:auto;
 }
+#panel-top::-webkit-scrollbar{display:none;}
+.stab{
+  padding:0 12px;background:none;border:none;border-bottom:2px solid transparent;
+  color:var(--mute);font-family:var(--ui);font-size:10.5px;font-weight:600;
+  cursor:pointer;white-space:nowrap;letter-spacing:.03em;text-transform:uppercase;
+  transition:color .12s,border-color .12s;flex-shrink:0;
+}
+.stab:hover{color:var(--body);}
+.stab.active{color:var(--hi);border-bottom-color:var(--acc);}
+.conflict-badge{
+  display:none;width:7px;height:7px;background:var(--amb);
+  border-radius:50%;margin-left:4px;vertical-align:middle;
+  display:inline-block;
+}
+.conflict-badge.on{background:var(--red);}
 
-/* accordion card */
-.acc-card {
-  background: var(--s1);
-  border: 1px solid var(--line);
-  border-radius: var(--r2);
-  overflow: hidden;
-  transition: border-color .15s;
-}
-.acc-card:hover { border-color: var(--line2); }
-.acc-card.open { border-color: var(--line2); }
+/* panel scroll */
+#panel-scroll{flex:1;overflow-y:auto;overflow-x:hidden;}
+#panel-scroll::-webkit-scrollbar{width:3px;}
+#panel-scroll::-webkit-scrollbar-thumb{background:var(--ln);border-radius:2px;}
 
-.acc-head {
-  display: flex; align-items: center;
-  padding: 14px 16px; gap: 12px;
-  cursor: pointer; user-select: none;
-  background: none; border: none; width: 100%;
-  text-align: left;
-  transition: background .1s;
-}
-.acc-head:hover { background: var(--s2); }
-.acc-icon {
-  width: 32px; height: 32px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px; flex-shrink: 0;
-  background: var(--acc-lo); border: 1px solid rgba(124,110,247,.2);
-}
-.acc-info { flex: 1; }
-.acc-name {
-  font-family: var(--head); font-size: 13.5px;
-  font-weight: 700; color: var(--hi);
-  letter-spacing: -.01em;
-}
-.acc-desc {
-  font-size: 11px; color: var(--mute);
-  margin-top: 1px; line-height: 1.4;
-}
-.acc-arrow {
-  font-size: 10px; color: var(--dim);
-  transition: transform .2s; flex-shrink: 0;
-}
-.acc-card.open .acc-arrow { transform: rotate(180deg); }
-.acc-count {
-  font-family: var(--mono); font-size: 10px;
-  color: var(--acc); font-weight: 600;
-  background: var(--acc-lo); border: 1px solid rgba(124,110,247,.25);
-  border-radius: 3px; padding: 1px 5px;
-  flex-shrink: 0;
-}
+/* tab panels */
+.tpanel{display:none;padding:12px 14px 24px;}
+.tpanel.active{display:block;}
+#tpanel-conflicts{display:none;padding:12px 14px;}
+#tpanel-conflicts.active{display:block;}
 
-.acc-body {
-  display: none;
-  border-top: 1px solid var(--line);
-  padding: 12px 16px 14px;
+/* ─── OPTION ROWS ─── */
+.grp{margin-bottom:18px;}
+.grp-lbl{
+  font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:6px;padding-bottom:5px;
+  border-bottom:1px solid var(--ln);
 }
-.acc-card.open .acc-body { display: block; }
+.row,.sbody .row{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  padding:6px 0;gap:10px;
+}
+.row+.row,.sbody .row+.row{border-top:1px solid rgba(255,255,255,.04);}
+.row.dim,.sbody .row.dim{opacity:.2;pointer-events:none;}
+.rl{flex:1;}
+.rl,label.rl{font-size:11.5px;color:var(--body);font-weight:500;line-height:1.3;cursor:default;}
+.rl small{display:block;font-size:10px;color:var(--mute);margin-top:2px;line-height:1.4;font-weight:400;}
 
-/* ═══════════════════════════════════════════════
-   OPTION ROWS inside accordion
-═══════════════════════════════════════════════ */
-.o-row, .sbody .row {
-  display: flex; align-items: flex-start;
-  justify-content: space-between;
-  padding: 7px 0; gap: 12px;
-}
-.o-row + .o-row,
-.sbody .row + .row {
-  border-top: 1px solid rgba(255,255,255,.04);
-}
-.o-row.dim, .sbody .row.dim {
-  opacity: .2; pointer-events: none;
-}
+/* ─── TOGGLE ─── */
+.tog{position:relative;width:30px;height:17px;flex-shrink:0;cursor:pointer;margin-top:1px;}
+.tog input{display:none;}
+.tk{position:absolute;inset:0;background:var(--s5);border:1px solid var(--ln2);border-radius:17px;transition:background .15s,border-color .15s;}
+.tk::before{content:'';position:absolute;width:11px;height:11px;left:2px;top:2px;background:var(--mute);border-radius:50%;transition:transform .15s,background .15s;}
+.tog input:checked~.tk{background:var(--acc);border-color:var(--acc2);}
+.tog input:checked~.tk::before{transform:translateX(13px);background:#fff;}
 
-.rl, .o-label { flex: 1; }
-.rl, .o-label > .name {
-  font-size: 12px; color: var(--body);
-  font-weight: 500; line-height: 1.3;
+/* ─── SLIDER ─── */
+.sl{margin:7px 0 4px;}
+.sl-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.sl-name{font-size:10.5px;color:var(--soft);font-weight:500;}
+.sv{font-family:var(--mono);font-size:10px;color:var(--acc);font-weight:600;}
+.srow{display:flex;align-items:center;gap:6px;}
+.srow input[type=range]{
+  flex:1;height:3px;cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+  background:var(--s5);border-radius:2px;outline:none;
 }
-.rl small, .o-label > .desc {
-  display: block; font-size: 10.5px;
-  color: var(--mute); margin-top: 2px; line-height: 1.4;
+.srow input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+  background:var(--acc);border:2px solid var(--bg);
+  box-shadow:0 0 0 1px var(--acc);cursor:pointer;
+  transition:transform .1s,box-shadow .1s;
 }
+.srow input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.22);box-shadow:0 0 0 4px rgba(124,110,247,.22);}
+.srow input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--acc);border:2px solid var(--bg);cursor:pointer;}
 
-/* sub-group label */
-.o-sub-label {
-  font-size: 9.5px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .08em;
-  color: var(--dim); margin: 10px 0 4px;
+/* ─── FIELD ─── */
+.fld{margin-top:7px;}
+.fld-lbl{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin-bottom:3px;}
+.fi,.fsel{
+  width:100%;background:var(--s3);border:1px solid var(--ln);
+  color:var(--body);font-family:var(--mono);font-size:11px;
+  padding:5px 8px;border-radius:var(--r);outline:none;transition:border-color .12s;
 }
-.o-sep { height: 1px; background: var(--line); margin: 8px 0; }
+.fi:focus,.fsel:focus{border-color:var(--acc2);}
+.fsel{font-family:var(--ui);font-size:11.5px;cursor:pointer;}
+.seed-row{display:flex;gap:4px;margin-top:4px;}
+.seed-row .fi{flex:1;}
+.btn-rng{
+  padding:5px 9px;background:var(--s3);border:1px solid var(--ln);
+  color:var(--soft);font-size:14px;border-radius:var(--r);cursor:pointer;
+  transition:all .1s;flex-shrink:0;
+}
+.btn-rng:hover{color:var(--hi);border-color:var(--ln2);}
 
-/* ── Toggle ── */
-.tog { position: relative; width: 32px; height: 18px; flex-shrink: 0; cursor: pointer; margin-top: 1px; }
-.tog input { display: none; }
-.tk {
-  position: absolute; inset: 0;
-  background: var(--s4); border: 1px solid var(--line2);
-  border-radius: 18px; transition: background .15s, border-color .15s;
+/* ─── MULTISELECT ─── */
+.msw{position:relative;margin-top:4px;}
+.ms-btn{
+  width:100%;display:flex;align-items:center;justify-content:space-between;
+  background:var(--s3);border:1px solid var(--ln);color:var(--body);
+  font-family:var(--ui);font-size:11.5px;padding:5px 8px;
+  border-radius:var(--r);cursor:pointer;text-align:left;gap:4px;transition:border-color .12s;
 }
-.tk::before {
-  content: ''; position: absolute;
-  width: 11px; height: 11px; left: 3px; top: 3px;
-  background: var(--mute); border-radius: 50%;
-  transition: transform .15s, background .15s;
+.ms-btn:hover,.ms-btn.open{border-color:var(--ln2);}
+.ms-btn.open{border-radius:var(--r) var(--r) 0 0;}
+.ms-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ms-arrow{font-size:9px;color:var(--dim);transition:transform .12s;}
+.ms-btn.open .ms-arrow{transform:rotate(180deg);}
+.ms-panel{
+  display:none;position:absolute;top:100%;left:0;right:0;z-index:200;
+  background:var(--s3);border:1px solid var(--ln2);border-top:none;
+  border-radius:0 0 var(--r) var(--r);box-shadow:0 10px 30px rgba(0,0,0,.5);
 }
-.tog input:checked ~ .tk { background: var(--acc); border-color: var(--acc2); }
-.tog input:checked ~ .tk::before { transform: translateX(14px); background: #fff; }
+.ms-panel.open{display:block;}
+.ms-item{
+  display:flex;align-items:center;gap:8px;padding:7px 8px;cursor:pointer;
+  font-size:11.5px;color:var(--body);background:none;border:none;width:100%;text-align:left;transition:background .07s;
+}
+.ms-item:hover{background:var(--s4);}
+.ms-item input{display:none;}
+.ms-ck{width:13px;height:13px;border:1px solid var(--ln2);border-radius:3px;background:var(--s4);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .1s;}
+.ms-item input:checked~.ms-ck{background:var(--acc);border-color:var(--acc);}
+.ms-item input:checked~.ms-ck::after{content:'';display:block;width:6px;height:4px;border-left:1.5px solid #fff;border-bottom:1.5px solid #fff;transform:rotate(-45deg) translateY(-1px);}
+.ms-lbl{line-height:1.3;}
+.ms-desc{font-size:10px;color:var(--mute);display:block;}
 
-/* ── Slider ── */
-.o-slider { margin: 8px 0 4px; }
-.o-slider-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-.o-slider-name { font-size: 11px; color: var(--soft); font-weight: 500; }
-.sv, .o-slider-val { font-family: var(--mono); font-size: 10.5px; color: var(--acc); font-weight: 600; }
-.srow { display: flex; align-items: center; gap: 8px; }
-.srow input[type=range] {
-  flex: 1; height: 4px; cursor: pointer;
-  -webkit-appearance: none; appearance: none;
-  background: var(--s4); border-radius: 2px; outline: none;
-}
-.srow input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 14px; height: 14px;
-  border-radius: 50%; background: var(--acc);
-  border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--acc);
-  cursor: pointer; transition: transform .1s, box-shadow .1s;
-}
-.srow input[type=range]::-webkit-slider-thumb:hover {
-  transform: scale(1.2); box-shadow: 0 0 0 4px rgba(124,110,247,.25);
-}
-.srow input[type=range]::-moz-range-thumb {
-  width: 14px; height: 14px; border-radius: 50%;
-  background: var(--acc); border: 2px solid var(--bg); cursor: pointer;
-}
+/* ─── TAGS ─── */
+.tagw{display:flex;flex-wrap:wrap;gap:3px;padding:3px 5px;margin-top:3px;background:var(--s3);border:1px solid var(--ln);border-radius:var(--r);min-height:28px;cursor:text;transition:border-color .12s;}
+.tagw:focus-within{border-color:var(--acc2);}
+.tg{display:flex;align-items:center;gap:2px;background:var(--s4);border:1px solid var(--ln2);border-radius:3px;padding:1px 5px;font-size:10.5px;color:var(--body);font-family:var(--mono);}
+.tx-btn{background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;line-height:1;transition:color .1s;}
+.tx-btn:hover{color:var(--red);}
+.ti{background:none;border:none;outline:none;font-family:var(--mono);font-size:11px;color:var(--body);min-width:50px;flex:1;padding:1px 2px;}
 
-/* ── Select / Input ── */
-.o-field { margin-top: 8px; }
-.o-field-label { font-size: 10.5px; color: var(--mute); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
-.fi, .fsel {
-  width: 100%; background: var(--s3); border: 1px solid var(--line);
-  color: var(--body); font-family: var(--mono); font-size: 11.5px;
-  padding: 5px 9px; border-radius: var(--r); outline: none;
-  transition: border-color .12s;
-}
-.fi:focus, .fsel:focus { border-color: var(--acc2); }
-.fsel { font-family: var(--ui); cursor: pointer; }
+/* ─── DOMAINS ─── */
+.drow{display:flex;gap:3px;margin-top:5px;}
+.drow .fi{flex:1;}
+.btn-add{padding:5px 9px;background:var(--s3);border:1px solid var(--ln);color:var(--soft);font-size:11px;border-radius:var(--r);cursor:pointer;transition:all .1s;white-space:nowrap;flex-shrink:0;}
+.btn-add:hover{color:var(--hi);border-color:var(--ln2);}
+.dlist{margin-top:3px;display:flex;flex-direction:column;gap:2px;max-height:70px;overflow-y:auto;}
+.di{display:flex;align-items:center;justify-content:space-between;background:var(--s3);border:1px solid var(--ln);border-radius:var(--r);padding:3px 8px;font-size:11px;font-family:var(--mono);color:var(--body);}
+.dx{background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px;transition:color .1s;}
+.dx:hover{color:var(--red);}
 
-/* seed row */
-.seed-row { display: flex; gap: 6px; margin-top: 4px; }
-.seed-row .fi { flex: 1; }
-.btn-rng {
-  padding: 5px 10px; background: var(--s3); border: 1px solid var(--line);
-  color: var(--soft); font-size: 13px; border-radius: var(--r);
-  cursor: pointer; transition: all .1s; flex-shrink: 0;
-}
-.btn-rng:hover { color: var(--hi); border-color: var(--line2); }
+/* ─── NOTICES ─── */
+.warn-box{margin-top:6px;padding:6px 9px;background:rgba(210,153,34,.07);border:1px solid rgba(210,153,34,.22);border-radius:var(--r);font-size:10.5px;color:var(--amb);line-height:1.5;}
+.info-box{margin-top:6px;padding:6px 9px;background:rgba(124,110,247,.07);border:1px solid rgba(124,110,247,.2);border-radius:var(--r);font-size:10.5px;color:#9b91f8;line-height:1.5;}
+.sub-sep{height:1px;background:var(--ln);margin:8px 0;}
+.sub-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin:8px 0 4px;}
 
-/* ── Multi-select ── */
-.msw { position: relative; margin-top: 4px; }
-.ms-btn {
-  width: 100%; display: flex; align-items: center;
-  justify-content: space-between;
-  background: var(--s3); border: 1px solid var(--line);
-  color: var(--body); font-family: var(--ui);
-  font-size: 12px; padding: 5px 9px;
-  border-radius: var(--r); cursor: pointer;
-  text-align: left; gap: 6px; transition: border-color .12s;
-}
-.ms-btn:hover, .ms-btn.open { border-color: var(--line2); }
-.ms-btn.open { border-radius: var(--r) var(--r) 0 0; }
-.ms-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ms-arrow { font-size: 9px; color: var(--dim); transition: transform .12s; }
-.ms-btn.open .ms-arrow { transform: rotate(180deg); }
-.ms-panel {
-  display: none; position: absolute; top: 100%; left: 0; right: 0;
-  z-index: 200; background: var(--s3);
-  border: 1px solid var(--line2); border-top: none;
-  border-radius: 0 0 var(--r) var(--r);
-  box-shadow: 0 10px 30px rgba(0,0,0,.5);
-}
-.ms-panel.open { display: block; }
-.ms-item {
-  display: flex; align-items: center; gap: 9px;
-  padding: 7px 9px; cursor: pointer; font-size: 12px;
-  color: var(--body); background: none; border: none;
-  width: 100%; text-align: left; transition: background .07s;
-}
-.ms-item:hover { background: var(--s4); }
-.ms-item input { display: none; }
-.ms-ck {
-  width: 13px; height: 13px; border: 1px solid var(--line2);
-  border-radius: 3px; background: var(--s4);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; transition: all .1s;
-}
-.ms-item input:checked ~ .ms-ck { background: var(--acc); border-color: var(--acc); }
-.ms-item input:checked ~ .ms-ck::after {
-  content: ''; display: block; width: 7px; height: 4px;
-  border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff;
-  transform: rotate(-45deg) translateY(-1px);
-}
-.ms-lbl { line-height: 1.3; }
-.ms-desc { font-size: 10.5px; color: var(--mute); display: block; }
+/* ─── VM SEGMENT ─── */
+.seg-ctrl{display:flex;gap:2px;background:var(--bg);border:1px solid var(--ln);border-radius:var(--r);padding:2px;margin-bottom:10px;}
+.seg-btn,.vm-seg{flex:1;padding:5px 0;background:none;border:none;color:var(--mute);font-family:var(--ui);font-size:11.5px;font-weight:500;cursor:pointer;border-radius:5px;transition:all .12s;text-align:center;}
+.seg-btn:hover,.vm-seg:hover{color:var(--body);}
+.seg-btn.active,.vm-seg.active{background:var(--s4);color:var(--hi);box-shadow:0 1px 3px rgba(0,0,0,.5);}
 
-/* ── Tag input ── */
-.tagw {
-  display: flex; flex-wrap: wrap; gap: 4px;
-  padding: 4px 6px; margin-top: 4px;
-  background: var(--s3); border: 1px solid var(--line);
-  border-radius: var(--r); min-height: 30px; cursor: text;
-  transition: border-color .12s;
-}
-.tagw:focus-within { border-color: var(--acc2); }
-.tg {
-  display: flex; align-items: center; gap: 3px;
-  background: var(--s4); border: 1px solid var(--line2);
-  border-radius: 4px; padding: 2px 6px;
-  font-size: 11px; color: var(--body); font-family: var(--mono);
-}
-.tx-btn { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 12px; line-height: 1; transition: color .1s; }
-.tx-btn:hover { color: var(--red); }
-.ti { background: none; border: none; outline: none; font-family: var(--mono); font-size: 11.5px; color: var(--body); min-width: 60px; flex: 1; padding: 2px; }
+/* bc/ovm hidden by default, shown by engine */
+#bc-sub,#ovm-sub{display:none;}
 
-/* ── Domain list ── */
-.drow { display: flex; gap: 4px; margin-top: 6px; }
-.drow .fi { flex: 1; }
-.btn-add {
-  padding: 5px 10px; background: var(--s3); border: 1px solid var(--line);
-  color: var(--soft); font-size: 11.5px; border-radius: var(--r);
-  cursor: pointer; transition: all .1s; white-space: nowrap; flex-shrink: 0;
-}
-.btn-add:hover { color: var(--hi); border-color: var(--line2); }
-.dlist { margin-top: 4px; display: flex; flex-direction: column; gap: 3px; }
-.di {
-  display: flex; align-items: center; justify-content: space-between;
-  background: var(--s3); border: 1px solid var(--line);
-  border-radius: var(--r); padding: 4px 9px;
-  font-size: 11.5px; font-family: var(--mono); color: var(--body);
-}
-.dx { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 14px; transition: color .1s; }
-.dx:hover { color: var(--red); }
+/* ─── CONFLICTS ─── */
+.ci-item{padding:5px 0;font-size:10.5px;display:flex;gap:6px;line-height:1.4;border-bottom:1px solid rgba(255,255,255,.04);}
+.ci-item::before{content:'!';flex-shrink:0;font-weight:700;}
+.ci-ok{padding:5px 0;font-size:10.5px;color:var(--grn);display:flex;gap:6px;}
+.ci-ok::before{content:'✓';}
 
-/* ── Notices ── */
-.warn-box {
-  margin-top: 8px; padding: 7px 10px;
-  background: rgba(210,153,34,.07); border: 1px solid rgba(210,153,34,.2);
-  border-radius: var(--r); font-size: 11px; color: var(--amb); line-height: 1.5;
+/* ─── STATUS BAR ─── */
+#statusbar{
+  flex-shrink:0;height:26px;
+  background:var(--s2);border-top:1px solid var(--ln);
+  display:flex;align-items:center;padding:0 14px;gap:16px;
 }
-.info-box {
-  margin-top: 8px; padding: 7px 10px;
-  background: rgba(124,110,247,.07); border: 1px solid rgba(124,110,247,.2);
-  border-radius: var(--r); font-size: 11px; color: #9b91f8; line-height: 1.5;
-}
+.sb-st{font-size:10px;color:var(--mute);}
+.sb-st b{color:var(--soft);font-family:var(--mono);font-weight:600;}
+.sb-gap{flex:1;}
+.sb-hint{font-size:10px;color:var(--dim);}
 
-/* ── VM mode segment ── */
-.seg-ctrl {
-  display: flex; gap: 2px; background: var(--s3);
-  border: 1px solid var(--line); border-radius: var(--r);
-  padding: 2px; margin-bottom: 10px;
-}
-.seg-btn, .vm-seg {
-  flex: 1; padding: 5px 0; background: none; border: none;
-  color: var(--mute); font-family: var(--ui); font-size: 12px;
-  font-weight: 500; cursor: pointer; border-radius: 4px;
-  transition: all .12s; text-align: center;
-}
-.seg-btn:hover, .vm-seg:hover { color: var(--body); }
-.seg-btn.active, .vm-seg.active {
-  background: var(--s4); color: var(--hi);
-  box-shadow: 0 1px 3px rgba(0,0,0,.4);
-}
-
-/* bc-sub / ovm-sub visibility (toggled by engine) */
-#bc-sub, #ovm-sub,
-#sarr-sub, #ct-sub, #ssplit-sub,
-#cff-sub, #dead-sub, #dbg-sub,
-#ren-sub, #chunk-sub, #dom-sub,
-#smap-sub, #dict-sub { display: contents; }
-
-/* ═══════════════════════════════════════════════
-   CONFLICTS BAR
-═══════════════════════════════════════════════ */
-#conflicts-strip {
-  display: none;
-  position: sticky; bottom: 0; left: 0; right: 0;
-  background: rgba(17,17,20,.95);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid var(--line);
-  padding: 0 28px; z-index: 50;
-}
-#conflicts-strip.visible { display: block; }
-.ci-item {
-  padding: 5px 0; font-size: 11px;
-  display: flex; gap: 6px; line-height: 1.4;
-  border-bottom: 1px solid rgba(255,255,255,.04);
-}
-.ci-item.warn { color: var(--amb); }
-.ci-item.err  { color: var(--red); }
-.ci-item::before { content: '!'; flex-shrink: 0; font-weight: 700; }
-.ci-ok { padding: 6px 0; font-size: 11px; color: var(--grn); display: none; }
-
-/* hidden engine-compat element */
-#conflicts-inner { display: none; }
-
-/* ═══════════════════════════════════════════════
-   FOOTER
-═══════════════════════════════════════════════ */
-#footer {
-  border-top: 1px solid var(--line);
-  padding: 24px 28px;
-  display: flex; align-items: center;
-  gap: 12px;
-}
-.footer-logo { font-family: var(--head); font-size: 13px; font-weight: 700; color: var(--dim); }
-.footer-logo em { color: var(--acc); font-style: normal; }
-.footer-gap { flex: 1; }
-.footer-note { font-size: 11px; color: var(--dim); }
-
-/* ═══════════════════════════════════════════════
-   AUTOCONFIG MODAL
-═══════════════════════════════════════════════ */
-#ac-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,.7); z-index: 900;
-  align-items: center; justify-content: center;
-  backdrop-filter: blur(4px);
-}
-#ac-overlay.open { display: flex; }
-#ac-modal {
-  background: var(--s1); border: 1px solid var(--line2);
-  border-radius: 12px; width: 540px; max-width: 96vw;
-  max-height: 88vh; display: flex; flex-direction: column;
-  box-shadow: 0 40px 100px rgba(0,0,0,.7); overflow: hidden;
-}
-#ac-head {
-  display: flex; align-items: center;
-  padding: 16px 20px; border-bottom: 1px solid var(--line); gap: 10px;
-}
-#ac-head h2 { font-family: var(--head); font-size: 15px; font-weight: 700; flex: 1; color: var(--hi); }
-.ac-close { background: none; border: none; font-size: 18px; color: var(--dim); cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: color .1s; }
-.ac-close:hover { color: var(--body); }
-#ac-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
-#ac-body::-webkit-scrollbar { width: 3px; }
-#ac-body::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
-.ac-section { margin-bottom: 18px; }
-.ac-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: var(--dim); margin-bottom: 8px; }
-.ac-badges { display: flex; flex-wrap: wrap; gap: 5px; }
-.ac-badge { display: inline-flex; align-items: center; gap: 3px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; border: 1px solid transparent; }
-.ac-badge.ok  { background: #052e16; border-color: #166534; color: #4ade80; }
-.ac-badge.warn{ background: #2d1f0a; border-color: #854d0e; color: #fcd34d; }
-.ac-badge.info{ background: #0b1f33; border-color: #1e3a5f; color: #7cbaf7; }
-.ac-badge.neu { background: var(--s3); border-color: var(--line); color: var(--soft); }
-.ac-levels { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
-.ac-lvl { padding: 10px 6px; background: var(--s2); border: 1.5px solid var(--line); border-radius: 7px; cursor: pointer; text-align: center; transition: all .12s; }
-.ac-lvl:hover { border-color: var(--line2); }
-.ac-lvl.sel { border-color: var(--acc); background: var(--acc-lo); }
-.ac-lvl-name { font-family: var(--head); font-size: 12.5px; font-weight: 700; color: var(--body); display: block; margin-bottom: 3px; }
-.ac-lvl.sel .ac-lvl-name { color: var(--acc); }
-.ac-lvl-desc { font-size: 10px; color: var(--mute); display: block; }
-.ac-rec-list { display: flex; flex-direction: column; gap: 4px; }
-.ac-rec { display: flex; align-items: flex-start; gap: 9px; padding: 8px 10px; border-radius: 6px; font-size: 11.5px; line-height: 1.45; background: var(--s2); border: 1px solid var(--line); }
-.ac-rec-icon { flex-shrink: 0; font-size: 14px; margin-top: 1px; }
-.ac-rec-text { color: var(--body); flex: 1; }
-.ac-rec-text b { font-weight: 600; }
-.ac-rec-text small { display: block; color: var(--mute); font-size: 10.5px; margin-top: 2px; }
-.ac-rec.on  { background: #052e16; border-color: #166534; }
-.ac-rec.off { background: #1a0505; border-color: #4a1515; }
-.ac-rec.set { background: #0b1220; border-color: #1a2a50; }
-#ac-foot { display: flex; align-items: center; justify-content: flex-end; padding: 12px 20px; border-top: 1px solid var(--line); gap: 8px; flex-shrink: 0; }
-#ac-apply { padding: 7px 22px; background: var(--acc); border: 1px solid var(--acc); color: #fff; font-family: var(--head); font-size: 12.5px; font-weight: 700; border-radius: var(--r); cursor: pointer; transition: opacity .12s; }
-#ac-apply:hover { opacity: .85; }
-#ac-cancel { padding: 7px 14px; background: none; border: 1px solid var(--line); color: var(--soft); font-family: var(--ui); font-size: 12.5px; border-radius: var(--r); cursor: pointer; transition: all .12s; }
-#ac-cancel:hover { color: var(--hi); border-color: var(--line2); }
+/* ─── MODAL ─── */
+#ac-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:900;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+#ac-overlay.open{display:flex;}
+#ac-modal{background:var(--s1);border:1px solid var(--ln2);border-radius:12px;width:520px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 40px 100px rgba(0,0,0,.7);overflow:hidden;}
+#ac-head{display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--ln);gap:10px;flex-shrink:0;}
+#ac-head h2{font-size:14px;font-weight:700;flex:1;color:var(--hi);}
+.ac-close{background:none;border:none;font-size:18px;color:var(--dim);cursor:pointer;padding:2px 5px;border-radius:4px;transition:color .1s;}
+.ac-close:hover{color:var(--body);}
+#ac-body{flex:1;overflow-y:auto;padding:16px 18px;}
+#ac-body::-webkit-scrollbar{width:3px;}
+#ac-body::-webkit-scrollbar-thumb{background:var(--ln);border-radius:2px;}
+.ac-section{margin-bottom:16px;}
+.ac-section-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin-bottom:8px;}
+.ac-badges{display:flex;flex-wrap:wrap;gap:5px;}
+.ac-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:500;border:1px solid transparent;}
+.ac-badge.ok {background:#052e16;border-color:#166534;color:#4ade80;}
+.ac-badge.warn{background:#2d1f0a;border-color:#854d0e;color:#fcd34d;}
+.ac-badge.info{background:#0b1f33;border-color:#1e3a5f;color:#7cbaf7;}
+.ac-badge.neu {background:var(--s3);border-color:var(--ln);color:var(--soft);}
+.ac-levels{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.ac-lvl{padding:10px 5px;background:var(--s2);border:1.5px solid var(--ln);border-radius:7px;cursor:pointer;text-align:center;transition:all .12s;}
+.ac-lvl:hover{border-color:var(--ln2);}
+.ac-lvl.sel{border-color:var(--acc);background:var(--acco);}
+.ac-lvl-name{font-size:12px;font-weight:700;color:var(--body);display:block;margin-bottom:2px;}
+.ac-lvl.sel .ac-lvl-name{color:var(--acc);}
+.ac-lvl-desc{font-size:9.5px;color:var(--mute);display:block;}
+.ac-rec-list{display:flex;flex-direction:column;gap:4px;}
+.ac-rec{display:flex;align-items:flex-start;gap:8px;padding:8px 9px;border-radius:6px;font-size:11px;line-height:1.4;background:var(--s2);border:1px solid var(--ln);}
+.ac-rec-icon{flex-shrink:0;font-size:13px;margin-top:1px;}
+.ac-rec-text{color:var(--body);flex:1;}
+.ac-rec-text b{font-weight:600;}
+.ac-rec-text small{display:block;color:var(--mute);font-size:10px;margin-top:1px;}
+.ac-rec.on {background:#052e16;border-color:#166534;}
+.ac-rec.off{background:#1a0505;border-color:#4a1515;}
+.ac-rec.set{background:#0b1220;border-color:#1a2a50;}
+#ac-foot{display:flex;align-items:center;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--ln);gap:8px;flex-shrink:0;}
+#ac-apply{padding:6px 20px;background:var(--acc);border:none;color:#fff;font-family:var(--ui);font-size:12px;font-weight:600;border-radius:var(--r);cursor:pointer;transition:opacity .12s;}
+#ac-apply:hover{opacity:.84;}
+#ac-cancel{padding:6px 13px;background:none;border:1px solid var(--ln);color:var(--soft);font-family:var(--ui);font-size:12px;border-radius:var(--r);cursor:pointer;transition:all .12s;}
+#ac-cancel:hover{color:var(--hi);border-color:var(--ln2);}
 </style>
 </head>
 <body>
+<div id="app">
 
-<!-- ═══════════════════════════════
-     NAV
-═══════════════════════════════ -->
-<nav id="nav">
-  <div class="nav-logo">Obs<em>cu</em>ra</div>
-  <div class="nav-gap"></div>
-  <div class="nav-links">
-    <div class="pill-grp">
-      <button class="tp active" data-t="browser" onclick="setTarget('browser')">Browser</button>
-      <button class="tp" data-t="browser-no-eval" onclick="setTarget('browser-no-eval')">No Eval</button>
-      <button class="tp" data-t="node" onclick="setTarget('node')">Node</button>
-      <button class="tp" data-t="tampermonkey" onclick="setTarget('tampermonkey')">TM</button>
-    </div>
-    <select id="preset" onchange="applyPreset()" style="margin-left:4px;">
-      <option value="light">Light</option>
-      <option value="medium">Medium</option>
-      <option value="high" selected>High</option>
-      <option value="max">Max</option>
-      <option value="custom">Custom</option>
-    </select>
-    <button class="nav-btn" onclick="openAutoConfig()">Auto-Config</button>
-    <button class="nav-btn" id="btn-copy" onclick="copyOut()">Copy</button>
-    <button class="nav-btn" id="btn-map" onclick="dlMap()" disabled>Map</button>
-    <button id="btn-run" onclick="runObfuscate()">▶ Run</button>
+<!-- ══════════ TOPBAR ══════════ -->
+<div id="topbar">
+  <div class="logo">Obs<em>cu</em>ra</div>
+  <div class="tsep"></div>
+  <div class="tpg">
+    <button class="tp active" data-t="browser"         onclick="setTarget('browser')">Browser</button>
+    <button class="tp"        data-t="browser-no-eval"  onclick="setTarget('browser-no-eval')">No Eval</button>
+    <button class="tp"        data-t="node"             onclick="setTarget('node')">Node</button>
+    <button class="tp"        data-t="tampermonkey"     onclick="setTarget('tampermonkey')">TM</button>
   </div>
-</nav>
-
-<!-- ═══════════════════════════════
-     HERO
-═══════════════════════════════ -->
-<section id="hero">
-  <div class="hero-tag">JavaScript Obfuscator</div>
-  <h1 class="hero-title">Make your code<br><span>unreadable.</span></h1>
-  <p class="hero-sub">Multi-layer obfuscation with bytecode VMs, string array encryption, control flow flattening, and advanced anti-analysis traps — all client-side.</p>
-  <div class="hero-pills">
-    <div class="hero-pill"><span class="dot"></span>Bytecode VM</div>
-    <div class="hero-pill"><span class="dot"></span>Opcode ISA</div>
-    <div class="hero-pill"><span class="dot"></span>RC4 + XOR Strings</div>
-    <div class="hero-pill"><span class="dot"></span>Control Flow Flattening</div>
-    <div class="hero-pill"><span class="dot"></span>Anti-Debug</div>
-    <div class="hero-pill"><span class="dot"></span>100% Client-Side</div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════
-     EDITORS
-═══════════════════════════════ -->
-<div id="workspace">
-
-  <div class="editor-card">
-    <div class="ed-toolbar">
-      <span class="ed-title">Input</span>
-      <span class="ed-gap"></span>
-      <button class="ed-btn" onclick="clearInput()">Clear</button>
-    </div>
-    <div class="ed-body" id="in-editor"></div>
-  </div>
-
-  <div class="editor-card">
-    <div class="ed-toolbar">
-      <span class="ed-title">Output</span>
-      <span class="ed-gap"></span>
-      <div id="run-stats">
-        <span class="stat">In <b id="s-in">—</b></span>
-        <span class="stat">→ <b id="s-out">—</b></span>
-        <span class="stat">×<b id="s-ratio">—</b></span>
-        <span class="stat">Str <b id="s-str">—</b></span>
-        <span class="stat">BC <b id="s-bc">—</b></span>
-        <span class="stat"><b id="s-time">—</b></span>
-      </div>
-      <span id="out-hint">Run to see output</span>
-    </div>
-    <div class="ed-body" id="out-editor"></div>
-  </div>
-
+  <div class="tsep"></div>
+  <select id="preset" onchange="applyPreset()">
+    <option value="light">Light</option>
+    <option value="medium">Medium</option>
+    <option value="high" selected>High</option>
+    <option value="max">Max</option>
+    <option value="custom">Custom</option>
+  </select>
+  <div class="tgap"></div>
+  <button class="txt-btn" onclick="openAutoConfig()">Auto-Config</button>
+  <button class="txt-btn" id="btn-copy" onclick="copyOut()">Copy</button>
+  <button class="txt-btn" id="btn-map" onclick="dlMap()" disabled>Map</button>
+  <div class="tsep"></div>
+  <!-- Settings toggle -->
+  <button class="icon-btn" id="settings-toggle" onclick="togglePanel()" title="Settings">
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" fill="currentColor"/></svg>
+  </button>
+  <button id="btn-run" onclick="runObfuscate()">
+    <span class="run-icon">▶</span> Run
+  </button>
 </div>
 
-<!-- ═══════════════════════════════
-     SETTINGS
-═══════════════════════════════ -->
-<section id="settings">
-  <div class="settings-header">
-    <h2 class="settings-title">Configuration</h2>
-    <span class="settings-count">9 modules</span>
+<!-- ══════════ WORKSPACE ══════════ -->
+<div id="workspace">
+
+  <!-- editors -->
+  <div id="editors">
+
+    <div id="in-wrap">
+      <div class="ed-header">
+        <span class="ed-label">Input</span>
+        <span class="ed-gap"></span>
+        <button class="ed-act" onclick="clearInput()">Clear</button>
+      </div>
+      <div class="ed-body" id="in-editor"></div>
+    </div>
+
+    <div id="out-wrap">
+      <div class="ed-header">
+        <span class="ed-label">Output</span>
+        <span class="ed-gap"></span>
+        <div id="run-stats">
+          <span class="st">In <b id="s-in">—</b></span>
+          <span class="st">→ <b id="s-out">—</b></span>
+          <span class="st">×<b id="s-ratio">—</b></span>
+          <span class="st">Str <b id="s-str">—</b></span>
+          <span class="st">BC <b id="s-bc">—</b></span>
+          <span class="st"><b id="s-time">—</b></span>
+        </div>
+        <span id="out-hint">Run to see output</span>
+      </div>
+      <div class="ed-body" id="out-editor"></div>
+    </div>
+
   </div>
 
-  <div class="accordion-grid">
+  <!-- ══════════ SLIDE PANEL ══════════ -->
+  <div id="panel">
+    <div id="panel-top">
+      <button class="stab active" onclick="switchTab('strings')">Strings</button>
+      <button class="stab" onclick="switchTab('identifiers')">Idents</button>
+      <button class="stab" onclick="switchTab('flow')">Flow</button>
+      <button class="stab" onclick="switchTab('vm')">VM</button>
+      <button class="stab" onclick="switchTab('protection')">Protect</button>
+      <button class="stab" onclick="switchTab('traps')">Traps</button>
+      <button class="stab" onclick="switchTab('output')">Output</button>
+      <button class="stab" onclick="switchTab('general')">More</button>
+    </div>
+    <div id="panel-scroll">
 
-    <!-- ── STRINGS ── -->
-    <div class="acc-card open" id="acc-strings">
-      <button class="acc-head" onclick="toggleAcc('strings')">
-        <div class="acc-icon">⊞</div>
-        <div class="acc-info">
-          <div class="acc-name">Strings</div>
-          <div class="acc-desc">Array extraction, encryption, encoding</div>
-        </div>
-        <span class="acc-arrow">▾</span>
-      </button>
-      <div class="acc-body">
-        <div id="sarr-sub">
-          <div class="o-sub-label">String Array</div>
-          <div class="o-row">
-            <label class="rl">Enable<small>Extract all strings into encrypted pool</small></label>
-            <label class="tog"><input type="checkbox" id="o_sarr" checked onchange="showSub('sarr-sub',true);liveCheck()"><span class="tk"></span></label>
-          </div>
-          <div class="o-field">
-            <div class="o-field-label">Encoding</div>
-            <div class="msw" id="msw-enc">
-              <button class="ms-btn" type="button" onclick="msToggle('enc')"><span class="ms-text" id="ms-enc-text">RC4 + XOR</span><span class="ms-arrow">▾</span></button>
-              <div class="ms-panel" id="ms-panel-enc">
-                <label class="ms-item"><input type="checkbox" id="enc-rc4" checked onchange="msSync('enc');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">RC4<span class="ms-desc">Stream cipher</span></span></label>
-                <label class="ms-item"><input type="checkbox" id="enc-xor" checked onchange="msSync('enc');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">XOR<span class="ms-desc">Byte-mask layer</span></span></label>
-                <label class="ms-item"><input type="checkbox" id="enc-none" onchange="msSync('enc');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">None<span class="ms-desc">Plain strings</span></span></label>
+      <!-- STRINGS -->
+      <div class="tpanel active" id="tpanel-strings">
+        <div class="grp">
+          <div class="grp-lbl">String Array</div>
+          <div id="sarr-sub">
+            <div class="row"><label class="rl">Enable<small>Extract all strings into encrypted pool</small></label><label class="tog"><input type="checkbox" id="o_sarr" checked onchange="showSub('sarr-sub',this.checked);liveCheck()"><span class="tk"></span></label></div>
+            <div class="fld"><div class="fld-lbl">Encoding</div>
+              <div class="msw" id="msw-enc">
+                <button class="ms-btn" type="button" onclick="msToggle('enc')"><span class="ms-text" id="ms-enc-text">RC4 + XOR</span><span class="ms-arrow">▾</span></button>
+                <div class="ms-panel" id="ms-panel-enc">
+                  <label class="ms-item"><input type="checkbox" id="enc-rc4" checked onchange="msSync('enc');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">RC4<span class="ms-desc">Stream cipher</span></span></label>
+                  <label class="ms-item"><input type="checkbox" id="enc-xor" checked onchange="msSync('enc');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">XOR<span class="ms-desc">Byte-mask layer</span></span></label>
+                  <label class="ms-item"><input type="checkbox" id="enc-none" onchange="msSync('enc');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">None<span class="ms-desc">Plain strings</span></span></label>
+                </div>
               </div>
             </div>
-          </div>
-          <div class="o-field">
-            <div class="o-field-label">Index Type</div>
-            <div class="msw" id="msw-idx">
-              <button class="ms-btn" type="button" onclick="msToggle('idx')"><span class="ms-text" id="ms-idx-text">Hex Integer</span><span class="ms-arrow">▾</span></button>
-              <div class="ms-panel" id="ms-panel-idx">
-                <label class="ms-item"><input type="checkbox" id="idx-hex" checked onchange="msSync('idx');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">Hex integer<span class="ms-desc">0x1a2b</span></span></label>
-                <label class="ms-item"><input type="checkbox" id="idx-computed" onchange="msSync('idx');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">XOR computed<span class="ms-desc">(0xab ^ 0x11)</span></span></label>
+            <div class="fld"><div class="fld-lbl">Index Type</div>
+              <div class="msw" id="msw-idx">
+                <button class="ms-btn" type="button" onclick="msToggle('idx')"><span class="ms-text" id="ms-idx-text">Hex Integer</span><span class="ms-arrow">▾</span></button>
+                <div class="ms-panel" id="ms-panel-idx">
+                  <label class="ms-item"><input type="checkbox" id="idx-hex" checked onchange="msSync('idx');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">Hex integer<span class="ms-desc">0x1a2b</span></span></label>
+                  <label class="ms-item"><input type="checkbox" id="idx-computed" onchange="msSync('idx');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">XOR computed<span class="ms-desc">(0xab ^ 0x11)</span></span></label>
+                </div>
               </div>
             </div>
-          </div>
-          <div class="o-slider">
-            <div class="o-slider-head"><span class="o-slider-name">Extraction Threshold</span><span class="sv" id="v-thresh">1.00</span></div>
-            <div class="srow"><input type="range" id="o_thresh" min="0" max="1" step=".05" value="1" oninput="SETD('v-thresh',parseFloat(this.value).toFixed(2))"></div>
-          </div>
-          <div class="o-slider">
-            <div class="o-slider-head"><span class="o-slider-name">Index Shift</span><span class="sv" id="v-idxsh">0</span></div>
-            <div class="srow"><input type="range" id="o_idxshift" min="0" max="200" step="1" value="0" oninput="SETD('v-idxsh',this.value)"></div>
-          </div>
-          <div class="o-row"><label class="rl">Rotate Array<small>Shift + self-correcting decoder</small></label><label class="tog"><input type="checkbox" id="o_srot" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Shuffle Array<small>Fisher-Yates randomize order</small></label><label class="tog"><input type="checkbox" id="o_sshuf" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Calls Transform<small>Wrap decoder calls in proxy fns</small></label><label class="tog"><input type="checkbox" id="o_calltrans" checked onchange="showSub('ct-sub',this.checked)"><span class="tk"></span></label></div>
-          <div id="ct-sub">
-            <div class="o-slider">
-              <div class="o-slider-head"><span class="o-slider-name">Wrapper Count</span><span class="sv" id="v-wc">2</span></div>
-              <div class="srow"><input type="range" id="o_wcount" min="1" max="5" step="1" value="2" oninput="SETD('v-wc',this.value)"></div>
+            <div class="sl"><div class="sl-head"><span class="sl-name">Threshold</span><span class="sv" id="v-thresh">1.00</span></div><div class="srow"><input type="range" id="o_thresh" min="0" max="1" step=".05" value="1" oninput="SETD('v-thresh',parseFloat(this.value).toFixed(2))"></div></div>
+            <div class="sl"><div class="sl-head"><span class="sl-name">Index Shift</span><span class="sv" id="v-idxsh">0</span></div><div class="srow"><input type="range" id="o_idxshift" min="0" max="200" step="1" value="0" oninput="SETD('v-idxsh',this.value)"></div></div>
+            <div class="row"><label class="rl">Rotate Array<small>Shift + self-correcting decoder</small></label><label class="tog"><input type="checkbox" id="o_srot" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Shuffle Array<small>Fisher-Yates randomize order</small></label><label class="tog"><input type="checkbox" id="o_sshuf" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Calls Transform<small>Wrap decoder calls in proxy fns</small></label><label class="tog"><input type="checkbox" id="o_calltrans" checked onchange="showSub('ct-sub',this.checked)"><span class="tk"></span></label></div>
+            <div id="ct-sub">
+              <div class="sl"><div class="sl-head"><span class="sl-name">Wrappers</span><span class="sv" id="v-wc">2</span></div><div class="srow"><input type="range" id="o_wcount" min="1" max="5" step="1" value="2" oninput="SETD('v-wc',this.value)"></div></div>
+              <div class="sl"><div class="sl-head"><span class="sl-name">Params</span><span class="sv" id="v-wp">2</span></div><div class="srow"><input type="range" id="o_wparams" min="1" max="5" step="1" value="2" oninput="SETD('v-wp',this.value)"></div></div>
+              <div class="row"><label class="rl">Chained Calls<small>decoder(decoder(i)) nesting</small></label><label class="tog"><input type="checkbox" id="o_wchain"><span class="tk"></span></label></div>
             </div>
-            <div class="o-slider">
-              <div class="o-slider-head"><span class="o-slider-name">Wrapper Params</span><span class="sv" id="v-wp">2</span></div>
-              <div class="srow"><input type="range" id="o_wparams" min="1" max="5" step="1" value="2" oninput="SETD('v-wp',this.value)"></div>
-            </div>
-            <div class="o-row"><label class="rl">Chained Calls<small>decoder(decoder(i)) nesting</small></label><label class="tog"><input type="checkbox" id="o_wchain"><span class="tk"></span></label></div>
+            <div class="fld"><div class="fld-lbl">Force Extract (regex)</div><div class="tagw" id="ta-force" onclick="G('ti-force').focus()"><input class="ti" id="ti-force" placeholder="pattern, Enter…" onkeydown="tagKey(event,'ta-force','ti-force')"></div></div>
+            <div class="fld"><div class="fld-lbl">Never Extract (regex)</div><div class="tagw" id="ta-resstr" onclick="G('ti-resstr').focus()"><input class="ti" id="ti-resstr" placeholder="pattern, Enter…" onkeydown="tagKey(event,'ta-resstr','ti-resstr')"></div></div>
           </div>
-          <div class="o-field"><div class="o-field-label">Force Extract (regex)</div><div class="tagw" id="ta-force" onclick="G('ti-force').focus()"><input class="ti" id="ti-force" placeholder="pattern, Enter…" onkeydown="tagKey(event,'ta-force','ti-force')"></div></div>
-          <div class="o-field"><div class="o-field-label">Never Extract (regex)</div><div class="tagw" id="ta-resstr" onclick="G('ti-resstr').focus()"><input class="ti" id="ti-resstr" placeholder="pattern, Enter…" onkeydown="tagKey(event,'ta-resstr','ti-resstr')"></div></div>
         </div>
-        <div class="o-sep"></div>
-        <div class="o-sub-label">String Encoding</div>
-        <div id="ssplit-sub">
-          <div class="o-row"><label class="rl">Escape Encoding<small>\x61\u0062 hex/unicode escapes</small></label><label class="tog"><input type="checkbox" id="o_senc" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Charcode Arrays<small>"hi" → fromCharCode(104,105)</small></label><label class="tog"><input type="checkbox" id="o_charcode"><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Inline atob<small>str → atob(b64) + TextDecoder</small></label><label class="tog"><input type="checkbox" id="o_atob" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Template Obfuscation<small>str → fromCharCode concat</small></label><label class="tog"><input type="checkbox" id="o_tmpl" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Split Strings<small>"hello" → "hel"+"lo"</small></label><label class="tog"><input type="checkbox" id="o_ssplit" checked onchange="showSub('ssplit-sub',true)"><span class="tk"></span></label></div>
-          <div class="o-slider">
-            <div class="o-slider-head"><span class="o-slider-name">Split Chunk Length</span><span class="sv" id="v-ssc">10</span></div>
-            <div class="srow"><input type="range" id="o_sschunk" min="3" max="60" step="1" value="10" oninput="SETD('v-ssc',this.value)"></div>
+        <div class="grp">
+          <div class="grp-lbl">String Encoding</div>
+          <div id="ssplit-sub">
+            <div class="row"><label class="rl">Escape Encoding<small>\x61\u0062 hex/unicode escapes</small></label><label class="tog"><input type="checkbox" id="o_senc" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Charcode Arrays<small>"hi" → fromCharCode(104,105)</small></label><label class="tog"><input type="checkbox" id="o_charcode"><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Inline atob<small>str → atob(b64) + TextDecoder</small></label><label class="tog"><input type="checkbox" id="o_atob" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Template Obfuscation<small>str → fromCharCode concat</small></label><label class="tog"><input type="checkbox" id="o_tmpl" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Split Strings<small>"hello" → "hel"+"lo"</small></label><label class="tog"><input type="checkbox" id="o_ssplit" checked onchange="showSub('ssplit-sub',this.checked)"><span class="tk"></span></label></div>
+            <div class="sl"><div class="sl-head"><span class="sl-name">Chunk Length</span><span class="sv" id="v-ssc">10</span></div><div class="srow"><input type="range" id="o_sschunk" min="3" max="60" step="1" value="10" oninput="SETD('v-ssc',this.value)"></div></div>
+            <div class="row"><label class="rl">Closure Trap Fold<small>IIFE reduce-based encoding</small></label><label class="tog"><input type="checkbox" id="o_clfold" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Pointer Encoding<small>Indirection chain on decoder refs</small></label><label class="tog"><input type="checkbox" id="o_ptrenc" checked><span class="tk"></span></label></div>
           </div>
-          <div class="o-row"><label class="rl">Closure Trap Fold<small>IIFE reduce-based encoding</small></label><label class="tog"><input type="checkbox" id="o_clfold" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Pointer Encoding<small>Indirection chain on decoder refs</small></label><label class="tog"><input type="checkbox" id="o_ptrenc" checked><span class="tk"></span></label></div>
         </div>
       </div>
-    </div>
 
-    <!-- ── IDENTIFIERS ── -->
-    <div class="acc-card open" id="acc-identifiers">
-      <button class="acc-head" onclick="toggleAcc('identifiers')">
-        <div class="acc-icon">⌥</div>
-        <div class="acc-info"><div class="acc-name">Identifiers</div><div class="acc-desc">Variable renaming, property access</div></div>
-        <span class="acc-arrow">▾</span>
-      </button>
-      <div class="acc-body">
-        <div id="ren-sub">
-          <div class="o-row"><label class="rl">Rename Variables<small>Replace all local identifier names</small></label><label class="tog"><input type="checkbox" id="o_ren" checked onchange="showSub('ren-sub',this.checked)"><span class="tk"></span></label></div>
-          <div class="o-field"><div class="o-field-label">Name Generator</div>
-            <select class="fsel" id="o_namegen" onchange="showSub('dict-sub',this.value==='dictionary')">
-              <option value="hexadecimal">Hexadecimal (_0x1a2b…)</option>
-              <option value="mangled">Mangled (a, b, c…)</option>
-              <option value="dictionary">Dictionary</option>
-            </select>
+      <!-- IDENTIFIERS -->
+      <div class="tpanel" id="tpanel-identifiers">
+        <div class="grp">
+          <div class="grp-lbl">Renaming</div>
+          <div id="ren-sub">
+            <div class="row"><label class="rl">Rename Variables<small>Replace all local identifier names</small></label><label class="tog"><input type="checkbox" id="o_ren" checked onchange="showSub('ren-sub',this.checked)"><span class="tk"></span></label></div>
+            <div class="fld"><div class="fld-lbl">Generator</div><select class="fsel" id="o_namegen" onchange="showSub('dict-sub',this.value==='dictionary')"><option value="hexadecimal">Hexadecimal (_0x…)</option><option value="mangled">Mangled (a,b,c…)</option><option value="dictionary">Dictionary</option></select></div>
+            <div class="fld"><div class="fld-lbl">Prefix</div><input class="fi" id="o_idpfx" type="text" placeholder="e.g. _x (optional)"></div>
+            <div id="dict-sub"><div class="fld"><div class="fld-lbl">Dictionary Words</div><div class="tagw" id="ta-dict" onclick="G('ti-dict').focus()"><input class="ti" id="ti-dict" placeholder="word, Enter…" onkeydown="tagKey(event,'ta-dict','ti-dict')"></div></div></div>
           </div>
-          <div class="o-field"><div class="o-field-label">Identifier Prefix</div><input class="fi" id="o_idpfx" type="text" placeholder="e.g. _x (optional)"></div>
-          <div id="dict-sub"><div class="o-field"><div class="o-field-label">Dictionary Words</div><div class="tagw" id="ta-dict" onclick="G('ti-dict').focus()"><input class="ti" id="ti-dict" placeholder="word, Enter…" onkeydown="tagKey(event,'ta-dict','ti-dict')"></div></div></div>
+          <div class="row"><label class="rl">Bracket Access<small>obj.foo → obj['foo']</small></label><label class="tog"><input type="checkbox" id="o_prop" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Rename Globals</label><label class="tog"><input type="checkbox" id="o_renglobal"><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Rename Properties<small>All object property keys</small></label><label class="tog"><input type="checkbox" id="o_renprop" onchange="G('renprop-w').style.display=this.checked?'block':'none';liveCheck()"><span class="tk"></span></label></div>
+          <div class="warn-box" id="renprop-w" style="display:none;">⚠ May break dynamic property access or external APIs.</div>
+          <div class="fld"><div class="fld-lbl">Reserved Names</div><div class="tagw" id="ta-resname" onclick="G('ti-resname').focus()"><input class="ti" id="ti-resname" placeholder="identifier, Enter…" onkeydown="tagKey(event,'ta-resname','ti-resname')"></div></div>
         </div>
-        <div class="o-row"><label class="rl">Bracket Access<small>obj.foo → obj['foo']</small></label><label class="tog"><input type="checkbox" id="o_prop" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Rename Globals<small>Rename top-level identifiers</small></label><label class="tog"><input type="checkbox" id="o_renglobal"><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Rename Properties<small>Rename all object property keys</small></label><label class="tog"><input type="checkbox" id="o_renprop" onchange="G('renprop-w').style.display=this.checked?'block':'none';liveCheck()"><span class="tk"></span></label></div>
-        <div class="warn-box" id="renprop-w" style="display:none;">⚠ May break dynamic property access or external APIs.</div>
-        <div class="o-field"><div class="o-field-label">Reserved Names</div><div class="tagw" id="ta-resname" onclick="G('ti-resname').focus()"><input class="ti" id="ti-resname" placeholder="identifier, Enter…" onkeydown="tagKey(event,'ta-resname','ti-resname')"></div></div>
-        <div class="o-sep"></div>
-        <div class="o-sub-label">Custom</div>
-        <div class="o-row"><label class="rl">Unicode Mangle<small>→ \u005F0x escaped identifiers</small></label><label class="tog"><input type="checkbox" id="o_unimangle" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Fake Proto Chain<small>Phantom prototype assignments</small></label><label class="tog"><input type="checkbox" id="o_fakeproto" checked><span class="tk"></span></label></div>
-      </div>
-    </div>
-
-    <!-- ── NUMBERS ── -->
-    <div class="acc-card open" id="acc-numbers">
-      <button class="acc-head" onclick="toggleAcc('numbers')">
-        <div class="acc-icon">#</div>
-        <div class="acc-info"><div class="acc-name">Numbers</div><div class="acc-desc">Hex literals, splitting, math obfuscation</div></div>
-        <span class="acc-arrow">▾</span>
-      </button>
-      <div class="acc-body">
-        <div class="o-row"><label class="rl">Hex Literals<small>97 → 0x61</small></label><label class="tog"><input type="checkbox" id="o_hexn" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Number Splitting<small>0x61 → (0x21+0x40)</small></label><label class="tog"><input type="checkbox" id="o_nsplit" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Math Expressions<small>n → Math['floor'](n+0x0)</small></label><label class="tog"><input type="checkbox" id="o_math" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Eval Disguise<small>0–9 → -~[] arithmetic chain</small></label><label class="tog"><input type="checkbox" id="o_evaldisguise" checked><span class="tk"></span></label></div>
-      </div>
-    </div>
-
-    <!-- ── CONTROL FLOW ── -->
-    <div class="acc-card open" id="acc-flow">
-      <button class="acc-head" onclick="toggleAcc('flow')">
-        <div class="acc-icon">⇄</div>
-        <div class="acc-info"><div class="acc-name">Control Flow</div><div class="acc-desc">Flattening, dead code, structural wrap</div></div>
-        <span class="acc-arrow">▾</span>
-      </button>
-      <div class="acc-body">
-        <div id="cff-sub">
-          <div class="o-row"><label class="rl">Control Flow Flattening<small>Shuffle into while/switch dispatch</small></label><label class="tog"><input type="checkbox" id="o_cff" checked onchange="showSub('cff-sub',this.checked)"><span class="tk"></span></label></div>
-          <div class="o-slider"><div class="o-slider-head"><span class="o-slider-name">CFF Threshold</span><span class="sv" id="v-cff">0.75</span></div><div class="srow"><input type="range" id="o_cff_t" min="0" max="1" step=".05" value=".75" oninput="SETD('v-cff',parseFloat(this.value).toFixed(2))"></div></div>
+        <div class="grp">
+          <div class="grp-lbl">Numbers</div>
+          <div class="row"><label class="rl">Hex Literals<small>97 → 0x61</small></label><label class="tog"><input type="checkbox" id="o_hexn" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Number Splitting<small>0x61 → (0x21+0x40)</small></label><label class="tog"><input type="checkbox" id="o_nsplit" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Math Expressions<small>n → Math['floor'](n+0x0)</small></label><label class="tog"><input type="checkbox" id="o_math" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Eval Disguise<small>0–9 → -~[] arithmetic chain</small></label><label class="tog"><input type="checkbox" id="o_evaldisguise" checked><span class="tk"></span></label></div>
         </div>
-        <div id="dead-sub">
-          <div class="o-row"><label class="rl">Dead Code Injection<small>Opaque always-false branches</small></label><label class="tog"><input type="checkbox" id="o_dead" checked onchange="showSub('dead-sub',this.checked)"><span class="tk"></span></label></div>
-          <div class="o-slider"><div class="o-slider-head"><span class="o-slider-name">Dead Code Threshold</span><span class="sv" id="v-dead">0.40</span></div><div class="srow"><input type="range" id="o_dead_t" min="0" max="1" step=".05" value=".4" oninput="SETD('v-dead',parseFloat(this.value).toFixed(2))"></div></div>
+        <div class="grp">
+          <div class="grp-lbl">Custom</div>
+          <div class="row"><label class="rl">Unicode Mangle<small>→ \u005F0x identifiers</small></label><label class="tog"><input type="checkbox" id="o_unimangle" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Fake Proto Chain<small>Phantom prototype assignments</small></label><label class="tog"><input type="checkbox" id="o_fakeproto" checked><span class="tk"></span></label></div>
         </div>
-        <div class="o-row"><label class="rl">IIFE Wrap<small>Wrap code in self-calling function</small></label><label class="tog"><input type="checkbox" id="o_iife" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Comma Obfuscation<small>void(a=…,b=…,fn()) expressions</small></label><label class="tog"><input type="checkbox" id="o_comma" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Object Key Transform<small>Keys → fromCharCode computed exprs</small></label><label class="tog"><input type="checkbox" id="o_objkeys"><span class="tk"></span></label></div>
       </div>
-    </div>
 
-    <!-- ── VM ── -->
-    <div class="acc-card open" id="acc-vm">
-      <button class="acc-head" onclick="toggleAcc('vm')">
-        <div class="acc-icon">⬡</div>
-        <div class="acc-info"><div class="acc-name">Virtual Machine</div><div class="acc-desc">Bytecode dispatcher or true opcode ISA</div></div>
-        <span class="acc-arrow">▾</span>
-      </button>
-      <div class="acc-body">
-        <input type="hidden" id="o_vm_mode" value="bytecode">
-        <input type="checkbox" id="o_bc" checked style="display:none">
-        <input type="checkbox" id="o_ovm" style="display:none">
-        <div class="seg-ctrl">
-          <button class="seg-btn vm-seg" data-vm="none" onclick="applyVmMode('none')">Off</button>
-          <button class="seg-btn vm-seg active" data-vm="bytecode" onclick="applyVmMode('bytecode')">Bytecode</button>
-          <button class="seg-btn vm-seg" data-vm="opcode" onclick="applyVmMode('opcode')">Opcode ISA</button>
+      <!-- CONTROL FLOW -->
+      <div class="tpanel" id="tpanel-flow">
+        <div class="grp">
+          <div class="grp-lbl">Flow Obfuscation</div>
+          <div id="cff-sub">
+            <div class="row"><label class="rl">Control Flow Flattening<small>Shuffle into while/switch dispatch</small></label><label class="tog"><input type="checkbox" id="o_cff" checked onchange="showSub('cff-sub',this.checked)"><span class="tk"></span></label></div>
+            <div class="sl"><div class="sl-head"><span class="sl-name">CFF Threshold</span><span class="sv" id="v-cff">0.75</span></div><div class="srow"><input type="range" id="o_cff_t" min="0" max="1" step=".05" value=".75" oninput="SETD('v-cff',parseFloat(this.value).toFixed(2))"></div></div>
+          </div>
+          <div id="dead-sub">
+            <div class="row"><label class="rl">Dead Code Injection<small>Opaque always-false branches</small></label><label class="tog"><input type="checkbox" id="o_dead" checked onchange="showSub('dead-sub',this.checked)"><span class="tk"></span></label></div>
+            <div class="sl"><div class="sl-head"><span class="sl-name">Dead Code Threshold</span><span class="sv" id="v-dead">0.40</span></div><div class="srow"><input type="range" id="o_dead_t" min="0" max="1" step=".05" value=".4" oninput="SETD('v-dead',parseFloat(this.value).toFixed(2))"></div></div>
+          </div>
+          <div class="row"><label class="rl">IIFE Wrap<small>(function(){…})()</small></label><label class="tog"><input type="checkbox" id="o_iife" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Comma Obfuscation<small>void(a=…,b=…,fn())</small></label><label class="tog"><input type="checkbox" id="o_comma" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Object Key Transform<small>Keys → fromCharCode exprs</small></label><label class="tog"><input type="checkbox" id="o_objkeys"><span class="tk"></span></label></div>
+        </div>
+      </div>
+
+      <!-- VM -->
+      <div class="tpanel" id="tpanel-vm">
+        <div class="grp">
+          <div class="grp-lbl">VM Mode</div>
+          <input type="hidden" id="o_vm_mode" value="bytecode">
+          <input type="checkbox" id="o_bc" checked style="display:none">
+          <input type="checkbox" id="o_ovm" style="display:none">
+          <div class="seg-ctrl">
+            <button class="seg-btn vm-seg" data-vm="none" onclick="applyVmMode('none')">Off</button>
+            <button class="seg-btn vm-seg active" data-vm="bytecode" onclick="applyVmMode('bytecode')">Bytecode</button>
+            <button class="seg-btn vm-seg" data-vm="opcode" onclick="applyVmMode('opcode')">Opcode ISA</button>
+          </div>
         </div>
         <div id="bc-sub">
-          <div class="o-sub-label">Encoding</div>
-          <div class="o-row"><label class="rl">Array XOR<small>XOR int[] with repeating key</small></label><label class="tog"><input type="checkbox" id="o_bc_arrenc" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Jump XOR<small>XOR dispatch values with key</small></label><label class="tog"><input type="checkbox" id="o_bc_jmpenc" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Stack XOR<small>Positional XOR on char accumulation</small></label><label class="tog"><input type="checkbox" id="o_bc_stackenc" checked><span class="tk"></span></label></div>
-          <div class="o-sub-label">Opcodes</div>
-          <div class="o-row"><label class="rl">Dynamic Opcodes<small>Randomize opcode constants per run</small></label><label class="tog"><input type="checkbox" id="o_bc_dynop" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Stateful Opcodes<small>XOR with evolving state register</small></label><label class="tog"><input type="checkbox" id="o_bc_stateful" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Compact Dispatch<small>Object lookup table</small></label><label class="tog"><input type="checkbox" id="o_bc_compact"><span class="tk"></span></label></div>
-          <div class="o-sub-label">Injection</div>
-          <div class="o-row"><label class="rl">Wrap Initializers<small>Nest dispatcher in named init fn</small></label><label class="tog"><input type="checkbox" id="o_bc_wrapinit"><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Decoy Opcodes<small>Insert dummy no-op opcodes</small></label><label class="tog"><input type="checkbox" id="o_bc_decoy" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Dead Branches<small>Unreachable branches in dispatcher</small></label><label class="tog"><input type="checkbox" id="o_bc_dead" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Macro Opcodes<small>Single opcode for init+build+exec</small></label><label class="tog"><input type="checkbox" id="o_bc_macro" checked><span class="tk"></span></label></div>
-          <div id="chunk-sub">
-            <div class="o-sub-label">Chunking</div>
-            <div class="o-row"><label class="rl">Chunk Splitting<small>Split int[] into sub-arrays</small></label><label class="tog"><input type="checkbox" id="o_chunk" checked onchange="showSub('chunk-sub',true)"><span class="tk"></span></label></div>
-            <div class="o-slider"><div class="o-slider-head"><span class="o-slider-name">Chunk Size (ints/part)</span><span class="sv" id="v-bcc">300</span></div><div class="srow"><input type="range" id="o_bcchunk" min="50" max="1000" step="50" value="300" oninput="SETD('v-bcc',this.value)"></div></div>
+          <div class="grp">
+            <div class="grp-lbl">Bytecode — Encoding</div>
+            <div class="row"><label class="rl">Array XOR<small>XOR int[] with repeating key</small></label><label class="tog"><input type="checkbox" id="o_bc_arrenc" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Jump XOR<small>XOR dispatch values with key</small></label><label class="tog"><input type="checkbox" id="o_bc_jmpenc" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Stack XOR<small>Positional XOR on char accumulation</small></label><label class="tog"><input type="checkbox" id="o_bc_stackenc" checked><span class="tk"></span></label></div>
           </div>
-          <div class="o-sub-label">Other</div>
-          <div class="o-row"><label class="rl">VM Anti-Debug<small>Pauses execution when DevTools open</small></label><label class="tog"><input type="checkbox" id="o_bc_antidebug" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Bytecode-Only String Array<small>Apply String Array only inside VM</small></label><label class="tog"><input type="checkbox" id="o_bc_sarrbconly"><span class="tk"></span></label></div>
-          <div class="info-box">Wraps via <code style="font-family:var(--mono);font-size:10px;">new Function()</code>. Auto-disabled for No-Eval target.</div>
+          <div class="grp">
+            <div class="grp-lbl">Bytecode — Opcodes</div>
+            <div class="row"><label class="rl">Dynamic Opcodes<small>Randomize constants per run</small></label><label class="tog"><input type="checkbox" id="o_bc_dynop" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Stateful Opcodes<small>XOR with evolving state register</small></label><label class="tog"><input type="checkbox" id="o_bc_stateful" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Compact Dispatch<small>Object lookup table</small></label><label class="tog"><input type="checkbox" id="o_bc_compact"><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Wrap Initializers<small>Nest dispatcher in init fn</small></label><label class="tog"><input type="checkbox" id="o_bc_wrapinit"><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Decoy Opcodes<small>Dummy no-op opcodes</small></label><label class="tog"><input type="checkbox" id="o_bc_decoy" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Dead Branches<small>Unreachable dispatcher branches</small></label><label class="tog"><input type="checkbox" id="o_bc_dead" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Macro Opcodes<small>Single opcode for init+build+exec</small></label><label class="tog"><input type="checkbox" id="o_bc_macro" checked><span class="tk"></span></label></div>
+          </div>
+          <div class="grp" id="chunk-sub">
+            <div class="grp-lbl">Bytecode — Chunking</div>
+            <div class="row"><label class="rl">Chunk Splitting<small>Split int[] into sub-arrays</small></label><label class="tog"><input type="checkbox" id="o_chunk" checked onchange="showSub('chunk-sub',true)"><span class="tk"></span></label></div>
+            <div class="sl"><div class="sl-head"><span class="sl-name">Chunk Size</span><span class="sv" id="v-bcc">300</span></div><div class="srow"><input type="range" id="o_bcchunk" min="50" max="1000" step="50" value="300" oninput="SETD('v-bcc',this.value)"></div></div>
+            <div class="row"><label class="rl">VM Anti-Debug<small>Pauses when DevTools open</small></label><label class="tog"><input type="checkbox" id="o_bc_antidebug" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">BC-Only String Array<small>Apply SA only inside VM</small></label><label class="tog"><input type="checkbox" id="o_bc_sarrbconly"><span class="tk"></span></label></div>
+            <div class="info-box">Wraps via <code style="font-family:var(--mono);font-size:10px;">new Function()</code>. Disabled for No-Eval.</div>
+          </div>
         </div>
         <div id="ovm-sub">
-          <div class="o-sub-label">Encoding</div>
-          <div class="o-row"><label class="rl">Operand XOR Scramble<small>Per-opcode XOR key</small></label><label class="tog"><input type="checkbox" id="o_ovm_xorop" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Opcode Shuffle<small>Random mapping per run</small></label><label class="tog"><input type="checkbox" id="o_ovm_shuffle" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">LFSR Stream Cipher<small>32-bit keystream XOR over bytecode</small></label><label class="tog"><input type="checkbox" id="o_ovm_lfsr" checked><span class="tk"></span></label></div>
-          <div class="o-sub-label">Dispatcher</div>
-          <div class="o-row"><label class="rl">Indirect Dispatch<small>Jump table — defeats linear sweep</small></label><label class="tog"><input type="checkbox" id="o_ovm_indirect" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Register Aliasing<small>Random register→slot mapping</small></label><label class="tog"><input type="checkbox" id="o_ovm_regmap" checked><span class="tk"></span></label></div>
-          <div class="o-sub-label">Anti-Analysis</div>
-          <div class="o-row"><label class="rl">Opaque Dispatch Guards<small>Dead arms mimicking real opcodes</small></label><label class="tog"><input type="checkbox" id="o_ovm_guards" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">PC Obfuscation<small>PC stored XOR'd with rolling mask</small></label><label class="tog"><input type="checkbox" id="o_ovm_pcxor" checked><span class="tk"></span></label></div>
-          <div class="o-row"><label class="rl">Constant Blinding<small>real = blind ^ stored</small></label><label class="tog"><input type="checkbox" id="o_ovm_blind" checked><span class="tk"></span></label></div>
-          <div class="info-box">True ISA — source never reconstructed as a string. ~7.99 entropy. Mutually exclusive with Bytecode VM.</div>
+          <div class="grp">
+            <div class="grp-lbl">Opcode ISA — Encoding</div>
+            <div class="row"><label class="rl">Operand XOR Scramble<small>Per-opcode key</small></label><label class="tog"><input type="checkbox" id="o_ovm_xorop" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Opcode Shuffle<small>Random mapping per run</small></label><label class="tog"><input type="checkbox" id="o_ovm_shuffle" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">LFSR Stream Cipher<small>32-bit keystream XOR</small></label><label class="tog"><input type="checkbox" id="o_ovm_lfsr" checked><span class="tk"></span></label></div>
+          </div>
+          <div class="grp">
+            <div class="grp-lbl">Opcode ISA — Dispatcher</div>
+            <div class="row"><label class="rl">Indirect Dispatch<small>Defeats linear sweep disasm</small></label><label class="tog"><input type="checkbox" id="o_ovm_indirect" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Register Aliasing<small>Random reg→slot mapping</small></label><label class="tog"><input type="checkbox" id="o_ovm_regmap" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Opaque Dispatch Guards<small>Dead arms mimicking opcodes</small></label><label class="tog"><input type="checkbox" id="o_ovm_guards" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">PC Obfuscation<small>PC stored XOR'd with rolling mask</small></label><label class="tog"><input type="checkbox" id="o_ovm_pcxor" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Constant Blinding<small>real = blind ^ stored</small></label><label class="tog"><input type="checkbox" id="o_ovm_blind" checked><span class="tk"></span></label></div>
+            <div class="info-box">True ISA — source never reconstructed as a string. ~7.99 entropy.</div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- ── PROTECTION ── -->
-    <div class="acc-card open" id="acc-protection">
-      <button class="acc-head" onclick="toggleAcc('protection')">
-        <div class="acc-icon">◈</div>
-        <div class="acc-info"><div class="acc-name">Protection</div><div class="acc-desc">Runtime defenses, anti-debug, domain lock</div></div>
-        <span class="acc-arrow">▾</span>
-      </button>
-      <div class="acc-body">
-        <div class="o-row"><label class="rl">Self-Defending<small>Infinite loop if reformatted</small></label><label class="tog"><input type="checkbox" id="o_self" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Anti-Beautifier<small>Whitespace ratio + length trap</small></label><label class="tog"><input type="checkbox" id="o_antib" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Native Fn Check<small>Detects hooked/wrapped natives</small></label><label class="tog"><input type="checkbox" id="o_native" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Tamper Detection<small>Runtime sentinel variable guard</small></label><label class="tog"><input type="checkbox" id="o_tamp" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Disable Console<small>Null console.log/warn/error</small></label><label class="tog"><input type="checkbox" id="o_con"><span class="tk"></span></label></div>
-        <div id="dbg-sub">
-          <div class="o-sep"></div>
-          <div class="o-sub-label">Debug Protection</div>
-          <div class="o-row"><label class="rl">DevTools Freeze<small>setInterval debugger trap</small></label><label class="tog"><input type="checkbox" id="o_dbg" checked onchange="showSub('dbg-sub',this.checked)"><span class="tk"></span></label></div>
-          <div class="o-slider"><div class="o-slider-head"><span class="o-slider-name">Interval (ms)</span><span class="sv" id="v-dbg">2000</span></div><div class="srow"><input type="range" id="o_dbgint" min="0" max="5000" step="100" value="2000" oninput="SETD('v-dbg',this.value)"></div></div>
+      <!-- PROTECTION -->
+      <div class="tpanel" id="tpanel-protection">
+        <div class="grp">
+          <div class="grp-lbl">Runtime Defenses</div>
+          <div class="row"><label class="rl">Self-Defending<small>Infinite loop if reformatted</small></label><label class="tog"><input type="checkbox" id="o_self" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Anti-Beautifier<small>Whitespace ratio + length trap</small></label><label class="tog"><input type="checkbox" id="o_antib" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Native Fn Check<small>Detects hooked/wrapped natives</small></label><label class="tog"><input type="checkbox" id="o_native" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Tamper Detection<small>Runtime sentinel variable guard</small></label><label class="tog"><input type="checkbox" id="o_tamp" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Disable Console<small>Nulls console.log/warn/error</small></label><label class="tog"><input type="checkbox" id="o_con"><span class="tk"></span></label></div>
         </div>
-        <div id="dom-sub">
-          <div class="o-sep"></div>
-          <div class="o-sub-label">Domain Lock</div>
-          <div class="o-row"><label class="rl">Enable<small>Restrict execution to listed hostnames</small></label><label class="tog"><input type="checkbox" id="o_dom" onchange="showSub('dom-sub',this.checked);liveCheck()"><span class="tk"></span></label></div>
+        <div class="grp" id="dbg-sub">
+          <div class="grp-lbl">Debug Protection</div>
+          <div class="row"><label class="rl">DevTools Freeze<small>setInterval debugger trap</small></label><label class="tog"><input type="checkbox" id="o_dbg" checked onchange="showSub('dbg-sub',this.checked)"><span class="tk"></span></label></div>
+          <div class="sl"><div class="sl-head"><span class="sl-name">Interval (ms)</span><span class="sv" id="v-dbg">2000</span></div><div class="srow"><input type="range" id="o_dbgint" min="0" max="5000" step="100" value="2000" oninput="SETD('v-dbg',this.value)"></div></div>
+        </div>
+        <div class="grp" id="dom-sub">
+          <div class="grp-lbl">Domain Lock</div>
+          <div class="row"><label class="rl">Enable<small>Restrict to listed hostnames</small></label><label class="tog"><input type="checkbox" id="o_dom" onchange="showSub('dom-sub',this.checked);liveCheck()"><span class="tk"></span></label></div>
           <div class="drow"><input class="fi" id="dom-inp" type="text" placeholder="example.com" onkeydown="if(event.key==='Enter')addDomain()"><button class="btn-add" onclick="addDomain()">+ Add</button></div>
           <div class="dlist" id="dom-list"></div>
-          <div class="o-field"><div class="o-field-label">Redirect URL</div><input class="fi" id="o_domredir" type="text" placeholder="https://example.com/blocked"></div>
+          <div class="fld"><div class="fld-lbl">Redirect URL</div><input class="fi" id="o_domredir" type="text" placeholder="https://example.com/blocked"></div>
         </div>
       </div>
-    </div>
 
-    <!-- ── TRAPS ── -->
-    <div class="acc-card open" id="acc-traps">
-      <button class="acc-head" onclick="toggleAcc('traps')">
-        <div class="acc-icon">⚡</div>
-        <div class="acc-info"><div class="acc-name">Traps</div><div class="acc-desc">Anti-analysis, deobfuscator deterrents</div></div>
-        <span class="acc-arrow">▾</span>
-      </button>
-      <div class="acc-body">
-        <div class="o-sub-label">Anti-Analysis</div>
-        <div class="o-row"><label class="rl">Opaque Predicates<small>Always-true/false guards fool symbolic exec</small></label><label class="tog"><input type="checkbox" id="o_opaque" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Stack Canary<small>Crash inliners with shallow call stacks</small></label><label class="tog"><input type="checkbox" id="o_canary" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Environment Fingerprint<small>Fails static emulators and sandboxes</small></label><label class="tog"><input type="checkbox" id="o_envfp" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Deobfuscator Trap<small>Infinite-regress bait for unpackers</small></label><label class="tog"><input type="checkbox" id="o_deobtrap" checked><span class="tk"></span></label></div>
-        <div class="o-sep"></div>
-        <div class="o-sub-label">Code Confusion</div>
-        <div class="o-row"><label class="rl">Proxy Function Wrap<small>Breaks static call graphs</small></label><label class="tog"><input type="checkbox" id="o_proxywrap" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Junk Polyglot Blocks<small>Dead CFF-lookalike switch blocks</small></label><label class="tog"><input type="checkbox" id="o_junkpoly" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Hash-Locked Decoder<small>Integrity self-check — patch it, breaks silently</small></label><label class="tog"><input type="checkbox" id="o_hashlocked" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">String Intern Trap<small>Key strings behind defineProperty getters</small></label><label class="tog"><input type="checkbox" id="o_interntrap" checked><span class="tk"></span></label></div>
+      <!-- TRAPS -->
+      <div class="tpanel" id="tpanel-traps">
+        <div class="grp">
+          <div class="grp-lbl">Anti-Analysis</div>
+          <div class="row"><label class="rl">Opaque Predicates<small>Fool symbolic execution engines</small></label><label class="tog"><input type="checkbox" id="o_opaque" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Stack Canary<small>Crash shallow-stack inliners</small></label><label class="tog"><input type="checkbox" id="o_canary" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Environment Fingerprint<small>Fails static emulators</small></label><label class="tog"><input type="checkbox" id="o_envfp" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Deobfuscator Trap<small>Infinite-regress bait for unpackers</small></label><label class="tog"><input type="checkbox" id="o_deobtrap" checked><span class="tk"></span></label></div>
+        </div>
+        <div class="grp">
+          <div class="grp-lbl">Code Confusion</div>
+          <div class="row"><label class="rl">Proxy Function Wrap<small>Breaks static call graphs</small></label><label class="tog"><input type="checkbox" id="o_proxywrap" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Junk Polyglot Blocks<small>Dead CFF-lookalike blocks</small></label><label class="tog"><input type="checkbox" id="o_junkpoly" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Hash-Locked Decoder<small>Integrity self-check</small></label><label class="tog"><input type="checkbox" id="o_hashlocked" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">String Intern Trap<small>defineProperty getter strings</small></label><label class="tog"><input type="checkbox" id="o_interntrap" checked><span class="tk"></span></label></div>
+        </div>
       </div>
-    </div>
 
-    <!-- ── OUTPUT ── -->
-    <div class="acc-card open" id="acc-output">
-      <button class="acc-head" onclick="toggleAcc('output')">
-        <div class="acc-icon">◎</div>
-        <div class="acc-info"><div class="acc-name">Output</div><div class="acc-desc">Minification, source maps, misc options</div></div>
-        <span class="acc-arrow">▾</span>
-      </button>
-      <div class="acc-body">
-        <div class="o-row"><label class="rl">Compact Output<small>Strip whitespace, collapse to one line</small></label><label class="tog"><input type="checkbox" id="o_mini" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Collapse Semicolons<small>var a=1;var b=2 → var a=1,b=2</small></label><label class="tog"><input type="checkbox" id="o_semi" checked><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Strict Mode<small>Prepend 'use strict' directive</small></label><label class="tog"><input type="checkbox" id="o_strict"><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Simplify<small>Pre-evaluate constant binary expressions</small></label><label class="tog"><input type="checkbox" id="o_simplify"><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">Ignore Imports<small>Pass import/require through unchanged</small></label><label class="tog"><input type="checkbox" id="o_ignimport"><span class="tk"></span></label></div>
-        <div class="o-row"><label class="rl">HTML Mode<small>Obfuscate &lt;script&gt; blocks inside HTML</small></label><label class="tog"><input type="checkbox" id="o_html"><span class="tk"></span></label></div>
-        <div id="smap-sub">
-          <div class="o-sep"></div>
-          <div class="o-sub-label">Source Map</div>
-          <div class="o-row"><label class="rl">Generate Source Map<small>Map output back to original source</small></label><label class="tog"><input type="checkbox" id="o_srcmap" onchange="showSub('smap-sub',this.checked);G('btn-map').disabled=!this.checked"><span class="tk"></span></label></div>
-          <div class="o-field"><div class="o-field-label">Mode</div><select class="fsel" id="o_smap_mode"><option value="inline">Inline</option><option value="separate">Separate</option></select></div>
-          <div class="o-field"><div class="o-field-label">Map URL</div><input class="fi" id="o_smap_url" type="text" placeholder="output.js.map"></div>
-          <div class="o-field"><div class="o-field-label">Source Root</div><input class="fi" id="o_smap_root" type="text" placeholder="/"></div>
+      <!-- OUTPUT -->
+      <div class="tpanel" id="tpanel-output">
+        <div class="grp">
+          <div class="grp-lbl">Minification</div>
+          <div class="row"><label class="rl">Compact Output<small>Strip whitespace, one line</small></label><label class="tog"><input type="checkbox" id="o_mini" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Collapse Semicolons<small>Merge var declarations</small></label><label class="tog"><input type="checkbox" id="o_semi" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Strict Mode<small>Prepend 'use strict'</small></label><label class="tog"><input type="checkbox" id="o_strict"><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Simplify<small>Pre-evaluate constant expressions</small></label><label class="tog"><input type="checkbox" id="o_simplify"><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Ignore Imports<small>Pass import/require through unchanged</small></label><label class="tog"><input type="checkbox" id="o_ignimport"><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">HTML Mode<small>Obfuscate &lt;script&gt; blocks in HTML</small></label><label class="tog"><input type="checkbox" id="o_html"><span class="tk"></span></label></div>
+        </div>
+        <div class="grp" id="smap-sub">
+          <div class="grp-lbl">Source Map</div>
+          <div class="row"><label class="rl">Generate<small>Map output back to original source</small></label><label class="tog"><input type="checkbox" id="o_srcmap" onchange="showSub('smap-sub',this.checked);G('btn-map').disabled=!this.checked"><span class="tk"></span></label></div>
+          <div class="fld"><div class="fld-lbl">Mode</div><select class="fsel" id="o_smap_mode"><option value="inline">Inline</option><option value="separate">Separate</option></select></div>
+          <div class="fld"><div class="fld-lbl">Map URL</div><input class="fi" id="o_smap_url" type="text" placeholder="output.js.map"></div>
+          <div class="fld"><div class="fld-lbl">Source Root</div><input class="fi" id="o_smap_root" type="text" placeholder="/"></div>
           <div class="info-box">Keep .map files private — they contain original source.</div>
         </div>
       </div>
-    </div>
 
-    <!-- ── GENERAL ── -->
-    <div class="acc-card open" id="acc-general">
-      <button class="acc-head" onclick="toggleAcc('general')">
-        <div class="acc-icon">⚙</div>
-        <div class="acc-info"><div class="acc-name">General</div><div class="acc-desc">Seed, conflicts, status</div></div>
-        <span class="acc-arrow">▾</span>
-      </button>
-      <div class="acc-body">
-        <div class="o-sub-label">Obfuscation Seed</div>
-        <div class="seed-row">
-          <input class="fi" id="seed-val" type="text" placeholder="blank = random each run">
-          <button class="btn-rng" onclick="doRandomSeed()">↺</button>
+      <!-- MORE (General + Conflicts) -->
+      <div class="tpanel" id="tpanel-general">
+        <div class="grp">
+          <div class="grp-lbl">Seed</div>
+          <div class="seed-row">
+            <input class="fi" id="seed-val" type="text" placeholder="blank = random each run">
+            <button class="btn-rng" onclick="doRandomSeed()">↺</button>
+          </div>
         </div>
-        <div class="o-sep"></div>
-        <div class="o-sub-label">Conflicts</div>
-        <div id="conflicts-inner"></div>
+        <div class="grp">
+          <div class="grp-lbl">Conflicts</div>
+          <div id="conflicts-inner"></div>
+        </div>
       </div>
-    </div>
 
-  </div><!-- end accordion-grid -->
-</section>
+      <!-- conflicts tab (hidden, engine still needs it) -->
+      <div id="tpanel-conflicts"></div>
 
-<!-- CONFLICTS STICKY STRIP -->
-<div id="conflicts-strip"></div>
+    </div><!-- end panel-scroll -->
+  </div><!-- end panel -->
 
-<!-- FOOTER -->
-<footer id="footer">
-  <div class="footer-logo">Obs<em>cu</em>ra</div>
-  <div class="footer-gap"></div>
-  <div class="footer-note">All processing is client-side. No code is transmitted.</div>
-</footer>
+</div><!-- end workspace -->
+
+<!-- STATUS BAR -->
+<div id="statusbar">
+  <span class="sb-st">In <b id="s-in">—</b></span>
+  <span class="sb-st">Out <b id="s-out">—</b></span>
+  <span class="sb-st">× <b id="s-ratio">—</b></span>
+  <span class="sb-st">Strings <b id="s-str">—</b></span>
+  <span class="sb-st">Bytecodes <b id="s-bc">—</b></span>
+  <span class="sb-st">Time <b id="s-time">—</b></span>
+  <div class="sb-gap"></div>
+  <span class="sb-hint" id="sb-hint">Paste JS · pick preset · click Run</span>
+</div>
+
+</div><!-- end app -->
 
 <!-- AUTOCONFIG MODAL -->
 <div id="ac-overlay" onclick="if(event.target===this)closeAutoConfig()">
@@ -1074,10 +744,7 @@ body {
       </div>
       <div class="ac-section"><div class="ac-section-title">Recommendations</div><div class="ac-rec-list" id="ac-recs">Pick a level above.</div></div>
     </div>
-    <div id="ac-foot">
-      <button id="ac-cancel" onclick="closeAutoConfig()">Cancel</button>
-      <button id="ac-apply" onclick="applyAutoConfig()">Apply</button>
-    </div>
+    <div id="ac-foot"><button id="ac-cancel" onclick="closeAutoConfig()">Cancel</button><button id="ac-apply" onclick="applyAutoConfig()">Apply</button></div>
   </div>
 </div>
 
@@ -1089,17 +756,30 @@ body {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
 <script>
-// ── ACCORDION ───────────────────────────────────
-function toggleAcc(name){
-  const card=document.getElementById('acc-'+name);
-  if(card)card.classList.toggle('open');
+/* ─── PANEL TOGGLE ─── */
+let panelOpen = false;
+function togglePanel(){
+  panelOpen = !panelOpen;
+  document.getElementById('panel').classList.toggle('open', panelOpen);
+  document.getElementById('editors').classList.toggle('shifted', panelOpen);
+  document.getElementById('settings-toggle').classList.toggle('active', panelOpen);
+  setTimeout(fitEditors, 30);
 }
 
-// ── SLIDER FILL ─────────────────────────────────
+/* ─── TABS ─── */
+function switchTab(name){
+  document.querySelectorAll('.stab').forEach(b=>
+    b.classList.toggle('active', b.getAttribute('onclick').includes("'"+name+"'")));
+  document.querySelectorAll('.tpanel,#tpanel-conflicts').forEach(p=>p.classList.remove('active'));
+  const p = document.getElementById('tpanel-'+name);
+  if(p) p.classList.add('active');
+}
+
+/* ─── SLIDERS ─── */
 function updateSliderFill(el){
   const min=parseFloat(el.min||0),max=parseFloat(el.max||100),val=parseFloat(el.value);
   const pct=((val-min)/(max-min)*100).toFixed(1);
-  el.style.background=`linear-gradient(to right,var(--acc) ${pct}%,var(--s4) ${pct}%)`;
+  el.style.background=`linear-gradient(to right,var(--acc) ${pct}%,var(--s5) ${pct}%)`;
 }
 function initSliders(){
   document.querySelectorAll('.srow input[type=range]').forEach(el=>{
@@ -1108,51 +788,39 @@ function initSliders(){
   });
 }
 
-// ── CONFLICTS STRIP ─────────────────────────────
-function syncConflictStrip(){
-  const src=document.getElementById('conflicts-inner');
-  const strip=document.getElementById('conflicts-strip');
-  if(!src||!strip)return;
-  const items=src.querySelectorAll('.ci-item');
-  if(items.length){
-    strip.innerHTML=src.innerHTML;
-    strip.classList.add('visible');
-  }else{
-    strip.classList.remove('visible');
-    strip.innerHTML='';
-  }
+/* ─── EDITOR FIT ─── */
+function fitEditors(){
+  if(window.inputEditor){ inputEditor.refresh(); }
+  if(window.outputEditor){ outputEditor.refresh(); }
+  ['in-editor','out-editor'].forEach(id=>{
+    const wrap=document.getElementById(id);
+    if(!wrap) return;
+    const h=wrap.offsetHeight;
+    if(h>10){
+      const cm=wrap.querySelector('.CodeMirror');
+      if(cm&&cm.CodeMirror) cm.CodeMirror.setSize(null,h);
+    }
+  });
 }
+if(typeof ResizeObserver!=='undefined'){
+  new ResizeObserver(()=>fitEditors()).observe(document.getElementById('editors'));
+}
+window.addEventListener('resize',fitEditors);
 
-// ── COMPAT SHIMS ────────────────────────────────
-// Engine calls switchTab — no-op in this layout (accordion-based)
-function switchTab(name){}
-
-// Engine calls querySelectorAll('.stab') and '.tpanel,...' — add shims
-// .stab → nav-section (not used here, but prevent errors)
-// .tpanel → acc-body panels (not needed since we use accordion)
-
-// ── STATS ───────────────────────────────────────
-function showStats(){
+/* ─── SHOW RUN STATS ─── */
+function showRunStats(){
   const rs=document.getElementById('run-stats');
   const oh=document.getElementById('out-hint');
-  if(rs)rs.style.display='flex';
-  if(oh)oh.style.display='none';
+  if(rs) rs.style.display='flex';
+  if(oh) oh.style.display='none';
+  const hint=document.getElementById('sb-hint');
+  if(hint) hint.style.display='none';
 }
 
+/* ─── BOOT ─── */
 window.addEventListener('load',()=>{
   initSliders();
-  // Patch liveCheck to also sync strip
-  const _origLC=window.liveCheck;
-  if(_origLC){
-    window.liveCheck=function(){
-      _origLC();
-      syncConflictStrip();
-    };
-  }
-});
-window.addEventListener('resize',()=>{
-  if(window.inputEditor)inputEditor.refresh();
-  if(window.outputEditor)outputEditor.refresh();
+  setTimeout(fitEditors,80);
 });
 
 // ================================================================
@@ -3263,7 +2931,6 @@ function liveCheck(){
   if(CHK('o_ovm')&&CHK('o_bc'))w.push('⚠ Bytecode VM + Opcode VM both active — Opcode VM will be skipped; disable one');
   if(CHK('o_unimangle')&&CHK('o_bc'))w.push('⚠ Unicode Mangle + Bytecode VM: \\uNNNN inside new Function() string causes SyntaxError — disable one');
   if(CHK('o_unimangle')&&CHK('o_ovm'))w.push('⚠ Unicode Mangle + Opcode VM: same issue — \\uNNNN in LITERAL_BLOCK strings causes SyntaxError');
-  if(typeof syncConflictStrip==='function')setTimeout(syncConflictStrip,0);
   body.innerHTML=w.length
     ?w.map(x=>`<div class="ci-item" style="color:${x.startsWith('⚠')?'var(--red)':'var(--amb)'}">${x}</div>`).join('')
     :'<div class="ci-ok">✓ No issues</div>';
@@ -3477,13 +3144,7 @@ function runObfuscate(){
     SETD('s-str',st.strings);
     SETD('s-bc',st.bytecodes);
     SETD('s-time',elapsed);
-    showStats();
-    SETD('s-in',src.length.toLocaleString()+' B');
-    SETD('s-out',out.length.toLocaleString()+' B');
-    SETD('s-ratio',(out.length/src.length).toFixed(1)+'×');
-    SETD('s-str',st.strings);
-    SETD('s-bc',st.bytecodes);
-    SETD('s-time',elapsed);
+    showRunStats();
   }catch(e){
     outputEditor.setValue('// ERROR: '+e.message+'\n//\n// '+(e.stack||''));
     G('out-hint').textContent='Error';
@@ -3744,7 +3405,7 @@ function applyAutoConfig(){
 // ================================================================
 //  PERSISTENCE — save/load all settings + input to localStorage
 // ================================================================
-const PERSIST_KEY='obscura_v1';
+const PERSIST_KEY='obscura_v2'; // bumped to clear stale v1 state
 
 function saveSettings(){
   try{
@@ -3871,8 +3532,28 @@ document.querySelectorAll('input[type=checkbox]').forEach(el=>el.addEventListene
 // Boot: try to load saved state, fall back to default preset
 window.addEventListener('load',()=>{
   initSliders();
+  setTimeout(fitEditors,80);
   const ok=loadSettings();
   if(!ok){applyPreset();}
+  // Force-correct all sub-panel visibility after init
+  // (guards against stale localStorage or timing issues)
+  (function fixSubPanels(){
+    const pairs=[
+      ['sarr-sub', 'o_sarr'], ['ssplit-sub', 'o_ssplit'],
+      ['ct-sub','o_calltrans'],['cff-sub','o_cff'],['dead-sub','o_dead'],
+      ['dbg-sub','o_dbg'],['ren-sub','o_ren'],['chunk-sub','o_chunk'],
+      ['dom-sub','o_dom'],['smap-sub','o_srcmap'],['dict-sub',null]
+    ];
+    pairs.forEach(([sub,chk])=>{
+      const el=document.getElementById(sub);
+      if(!el)return;
+      if(chk===null){el.style.display='none';return;}
+      const cb=document.getElementById(chk);
+      el.style.display=(cb&&cb.checked)?'block':'none';
+    });
+    // sarr-sub and ssplit-sub: also show if no checkbox controls them (always-on layout)
+    // sarr-sub is only hidden when o_sarr is off which is correct
+  })();
   // Wire up auto-save after load so save isn't triggered during init
   document.querySelectorAll('input[id],select[id]').forEach(el=>{
     el.addEventListener('change',saveSettings);
