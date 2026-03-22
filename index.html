@@ -168,13 +168,34 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 #panel.open{transform:translateX(0);}
 
 /* panel top */
+#panel-top-wrap{
+  position:relative;flex-shrink:0;
+}
 #panel-top{
   flex-shrink:0;height:36px;
   background:var(--s2);border-bottom:1px solid var(--ln);
   display:flex;align-items:stretch;gap:0;
   overflow-x:auto;
+  scrollbar-width:none;
 }
 #panel-top::-webkit-scrollbar{display:none;}
+
+/* Tab scroll hint — fades out when scrolled to end */
+#tab-scroll-hint{
+  position:absolute;right:0;top:0;height:36px;
+  display:flex;align-items:center;
+  background:linear-gradient(to right, transparent, var(--s2) 55%);
+  padding-left:20px;padding-right:6px;
+  pointer-events:none;
+  transition:opacity .25s;
+  border-bottom:1px solid var(--ln);
+}
+#tab-scroll-hint.hidden{opacity:0;}
+#tab-scroll-arrow{
+  font-size:14px;color:var(--acc);font-weight:400;
+  animation:tab-hint-pulse 2s ease-in-out infinite;
+}
+@keyframes tab-hint-pulse{0%,100%{opacity:.5;}50%{opacity:1;}}
 .stab{
   padding:0 12px;background:none;border:none;border-bottom:2px solid transparent;
   color:var(--mute);font-family:var(--ui);font-size:10.5px;font-weight:600;
@@ -235,7 +256,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 .srow input[type=range]{
   flex:1;height:3px;cursor:pointer;
   -webkit-appearance:none;appearance:none;
-  background:var(--s5);border-radius:2px;outline:none;
+  background:var(--s5);
+  border-radius:2px;outline:none;
 }
 .srow input[type=range]::-webkit-slider-thumb{
   -webkit-appearance:none;width:13px;height:13px;border-radius:50%;
@@ -245,6 +267,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 }
 .srow input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.22);box-shadow:0 0 0 4px rgba(124,110,247,.22);}
 .srow input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--acc);border:2px solid var(--bg);cursor:pointer;}
+.srow input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:linear-gradient(to right,var(--acc) var(--pct,0%),var(--s5) var(--pct,0%));}
 
 /* ─── FIELD ─── */
 .fld{margin-top:7px;}
@@ -367,25 +390,25 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 /* ─── SCROLL HINT ─── */
 #scroll-hint{
   position:absolute;bottom:0;left:0;right:0;
-  height:40px;
-  background:linear-gradient(to bottom,transparent,var(--s1) 80%);
-  display:flex;align-items:flex-end;justify-content:center;
-  padding-bottom:7px;pointer-events:none;
-  opacity:1;transition:opacity .4s;flex-shrink:0;
+  height:48px;
+  background:linear-gradient(to bottom,transparent,var(--s1) 70%);
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+  padding-bottom:8px;gap:2px;pointer-events:none;
+  opacity:1;transition:opacity .4s;
 }
-.scroll-dots{
-  display:flex;gap:3px;align-items:center;
+.scroll-hint-text{
+  font-size:9.5px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--mute);
+  animation:hint-pulse 2.2s ease-in-out infinite;
 }
-.scroll-dots span{
-  width:3px;height:3px;border-radius:50%;
-  background:var(--acc);opacity:.5;
-  animation:scrollbounce 1.4s ease-in-out infinite;
+.scroll-hint-arrow{
+  font-size:13px;color:var(--acc);opacity:.8;
+  animation:hint-bounce 2.2s ease-in-out infinite;
 }
-.scroll-dots span:nth-child(2){animation-delay:.2s;}
-.scroll-dots span:nth-child(3){animation-delay:.4s;}
-@keyframes scrollbounce{
-  0%,100%{opacity:.3;transform:translateY(0);}
-  50%{opacity:.9;transform:translateY(-3px);}
+@keyframes hint-pulse{0%,100%{opacity:.4;}50%{opacity:.9;}}
+@keyframes hint-bounce{
+  0%,100%{opacity:.5;transform:translateY(0);}
+  50%{opacity:1;transform:translateY(3px);}
 }
 
 /* ─── STATUS BAR ─── */
@@ -513,6 +536,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 
   <!-- ══════════ SLIDE PANEL ══════════ -->
   <div id="panel">
+    <div id="panel-top-wrap">
     <div id="panel-top">
       <button class="stab active" onclick="switchTab('strings')">Strings</button>
       <button class="stab" onclick="switchTab('identifiers')">Idents</button>
@@ -522,7 +546,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
       <button class="stab" onclick="switchTab('traps')">Traps</button>
       <button class="stab" onclick="switchTab('output')">Output</button>
       <button class="stab" onclick="switchTab('general')">More</button>
+    </div><!-- end panel-top -->
+    <div id="tab-scroll-hint">
+      <span id="tab-scroll-arrow">›</span>
     </div>
+  </div><!-- end panel-top-wrap -->
     <div id="panel-scroll">
 
       <!-- STRINGS -->
@@ -768,7 +796,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 
     </div><!-- end panel-scroll -->
   <div id="scroll-hint">
-    <div class="scroll-dots"><span></span><span></span><span></span></div>
+    <span class="scroll-hint-text">scroll for more</span>
+    <span class="scroll-hint-arrow">↓</span>
   </div>
   </div><!-- end panel -->
 
@@ -824,22 +853,59 @@ function togglePanel(){
   document.getElementById('editors').classList.toggle('shifted', panelOpen);
   const pull = document.getElementById('panel-pull');
   if(pull){pull.style.right = panelOpen ? 'var(--panel)' : '0';pull.dataset.open=panelOpen;}
+  if(panelOpen&&window._updateTabHint)setTimeout(window._updateTabHint,30);
   setTimeout(fitEditors, 30);
 }
 
-// Scroll hint — hide when near bottom
+// Scroll hints
 (function(){
-  function updateHint(){
-    const sc=document.getElementById('panel-scroll');
-    const hint=document.getElementById('scroll-hint');
-    if(!sc||!hint)return;
-    const atBottom=sc.scrollHeight-sc.scrollTop-sc.clientHeight<30;
-    hint.style.opacity=atBottom?'0':'1';
+  const sc=()=>document.getElementById('panel-scroll');
+  const hint=()=>document.getElementById('scroll-hint');
+  const tabs=()=>document.getElementById('panel-top');
+  const tabHint=()=>document.getElementById('tab-scroll-hint');
+
+  // Re-evaluate the bottom hint for the current tab's content
+  function updateBottomHint(){
+    const s=sc(),h=hint();
+    if(!s||!h)return;
+    const canScroll=s.scrollHeight>s.clientHeight+10;
+    const atBottom=s.scrollHeight-s.scrollTop-s.clientHeight<40;
+    h.style.opacity=(canScroll&&!atBottom)?'1':'0';
   }
+
+  // Tab bar horizontal scroll hint
+  function updateTabHint(){
+    const t=tabs(),th=tabHint();
+    if(!t||!th)return;
+    const atEnd=t.scrollWidth-t.scrollLeft-t.clientWidth<8;
+    th.classList.toggle('hidden',atEnd);
+  }
+
+  // Called every time we switch tabs — resets scroll position + re-checks hint
+  window._onTabSwitch=function(){
+    const s=sc();
+    if(s)s.scrollTop=0;          // scroll back to top of new tab
+    // Use rAF so DOM has painted the new tab content before measuring
+    requestAnimationFrame(()=>{
+      updateBottomHint();
+    });
+  };
+
   window.addEventListener('load',()=>{
-    const sc=document.getElementById('panel-scroll');
-    if(sc){sc.addEventListener('scroll',updateHint);updateHint();}
+    const s=sc();
+    if(s){
+      s.addEventListener('scroll',updateBottomHint);
+      updateBottomHint();
+    }
+    const t=tabs();
+    if(t){
+      t.addEventListener('scroll',updateTabHint);
+      updateTabHint();
+    }
   });
+
+  window._updateTabHint=updateTabHint;
+  window._updateBottomHint=updateBottomHint;
 })();
 
 /* ─── TABS ─── */
@@ -849,16 +915,20 @@ function switchTab(name){
   document.querySelectorAll('.tpanel,#tpanel-conflicts').forEach(p=>p.classList.remove('active'));
   const p = document.getElementById('tpanel-'+name);
   if(p) p.classList.add('active');
+  if(window._onTabSwitch) window._onTabSwitch();
 }
 
 /* ─── SLIDERS ─── */
 function updateSliderFill(el){
   const min=parseFloat(el.min||0),max=parseFloat(el.max||100),val=parseFloat(el.value);
   const pct=((val-min)/(max-min)*100).toFixed(1);
-  el.style.background=`linear-gradient(to right,var(--acc) ${pct}%,var(--s5) ${pct}%)`;
+  el.style.background='linear-gradient(to right,var(--acc) '+pct+'%,var(--s5) '+pct+'%)';
+}
+function refreshAllSliders(){
+  document.querySelectorAll('input[type=range]').forEach(updateSliderFill);
 }
 function initSliders(){
-  document.querySelectorAll('.srow input[type=range]').forEach(el=>{
+  document.querySelectorAll('input[type=range]').forEach(el=>{
     updateSliderFill(el);
     el.addEventListener('input',()=>updateSliderFill(el));
   });
@@ -909,9 +979,20 @@ function VAL(id){const e=G(id);return e?e.value:'';}
 function NUM(id,d){const v=parseFloat(VAL(id));return isNaN(v)?d:v;}
 function INT(id,d){const v=parseInt(VAL(id));return isNaN(v)?d:v;}
 function SET(id,v){const e=G(id);if(e)e.checked=v;}
-function SETV(id,v){const e=G(id);if(e)e.value=v;}
+function SETV(id,v){
+  const e=G(id);if(!e)return;
+  e.value=v;
+  // If it's a range, update the visual fill
+  if(e.type==='range'&&typeof updateSliderFill==='function')updateSliderFill(e);
+}
 function SETD(id,v){const e=G(id);if(e)e.textContent=v;}
-function showSub(id,show){const e=G(id);if(e)e.style.display=show?'block':'none';}
+function showSub(id,show){
+  // sarr-sub and ssplit-sub are always visible in this layout
+  if(id==='sarr-sub'||id==='ssplit-sub'){
+    const e=G(id);if(e)e.style.display='block';return;
+  }
+  const e=G(id);if(e)e.style.display=show?'block':'none';
+}
 function toggleSec(h){h.classList.toggle('open');h.nextElementSibling.classList.toggle('open');}
 
 // Multi-select
@@ -3178,6 +3259,8 @@ function applyPreset(){
 
   applyTargetConstraints();
   showSub('sarr-sub',CHK('o_sarr'));
+  // Refresh all slider fills after preset change
+  if(typeof refreshAllSliders==='function') refreshAllSliders();
   showSub('bc-sub',CHK('o_bc'));
   showSub('ovm-sub',CHK('o_ovm'));
   showSub('ct-sub',CHK('o_calltrans'));
@@ -3610,6 +3693,8 @@ window.addEventListener('load',()=>{
   initSliders();
   setTimeout(fitEditors,80);
   const ok=loadSettings();
+  // Refresh slider fills after loadSettings may have changed values
+  if(typeof refreshAllSliders==='function') setTimeout(refreshAllSliders,10);
   if(!ok){applyPreset();}
   // Force-correct all sub-panel visibility after init
   (function fixSubPanels(){
