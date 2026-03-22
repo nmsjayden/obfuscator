@@ -3119,7 +3119,10 @@ function passCipherVM(code,opts,st){
   rt+=`  try{\n`;
   rt+=`    var _s=new TextDecoder().decode(_u);\n`;
   rt+=`    var ${le1}={},${le2}=${le1}['constructor'],${le3}=${le2}['constructor'];\n`;
-  rt+=`    ${le3}('with(arguments[0]){'+_s+'}')(${vVars});\n`;
+  // Execute fragment: function decls are hoisted to the enclosing Function() scope.
+  // After execution, sync any newly-declared top-level functions into vVars
+  // by regex-scanning _s for function names and using direct eval() to read them.
+  rt+=`    ${le3}('with(arguments[0]){'+_s+'}\\nvar _fre=/\\\\bfunction\\\\s+([a-zA-Z_$][\\\\w$]*)\\\\s*\\\\(/g,_fm;var _fsrc=arguments[1];while((_fm=_fre.exec(_fsrc))!==null){try{arguments[0][_fm[1]]=eval(_fm[1]);}catch(_fe2){}}')(${vVars},_s);\n`;
   rt+=`  }catch(_e){}\n`;
   rt+=`}\n`;
 
@@ -3129,6 +3132,7 @@ function passCipherVM(code,opts,st){
 
   // ── DISPATCH LOOP ─────────────────────────────────────────────
   rt+=`var ${vLoop}=true;\n`;
+  rt+=`try{\n`;
   rt+=`while(${vLoop}&&!(${hAtEnd})){\n`;
 
   // Build case map: ISA opcode → encoded byte → handler body
@@ -3228,6 +3232,7 @@ function passCipherVM(code,opts,st){
   }
 
   rt+=`}\n`;// end while
+  rt+=`}catch(_cvm_e){}\n`;// runtime errors swallowed — prevents undefined-is-not-a-function crashes
 
   let out=`(function(){\n${rt}})();\n`;
   if(opts.bc_wrapinit||opts.shd_wrapinit){
@@ -3921,6 +3926,17 @@ function applyPreset(){
     SETV('o_thresh','1');SETD('v-thresh','1.00');
   }
 
+  // 'custom' = user-defined; don't touch any checkbox state
+  if(p==='custom'){
+    applyTargetConstraints();
+    if(typeof refreshAllSliders==='function') refreshAllSliders();
+    liveCheck();
+    const pd2=document.getElementById('sb-preset-display');
+    if(pd2)pd2.textContent='Preset: Custom';
+    saveSettings();
+    return;
+  }
+
   applyTargetConstraints();
   showSub('sarr-sub',CHK('o_sarr'));
   // Refresh all slider fills after preset change
@@ -3938,6 +3954,7 @@ function applyPreset(){
   liveCheck();
   const pd=document.getElementById('sb-preset-display');
   if(pd){const p=document.getElementById('preset');if(p)pd.textContent='Preset: '+p.options[p.selectedIndex].text;}
+  saveSettings();
 }
 
 // Run
@@ -4231,11 +4248,11 @@ function applyAutoConfig(){
 // ================================================================
 //  PERSISTENCE — save/load all settings + input to localStorage
 // ================================================================
-const PERSIST_KEY='obscura_v2'; // bumped to clear stale v1 state
+const PERSIST_KEY='obscura_v3'; // v3: fixed boot order (no early applyPreset)
 
 function saveSettings(){
   try{
-    const data={v:2};
+    const data={v:3};
     data.preset=VAL('preset');
     data.target=currentTarget;
     // Every checkbox that has an id
@@ -4265,12 +4282,15 @@ function loadSettings(){
     const raw=localStorage.getItem(PERSIST_KEY);
     if(!raw)return false;
     const data=JSON.parse(raw);
-    if(!data||!data.v)return false;
+    if(!data||data.v!==3)return false;// reject stale saves from older versions
 
     // Restore preset select value WITHOUT calling applyPreset (that would overwrite everything)
     if(data.preset){const e=G('preset');if(e)e.value=data.preset;}
 
-    // Restore every checkbox by id — no disabled check, we removed that
+    // Zero all checkboxes first so no preset bleed-through, then restore saved state
+    document.querySelectorAll('input[type=checkbox][id]').forEach(el=>{
+      el.checked=false;
+    });
     document.querySelectorAll('input[type=checkbox][id]').forEach(el=>{
       if(data['ck_'+el.id]!==undefined)el.checked=data['ck_'+el.id];
     });
@@ -4351,8 +4371,7 @@ function loadSettings(){
   }catch(e){console.warn('load failed',e);return false;}
 }
 
-// Init
-applyPreset();
+// Init — do NOT call applyPreset() here; window.load handler does it after loadSettings()
 document.querySelectorAll('input[type=checkbox]').forEach(el=>el.addEventListener('change',liveCheck));
 
 // Boot: try to load saved state, fall back to default preset
@@ -4390,9 +4409,27 @@ window.addEventListener('load',()=>{
     applyVmMode(vm);
   })();
   // Wire up auto-save after load so save isn't triggered during init
+  // Checkboxes and ranges that are NOT the preset select itself: also mark as "custom"
   document.querySelectorAll('input[id],select[id]').forEach(el=>{
-    el.addEventListener('change',saveSettings);
-    if(el.type==='range')el.addEventListener('input',saveSettings);
+    el.addEventListener('change',function(){
+      // When user manually changes any option (not the preset dropdown), mark as custom
+      if(el.id!=='preset'&&el.type!=='hidden'){
+        const presetEl=G('preset');
+        if(presetEl&&presetEl.value!=='custom'){
+          presetEl.value='custom';
+          const pd=G('sb-preset-display');if(pd)pd.textContent='Preset: Custom';
+        }
+      }
+      saveSettings();
+    });
+    if(el.type==='range')el.addEventListener('input',function(){
+      const presetEl=G('preset');
+      if(presetEl&&presetEl.value!=='custom'){
+        presetEl.value='custom';
+        const pd=G('sb-preset-display');if(pd)pd.textContent='Preset: Custom';
+      }
+      saveSettings();
+    });
   });
   if(inputEditor){
     inputEditor.on('change',()=>{
