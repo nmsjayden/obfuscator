@@ -363,12 +363,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 
 /* ─── VM SEGMENT ─── */
 .seg-ctrl{display:flex;gap:2px;background:var(--bg);border:1px solid var(--ln);border-radius:var(--r);padding:2px;margin-bottom:10px;}
-.seg-btn,.vm-seg{flex:1;padding:5px 0;background:none;border:none;color:var(--mute);font-family:var(--ui);font-size:11.5px;font-weight:500;cursor:pointer;border-radius:5px;transition:all .12s;text-align:center;}
-.seg-btn:hover,.vm-seg:hover{color:var(--body);}
-.seg-btn.active,.vm-seg.active{background:var(--s4);color:var(--hi);box-shadow:0 1px 3px rgba(0,0,0,.5);}
 
 /* bc/ovm hidden by default, shown by engine */
-#bc-sub,#ovm-sub,#both-sub{display:none;}
+#bc-sub{display:none;}
 
 /* ─── CONFLICTS ─── */
 .ci-item{padding:5px 0;font-size:10.5px;display:flex;gap:6px;line-height:1.4;border-bottom:1px solid rgba(255,255,255,.04);}
@@ -485,6 +482,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 #ac-apply:hover{opacity:.84;}
 #ac-cancel{padding:6px 13px;background:none;border:1px solid var(--ln);color:var(--soft);font-family:var(--ui);font-size:12px;border-radius:var(--r);cursor:pointer;transition:all .12s;}
 #ac-cancel:hover{color:var(--hi);border-color:var(--ln2);}
+/* ─── OPCODE STATS ─── */
+.op-stats{display:flex;gap:6px;margin:8px 0 10px;}
+.op-stat{flex:1;background:var(--s3);border:1px solid var(--ln);border-radius:var(--r);padding:8px 6px;text-align:center;}
+.op-stat-hi{border-color:var(--acc2);background:var(--acco);}
+.op-stat-num{display:block;font-family:var(--mono);font-size:17px;font-weight:700;color:var(--hi);line-height:1.2;}
+.op-stat-hi .op-stat-num{color:var(--acc);}
+.op-stat-lbl{display:block;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mute);margin-top:3px;}
+
 </style>
 </head>
 <body>
@@ -682,80 +687,72 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
       </div>
 
       <!-- VM -->
+      <!-- VM -->
       <div class="tpanel" id="tpanel-vm">
+
+        <!-- Enable -->
         <div class="grp">
-          <div class="grp-lbl">Virtual Machine</div>
+          <div class="grp-lbl">Bytecode VM</div>
           <input type="hidden" id="o_vm_mode" value="none">
-          <input type="checkbox" id="o_bc"  style="display:none">
-          <input type="checkbox" id="o_ovm" style="display:none">
-          <!-- Enable toggle -->
-          <div class="row" style="margin-bottom:8px;">
-            <label class="rl">Enable VM<small>Wrap JS in a runtime VM — eliminates readable source entirely</small></label>
+          <input type="checkbox" id="o_bc" style="display:none">
+          <div class="row">
+            <label class="rl">Enable<small>Wrap source in ChaCha8-encrypted fragments — runtime assembles and executes via aliased constructor chain</small></label>
             <label class="tog"><input type="checkbox" id="o_vm_enable" onchange="applyVmEnable(this.checked)"><span class="tk"></span></label>
           </div>
-          <!-- Mode selector — hidden when VM off -->
-          <div id="vm-mode-row" style="display:none;margin-bottom:8px;">
-            <div class="fld-lbl" style="margin-bottom:4px;">Mode</div>
-            <div class="seg-ctrl" style="margin-bottom:6px;">
-              <button class="seg-btn vm-seg active" data-vm="bytecode" onclick="applyVmMode('bytecode')">Bytecode</button>
-              <button class="seg-btn vm-seg"         data-vm="cyphervm"   onclick="applyVmMode('cyphervm')">Cipher VM</button>
-            </div>
-          </div>
-          <div id="vm-info-none" class="info-box">VM is off. JS is obfuscated but not wrapped in a virtual machine.</div>
-          <div id="vm-info-bc"   class="info-box" style="display:none">Source → ChaCha8-encrypted fragments → shuffled base64 vars → runtime reassembles &amp; executes via aliased constructor chain. No <code style="font-family:var(--mono);font-size:10px;">new Function</code> string visible.</div>
-          <div id="vm-info-cyphervm" class="info-box" style="display:none">Source compiled to a custom bytecode ISA. A generated interpreter executes opcodes directly — no source string ever reconstructed. Opcodes shuffled per run, LFSR-encrypted, string constants blind-XOR’d.</div>
-          <div id="vm-info-both" class="info-box" style="display:none">Cipher VM compiles source to bytecode (inner). Bytecode VM wraps the interpreter+bytecode with ChaCha8 (outer). Cracking the outer reveals only the interpreter — never the original source.</div>
+          <div id="vm-info-none" class="info-box">VM off — source runs after standard obfuscation passes only.</div>
+          <div id="vm-info-bc"   class="info-box" style="display:none">Source split into independently ChaCha8-keyed fragments. Runtime verifies Fletcher-16 integrity, decrypts in order, and executes. No literal <code style="font-family:var(--mono);font-size:10px;">new Function</code> string visible in output.</div>
         </div>
 
-        <!-- BYTECODE VM options -->
+        <!-- Options (shown when VM enabled) -->
         <div id="bc-sub">
+
+          <!-- Opcode Space -->
           <div class="grp">
-            <div class="grp-lbl">Bytecode — Encryption</div>
-            <div class="info-box" style="margin-bottom:6px;">ChaCha8 stream cipher — 8-round quarter-round mixing, 256-bit key, 96-bit nonce. Each fragment has its own derived subkey.</div>
-            <div class="row"><label class="rl">Fragment Source<small>Split source into N independently-keyed chunks — no single string holds the full source</small></label><label class="tog"><input type="checkbox" id="o_chunk" checked><span class="tk"></span></label></div>
+            <div class="grp-lbl">Opcode Space</div>
+            <div class="op-stats">
+              <div class="op-stat">
+                <span class="op-stat-num">34</span>
+                <span class="op-stat-lbl">Real</span>
+              </div>
+              <div class="op-stat">
+                <span class="op-stat-num" id="v-op-decoy">94</span>
+                <span class="op-stat-lbl">Decoy</span>
+              </div>
+              <div class="op-stat op-stat-hi">
+                <span class="op-stat-num" id="v-op-total">128</span>
+                <span class="op-stat-lbl">Total</span>
+              </div>
+            </div>
+            <div class="sl">
+              <div class="sl-head"><span class="sl-name">Total Opcode Slots</span><span class="sv" id="v-bc-opcount">128</span></div>
+              <div class="srow"><input type="range" id="o_bc_opcount" min="34" max="256" step="1" value="128" oninput="SETD('v-bc-opcount',this.value);updateOpcodeDisplay()"></div>
+            </div>
+            <div class="row"><label class="rl">Inject Decoy Fragments<small>Dead lookalike vars alongside real ones — same encrypted pattern, never executed</small></label><label class="tog"><input type="checkbox" id="o_bc_decoy" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Dead Variable Noise<small>Unreferenced random var declarations scattered between fragment vars</small></label><label class="tog"><input type="checkbox" id="o_bc_dead" checked><span class="tk"></span></label></div>
+          </div>
+
+          <!-- Encryption -->
+          <div class="grp">
+            <div class="grp-lbl">Encryption</div>
+            <div class="info-box" style="margin-bottom:6px;">ChaCha8 — 8-round quarter-round mixing, 256-bit key, 96-bit nonce. Each fragment derives its own subkey from the master key.</div>
+            <div class="row"><label class="rl">Fragment Source<small>Split into N independently-keyed chunks — no single string holds the full source</small></label><label class="tog"><input type="checkbox" id="o_chunk" checked><span class="tk"></span></label></div>
             <div class="sl"><div class="sl-head"><span class="sl-name">Fragment Size (bytes)</span><span class="sv" id="v-bcc">300</span></div><div class="srow"><input type="range" id="o_bcchunk" min="50" max="1000" step="50" value="300" oninput="SETD('v-bcc',this.value)"></div></div>
-            <div class="row"><label class="rl">Shuffle Fragment Order<small>Fragments emitted in random order; runtime re-sorts by embedded index tag</small></label><label class="tog"><input type="checkbox" id="o_bc_dynop" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Shuffle Fragment Order<small>Emitted in random order — runtime re-sorts by embedded index tag</small></label><label class="tog"><input type="checkbox" id="o_bc_dynop" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Fletcher-16 Integrity Tags<small>Each fragment carries a checksum — patching any byte breaks execution</small></label><label class="tog"><input type="checkbox" id="o_bc_stateful" checked><span class="tk"></span></label></div>
           </div>
+
+          <!-- Execution -->
           <div class="grp">
-            <div class="grp-lbl">Bytecode — Execution</div>
-            <div class="row"><label class="rl">Aliased Constructor Chain<small>Execution via ({}).constructor.constructor — no literal new Function string</small></label><label class="tog"><input type="checkbox" id="o_bc_jmpenc" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Decoy Fragments<small>Dead thunks with random content mixed into the fragment array</small></label><label class="tog"><input type="checkbox" id="o_bc_decoy" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Dead Variables<small>Mutating unused vars alongside real ones</small></label><label class="tog"><input type="checkbox" id="o_bc_dead" checked><span class="tk"></span></label></div>
+            <div class="grp-lbl">Execution</div>
+            <div class="row"><label class="rl">Aliased Constructor Chain<small>({}).constructor.constructor — no literal new Function string</small></label><label class="tog"><input type="checkbox" id="o_bc_jmpenc" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Wrap in Init Fn<small>Nest VM body in a named wrapper function</small></label><label class="tog"><input type="checkbox" id="o_bc_wrapinit"><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Anti-Debug<small>DevTools detection loop inside VM</small></label><label class="tog"><input type="checkbox" id="o_bc_antidebug" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">SA Inside VM Only<small>Apply String Array only inside VM wrapper</small></label><label class="tog"><input type="checkbox" id="o_bc_sarrbconly"><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Anti-Debug<small>DevTools detection loop — freezes tab if breakpoints detected</small></label><label class="tog"><input type="checkbox" id="o_bc_antidebug" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">SA Inside VM Only<small>Apply String Array only inside VM wrapper — leaner output</small></label><label class="tog"><input type="checkbox" id="o_bc_sarrbconly"><span class="tk"></span></label></div>
           </div>
-        </div>
 
-        <!-- CYPHERVM options -->
-        <div id="ovm-sub">
-          <div class="grp">
-            <div class="grp-lbl">Cipher VM — Compiler</div>
-            <div class="info-box" style="margin-bottom:6px;">Source is split at statement boundaries. Each statement becomes an independent encrypted thunk. The trampoline follows a linked list through a shuffled thunk table — no opcodes, no dispatch loop, no source string.</div>
-            <div class="row"><label class="rl">Decoy Thunks<small>Decoy opcodes with dead dispatch arms for unused byte values</small></label><label class="tog"><input type="checkbox" id="o_ovm_shuffle" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Table XOR Masking<small>Next-slot pointers XOR'd with a per-run key — link structure is not plaintext</small></label><label class="tog"><input type="checkbox" id="o_ovm_lfsr" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Shared Scope Object<small>String bytes and name indices XOR’d with per-run keys — constants never plaintext</small></label><label class="tog"><input type="checkbox" id="o_ovm_indirect" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Integrity Tags<small>Dead dispatch arms bloat the switch/case to hide real handlers</small></label><label class="tog"><input type="checkbox" id="o_ovm_guards" checked><span class="tk"></span></label></div>
-          </div>
-          <div class="grp">
-            <div class="grp-lbl">Cipher VM — Interpreter</div>
-            <div class="row"><label class="rl">Anti-Debug<small>Program counter stored XOR’d with a random mask</small></label><label class="tog"><input type="checkbox" id="o_ovm_xorop" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Wrap in Init Fn<small>Nest Cipher VM interpreter in a named wrapper function</small></label><label class="tog"><input type="checkbox" id="o_ovm_regmap"><span class="tk"></span></label></div>
-          </div>
-        </div>
+        </div><!-- end bc-sub -->
 
-        <!-- BOTH — extra options shown when Bytecode + CypherVM both active -->
-        <div id="both-sub">
-          <div class="grp">
-            <div class="grp-lbl">Both VMs — Layering</div>
-            <div class="row"><label class="rl">Shared Anti-Debug<small>Single combined DevTools trap covers both VMs</small></label><label class="tog"><input type="checkbox" id="o_both_antidebug" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Inter-VM Integrity Check<small>Bytecode VM embeds an integrity marker verified before executing the Cipher VM interpreter</small></label><label class="tog"><input type="checkbox" id="o_both_integ" checked><span class="tk"></span></label></div>
-            <div class="info-box">Cipher VM (inner) compiles to bytecode. Bytecode VM wraps the interpreter with ChaCha8. Cracking the outer reveals only the interpreter — never the original source.</div>
-          </div>
-        </div>
-
-      </div>
+      </div><!-- end tpanel-vm -->
 
       <!-- PROTECTION -->
       <div class="tpanel" id="tpanel-protection">
@@ -826,7 +823,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
         <div class="grp" id="smap-sub">
           <div class="grp-lbl">Source Map</div>
           <div class="row"><label class="rl">Generate<small>Map output back to original source</small></label><label class="tog"><input type="checkbox" id="o_srcmap" onchange="showSub('smap-sub',this.checked);G('btn-map').disabled=!this.checked"><span class="tk"></span></label></div>
-          <div class="fld"><div class="fld-lbl">Mode</div><select class="fsel" id="o_smap_mode"><option value="inline">Inline</option><option value="separate">Separate</option></select></div>
           <div class="fld"><div class="fld-lbl">Map URL</div><input class="fi" id="o_smap_url" type="text" placeholder="output.js.map"></div>
           <div class="fld"><div class="fld-lbl">Source Root</div><input class="fi" id="o_smap_root" type="text" placeholder="/"></div>
           <div class="info-box">Keep .map files private — they contain original source.</div>
@@ -2211,16 +2207,61 @@ function passBytecodeVM(code,opts,st){
     return packed;
   });
 
-  // ── Shuffle fragment emission order ───────────────────────────
-  // The runtime re-sorts by the embedded fragIdx tag, so order doesn't matter
-  const emitOrder=encFrags.slice().sort(()=>RNG.next()-.5);
-  const fragNames=emitOrder.map(()=>freshId());
+  // ── Build decoy fragments ─────────────────────────────────────
+  // Decoys are structurally IDENTICAL to real fragments:
+  //   - Same key derivation (deriveSubkey/deriveNonce with fragIdx >= fragCount)
+  //   - Correct Fletcher-16 checksum (passes integrity check)
+  //   - Valid-looking JS plaintext (obfuscated dead var — looks like real code)
+  //   - Included in vFrags alongside real ones (no dead standalone vars)
+  // The ONLY distinguishing feature is fragIdx >= fragCount.
+  // A deobfuscator must extract the master key AND know fragCount to filter them.
+  const decoysToAdd=opts.bc_decoy?Math.max(0,(opts.bc_opcount||128)-34):0;
+  const decoyFrags=[];
+  for(let d=0;d<decoysToAdd;d++){
+    const di=fragCount+d;
+    // Plaintext: a plausible-looking obfuscated dead assignment
+    // Uses freshId() names + arithmetic on masterKey words so it looks like key material
+    const dvn=freshId(),dv2=freshId();
+    const dw=(d%8);// borrow a masterKey word index for realism
+    const dc1=hexInt((RNG.int(0xffff)<<16|RNG.int(0xffff))>>>0);
+    const dc2=hexInt(RNG.int(0xffff));
+    // Looks like obfuscated arithmetic that could be part of a real computation
+    const deadSrc=`var ${dvn}=(${dc1}^${dc2}),${dv2}=(${dvn}&${hexInt(0xff)});`;
+    const plainBytes=new TextEncoder().encode(deadSrc);
+    // Encrypt with REAL key derivation — attacker can't distinguish by ciphertext
+    const dsk=deriveSubkey(di);
+    const dfn=deriveNonce(di);
+    const denc=chacha8Crypt(plainBytes,dsk,dfn);
+    // CORRECT Fletcher-16 tag — passes integrity check
+    const dtag=fletcher16(denc);
+    const dpacked=new Uint8Array(4+denc.length);
+    dpacked[0]=(di>>8)&0xff; dpacked[1]=di&0xff;
+    dpacked[2]=(dtag>>8)&0xff; dpacked[3]=dtag&0xff;
+    dpacked.set(denc,4);
+    decoyFrags.push(dpacked);
+  }
+
+  // ── Shuffle ALL fragments (real + decoy) together ─────────────
+  // Real fragments have fragIdx 0..fragCount-1.
+  // Decoys have fragIdx fragCount..fragCount+D-1.
+  // They are shuffled into one pool — static analysis cannot tell which is which
+  // without decrypting every entry using the master key.
+  const allFrags=(opts.bc_dynop?[...encFrags,...decoyFrags].sort(()=>RNG.next()-.5):[...encFrags,...decoyFrags]);
+  const allFragNames=allFrags.map(()=>freshId());
 
   // ── Serialise each fragment to base64 ────────────────────────
   function toB64(u8){
     let raw='';for(let i=0;i<u8.length;i++)raw+=String.fromCharCode(u8[i]);
     return btoa(raw);
   }
+
+  // ── Obfuscate fragCount (the real/decoy boundary) ─────────────
+  // Split into two halves XOR'd at runtime so the integer doesn't
+  // appear as a literal in the output. An attacker must find both
+  // halves and combine them to reconstruct fragCount.
+  const fcA=(RNG.int(0xfffe)+1)>>>0;
+  const fcB=(fragCount^fcA)>>>0;
+  const vFCA=freshId(),vFCB=freshId(),vFC=freshId();
 
   // ── Runtime identifiers ───────────────────────────────────────
   const vFrags=freshId(),vMk=freshId(),vMn=freshId();
@@ -2242,13 +2283,23 @@ function passBytecodeVM(code,opts,st){
   out+=`var ${vMk}=[${Array.from(masterKey).map(v=>hexInt(v>>>0)).join(',')}];\n`;
   out+=`var ${vMn}=[${Array.from(masterNonce).map(v=>hexInt(v>>>0)).join(',')}];\n`;
 
-  // ── Emit encrypted fragment vars (shuffled order) ─────────────
-  emitOrder.forEach((f,i)=>{
-    out+=`var ${fragNames[i]}=${JSON.stringify(toB64(f))};\n`;
+  // ── Obfuscated fragCount ───────────────────────────────────────
+  out+=`var ${vFCA}=${hexInt(fcA)},${vFCB}=${hexInt(fcB)};\n`;
+  out+=`var ${vFC}=(${vFCA}^${vFCB});\n`;
+
+  // ── Emit all fragment vars (real and decoy interleaved) ────────
+  allFrags.forEach((f,i)=>{
+    // Dead variable noise: looks like key-schedule arithmetic referencing real vars
+    if(opts.bc_dead&&i>0&&RNG.next()>.55){
+      const dn1=freshId(),dn2=freshId();
+      const wi=RNG.int(8);// index into masterKey array — looks like it matters
+      out+=`var ${dn1}=(${vMk}[${hexInt(wi)}]^${hexInt(RNG.int(0xffff))}),${dn2}=(${dn1}>>>8);\n`;
+    }
+    out+=`var ${allFragNames[i]}=${JSON.stringify(toB64(f))};\n`;
   });
 
-  // ── Collect all fragments into one array ──────────────────────
-  out+=`var ${vFrags}=[${fragNames.join(',')}];\n`;
+  // ── Collect ALL fragments (real + decoy) into one array ────────
+  out+=`var ${vFrags}=[${allFragNames.join(',')}];\n`;
 
   // ── Emit ChaCha8 quarter-round decrypt helper ─────────────────
   out+=`function ${vDecrypt}(data,mk,mn){\n`;
@@ -2305,27 +2356,33 @@ function passBytecodeVM(code,opts,st){
   out+=`  return fn;\n`;
   out+=`}\n`;
 
-  // ── Assemble: base64-decode all frags, sort by embedded fragIdx, verify+decrypt ──
-  out+=`function ${vAssemble}(frags,mk,mn){\n`;
+  // ── Assemble: base64-decode, filter to real frags, verify+decrypt ──
+  // fc (fragCount) gates which entries are real vs decoy.
+  // Without knowing fc AND the master key, an attacker cannot determine
+  // which of the vFrags entries contribute to the source.
+  out+=`function ${vAssemble}(frags,mk,mn,fc){\n`;
   out+=`  var decoded=frags.map(function(b64){\n`;
   out+=`    var raw=atob(b64),u8=new Uint8Array(raw.length);\n`;
   out+=`    for(var i=0;i<raw.length;i++)u8[i]=raw.charCodeAt(i);\n`;
   out+=`    return u8;\n`;
   out+=`  });\n`;
-  // Sort by embedded fragIdx (first 2 bytes, big-endian)
+  // Sort by embedded fragIdx
   out+=`  decoded.sort(function(a,b){return((a[0]<<8)|a[1])-((b[0]<<8)|b[1]);});\n`;
-  // Verify checksum and decrypt each fragment
+  // Filter: only process fragments with fragIdx < fc (real ones)
+  // Decoys (fragIdx >= fc) are silently dropped — they have valid checksums
+  // and valid-looking ciphertext, but they decrypt to dead code we don't want
+  out+=`  decoded=decoded.filter(function(u8){return((u8[0]<<8)|u8[1])<fc;});\n`;
+  // Verify checksum and decrypt each real fragment
   out+=`  var parts=decoded.map(function(u8){\n`;
   out+=`    var fi=(u8[0]<<8)|u8[1];\n`;
   out+=`    var tag=(u8[2]<<8)|u8[3];\n`;
   out+=`    var enc=u8.slice(4);\n`;
-  // Integrity check
   out+=`    if(${vFletch}(enc)!==tag)return new Uint8Array(0);\n`;
   out+=`    var sk=${vDerSk}(fi,mk);\n`;
   out+=`    var fn=${vDerNn}(fi,mn);\n`;
   out+=`    return ${vDecrypt}(enc,sk,fn);\n`;
   out+=`  });\n`;
-  // Concatenate decrypted parts in order
+  // Concatenate in order
   out+=`  var total=0;\n`;
   out+=`  for(var i=0;i<parts.length;i++)total+=parts[i].length;\n`;
   out+=`  var result=new Uint8Array(total),off=0;\n`;
@@ -2333,25 +2390,20 @@ function passBytecodeVM(code,opts,st){
   out+=`  return result;\n`;
   out+=`}\n`;
 
-  // ── Execute: reconstruct string, run via aliased constructor chain ────────────
-  // We alias Function.prototype.constructor through a chain of object
-  // property hops to avoid the literal string `new Function` in the output.
-  // The pattern: ({}).constructor.constructor(src)() is equivalent to
-  // new Function(src)() but looks like property access in static analysis.
-  out+=`function ${vRun}(frags,mk,mn){\n`;
-  out+=`  var _bytes=${vAssemble}(frags,mk,mn);\n`;
+  // ── Execute via aliased constructor chain ─────────────────────
+  out+=`function ${vRun}(frags,mk,mn,fc){\n`;
+  out+=`  var _bytes=${vAssemble}(frags,mk,mn,fc);\n`;
   out+=`  if(!_bytes.length)return;\n`;
   out+=`  var _src=new TextDecoder().decode(_bytes);\n`;
-  // Multi-hop alias: avoid `new Function` and `Function` string entirely
   const hop1=freshId(),hop2=freshId(),hop3=freshId();
   out+=`  var ${hop1}={};\n`;
-  out+=`  var ${hop2}=${hop1}['constructor'];\n`;       // Object
-  out+=`  var ${hop3}=${hop2}['constructor'];\n`;       // Function
+  out+=`  var ${hop2}=${hop1}['constructor'];\n`;
+  out+=`  var ${hop3}=${hop2}['constructor'];\n`;
   out+=`  ${hop3}(_src)();\n`;
   out+=`}\n`;
 
-  // ── Invoke ────────────────────────────────────────────────────
-  out+=`${vRun}(${vFrags},${vMk},${vMn});\n`;
+  // ── Invoke — pass obfuscated fragCount so assembly knows the boundary ─
+  out+=`${vRun}(${vFrags},${vMk},${vMn},${vFC});\n`;
 
   // ── Wrap in init fn if requested ─────────────────────────────
   out+=`})();`;
@@ -2442,805 +2494,6 @@ function passBytecodeVM(code,opts,st){
 //  The interpreter runs LITERAL_EXEC via indirect eval — but only as a last
 //  resort, not for the main body. Simple JS compiles fully.
 // ================================================================
-function passCipherVM(code,opts,st){
-
-  // ── ISA DEFINITION ─────────────────────────────────────────────
-  const I={
-    PUSH_STR:0,   // <u16:len> <utf8-blind bytes>        → push string
-    PUSH_NUM:1,   // <f64 le 8 bytes>                    → push number
-    PUSH_TRUE:2,  //                                     → push true
-    PUSH_FALSE:3, //                                     → push false
-    PUSH_NULL:4,  //                                     → push null
-    PUSH_UNDEF:5, //                                     → push undefined
-    PUSH_THIS:6,  //                                     → push globalThis
-    LOAD_VAR:7,   // <u16:nameIdx>                       → push vars[name]
-    STORE_VAR:8,  // <u16:nameIdx>                       → vars[name]=pop
-    DECLARE:9,    // <u16:nameIdx>                       → if name not in vars, vars[name]=undef
-    LOAD_PROP:10, // <u16:nameIdx>                       → obj=pop, push obj[name]
-    STORE_PROP:11,// <u16:nameIdx>                       → val=pop, obj=pop, obj[name]=val
-    LOAD_IDX:12,  //                                     → idx=pop, obj=pop, push obj[idx]
-    STORE_IDX:13, //                                     → val=pop, idx=pop, obj=pop, obj[idx]=val
-    CALL:14,      // <u8:argc>                           → args=pop*argc, fn=pop, ctx=pop, push ret
-    CALL_VOID:15, // <u8:argc>                           → same, discard
-    NEW_CALL:16,  // <u8:argc>                           → new ctor(...args)
-    JUMP:17,      // <i16:offset>                        → pc+=offset
-    JUMP_TRUE:18, // <i16:offset>                        → if pop, pc+=offset
-    JUMP_FALSE:19,// <i16:offset>                        → if !pop, pc+=offset
-    RET:20,       //                                     → halt loop
-    ADD:21,BIN_SUB:22,BIN_MUL:23,BIN_DIV:24,BIN_MOD:25,
-    BIN_AND:26,BIN_OR:27,BIN_XOR:28,BIN_SHL:29,BIN_SHR:30,BIN_USHR:31,
-    CMP_EQ:32,CMP_NEQ:33,CMP_SEQ:34,CMP_SNEQ:35,
-    CMP_LT:36,CMP_LTE:37,CMP_GT:38,CMP_GTE:39,
-    LOGIC_AND:40,LOGIC_OR:41,
-    UNI_NEG:42,UNI_NOT:43,UNI_BNOT:44,UNI_TYPEOF:45,UNI_VOID:46,
-    DUP:47,POP:48,SWAP:49,
-    ARRAY_NEW:50, // <u16:count>
-    OBJ_NEW:51,   // <u16:pairs>
-    IN_OP:52,INSTANCEOF:53,
-    THROW_V:54,
-    LITERAL_EXEC:63,// <u32:len> <raw utf8> — fallback eval for unsupported constructs
-  };
-
-  // ── OPCODE SHUFFLE ─────────────────────────────────────────────
-  // Each ISA opcode maps to a random byte value. Attacker must reverse
-  // this mapping (which is baked into the LFSR-encrypted bytecode).
-  const numOps=Object.keys(I).length;
-  const encMap=new Uint8Array(64);  // ISA → encoded byte
-  {
-    const perm=new Uint8Array(256);
-    for(let i=0;i<256;i++)perm[i]=i;
-    for(let i=255;i>0;i--){const j=RNG.int(i+1);const t=perm[i];perm[i]=perm[j];perm[j]=t;}
-    Object.values(I).forEach((v,i)=>{encMap[v]=perm[i];});
-  }
-
-  // ── CONSTANT BLINDING ──────────────────────────────────────────
-  // String bytes are XOR'd with a per-run key. Name indices are
-  // XOR'd with a separate key. Attacker must know both keys.
-  const BLIND_S=RNG.int(0xfe)+1;  // XOR key for string bytes
-  const BLIND_N=RNG.int(0xfffe)+1;// XOR key for name indices
-
-  // ── NAME TABLE ────────────────────────────────────────────────
-  const nameTable=[];
-  const nameMap=Object.create(null);
-  function internName(s){
-    if(nameMap[s]!==undefined)return nameMap[s];
-    const i=nameTable.length;nameTable.push(s);nameMap[s]=i;return i;
-  }
-
-  // ── BYTECODE EMITTER ──────────────────────────────────────────
-  const bc=[];
-  function emit(op){bc.push(encMap[op]);}
-  function emitU8(v){bc.push(v&0xff);}
-  function emitU16(v){bc.push((v>>8)&0xff,v&0xff);}
-  function emitI16(v){const u=v<0?v+0x10000:v;bc.push((u>>8)&0xff,u&0xff);}
-  function emitU32(v){bc.push((v>>>24)&0xff,(v>>>16)&0xff,(v>>>8)&0xff,v&0xff);}
-  function emitF64(n){
-    const buf=new ArrayBuffer(8);new DataView(buf).setFloat64(0,n,true);
-    new Uint8Array(buf).forEach(b=>bc.push(b));
-  }
-  function emitStr(s){
-    const b=new TextEncoder().encode(s);
-    emitU16(b.length);
-    for(let i=0;i<b.length;i++)bc.push(b[i]^BLIND_S);
-  }
-  function emitName(s){const idx=internName(s);emitU16(idx^BLIND_N);}
-  function patchI16(pos,v){const u=v<0?v+0x10000:v;bc[pos]=(u>>8)&0xff;bc[pos+1]=u&0xff;}
-
-  // ── COMPILER ──────────────────────────────────────────────────
-  const toks=tokenize(code);
-  let tp=0;
-  function peek(off=0){return toks[tp+off]||{t:'eof',v:''};}
-  function consume(){return toks[tp++]||{t:'eof',v:''};}
-  function skipWs(){while(peek().t==='ws'||peek().t==='comment')tp++;}
-  function expect(v){skipWs();const t=consume();if(t.v!==v)throw new Error(`CVM: expected '${v}' got '${t.v}'`);}
-
-  // Fallback: collect unsupported tokens as literal text, emit as LITERAL_EXEC
-  let litBuf='';
-  function flushLit(){
-    if(!litBuf.trim()){litBuf='';return;}
-    const b=new TextEncoder().encode(litBuf.trim());
-    emit(I.LITERAL_EXEC);emitU32(b.length);
-    b.forEach(x=>bc.push(x));
-    litBuf='';
-  }
-
-  // ── Binary operator table ─────────────────────────────────────
-  const BINOP={
-    '+':I.ADD,'-':I.BIN_SUB,'*':I.BIN_MUL,'/':I.BIN_DIV,'%':I.BIN_MOD,
-    '&':I.BIN_AND,'|':I.BIN_OR,'^':I.BIN_XOR,'<<':I.BIN_SHL,'>>':I.BIN_SHR,'>>>':I.BIN_USHR,
-    '==':I.CMP_EQ,'!=':I.CMP_NEQ,'===':I.CMP_SEQ,'!==':I.CMP_SNEQ,
-    '<':I.CMP_LT,'<=':I.CMP_LTE,'>':I.CMP_GT,'>=':I.CMP_GTE,
-    '&&':I.LOGIC_AND,'||':I.LOGIC_OR,
-    'in':I.IN_OP,'instanceof':I.INSTANCEOF,
-  };
-  const BINOP_PREC={
-    '||':1,'&&':2,'|':3,'^':4,'&':5,
-    '==':6,'!=':6,'===':6,'!==':6,
-    '<':7,'<=':7,'>':7,'>=':7,'in':7,'instanceof':7,
-    '<<':8,'>>':8,'>>>':8,
-    '+':9,'-':9,'*':10,'/':10,'%':10,
-  };
-
-  function compileBinOps(minPrec){
-    while(true){
-      skipWs();
-      const t=peek();
-      // Handle multi-char ops: ===, !==, >>>, <<, >>, <=, >=, ==, !=, &&, ||
-      let opStr=t.v;
-      // Check for two-char extensions
-      if((opStr==='>'||opStr==='<'||opStr==='='||opStr==='!')&&toks[tp+1]){
-        const maybe2=opStr+toks[tp+1].v;
-        const maybe3=toks[tp+2]?maybe2+toks[tp+2].v:'';
-        if(maybe3 in BINOP){opStr=maybe3;}
-        else if(maybe2 in BINOP){opStr=maybe2;}
-      }
-      const prec=BINOP_PREC[opStr];
-      if(prec===undefined||prec<minPrec)break;
-      // Consume the operator token(s)
-      if(opStr.length===3){consume();consume();consume();}
-      else if(opStr.length===2){consume();consume();}
-      else consume();
-      skipWs();
-      compileExpr(prec+1);
-      const op=BINOP[opStr];
-      if(op!==undefined)emit(op);
-    }
-  }
-
-  function compileExpr(minPrec=0){
-    skipWs();
-    const t=peek();
-    if(t.t==='eof')return false;
-
-    // String literal
-    if(t.t==='str'){
-      consume();
-      const raw=safeParseStr(t);
-      if(raw===null){litBuf+=t.v;return true;}
-      emit(I.PUSH_STR);emitStr(raw);
-    }
-    // Number literal
-    else if(t.t==='num'){
-      consume();
-      const n=/^0[xX]/.test(t.v)?parseInt(t.v,16):parseFloat(t.v);
-      emit(I.PUSH_NUM);emitF64(isNaN(n)?0:n);
-    }
-    // Keywords
-    else if(t.v==='true'){consume();emit(I.PUSH_TRUE);}
-    else if(t.v==='false'){consume();emit(I.PUSH_FALSE);}
-    else if(t.v==='null'){consume();emit(I.PUSH_NULL);}
-    else if(t.v==='undefined'){consume();emit(I.PUSH_UNDEF);}
-    else if(t.v==='this'){consume();emit(I.PUSH_THIS);}
-    // typeof
-    else if(t.v==='typeof'){
-      consume();skipWs();
-      // typeof x — handle undefined name without ReferenceError
-      const nx=peek();
-      if(nx.t==='id'){
-        consume();
-        // Push the name as a string, then emit a special sequence:
-        // We can't safely do LOAD_VAR for typeof — it would throw if undefined.
-        // Instead emit PUSH_STR(name) and a special TYPEOF_NAME pseudo-op via LITERAL_EXEC
-        const litSrc=`typeof ${nx.v}`;
-        const lb=new TextEncoder().encode(litSrc);
-        emit(I.LITERAL_EXEC);emitU32(lb.length);lb.forEach(x=>bc.push(x));
-      } else {
-        compileExpr(99);emit(I.UNI_TYPEOF);
-      }
-    }
-    // void
-    else if(t.v==='void'){consume();skipWs();compileExpr(99);emit(I.UNI_VOID);}
-    // Unary operators
-    else if(t.v==='!'&&peek(1).v!=='='){consume();compileExpr(99);emit(I.UNI_NOT);}
-    else if(t.v==='~'){consume();compileExpr(99);emit(I.UNI_BNOT);}
-    else if(t.v==='-'&&(peek(1).t==='num'||peek(1).t==='id'||peek(1).v==='(')){
-      consume();compileExpr(99);emit(I.UNI_NEG);
-    }
-    // Parenthesised expression
-    else if(t.v==='('){
-      consume();skipWs();compileExpr();skipWs();expect(')');
-    }
-    // Array literal
-    else if(t.v==='['){
-      consume();skipWs();
-      let count=0;
-      while(peek().v!==']'&&peek().t!=='eof'){
-        if(count>0){skipWs();if(peek().v===',')consume();skipWs();}
-        compileExpr();skipWs();count++;
-      }
-      expect(']');emit(I.ARRAY_NEW);emitU16(count);
-    }
-    // Object literal
-    else if(t.v==='{'){
-      consume();skipWs();
-      let pairs=0;
-      while(peek().v!=='}'&&peek().t!=='eof'){
-        if(pairs>0){skipWs();if(peek().v===',')consume();skipWs();}
-        const kt=peek();
-        if(kt.t==='id'||kt.t==='str'||kt.t==='num'){
-          consume();
-          const kn=kt.t==='str'?(safeParseStr(kt)||kt.v.slice(1,-1)):kt.v;
-          emit(I.PUSH_STR);emitStr(kn);
-          skipWs();expect(':');skipWs();
-          compileExpr();skipWs();pairs++;
-        } else break;
-      }
-      skipWs();expect('}');
-      emit(I.OBJ_NEW);emitU16(pairs);
-    }
-    // new expr(args)
-    else if(t.v==='new'){
-      consume();skipWs();
-      const ctor=consume();
-      if(ctor.t!=='id'){litBuf+=`new ${ctor.v}`;return true;}
-      emit(I.PUSH_UNDEF);// placeholder ctx
-      emit(I.LOAD_VAR);emitName(ctor.v);
-      skipWs();
-      let argc=0;
-      if(peek().v==='('){
-        consume();skipWs();
-        while(peek().v!==')'&&peek().t!=='eof'){
-          if(argc>0){skipWs();if(peek().v===',')consume();skipWs();}
-          compileExpr();skipWs();argc++;
-        }
-        expect(')');
-      }
-      emit(I.NEW_CALL);emitU8(argc);
-    }
-    // Identifier: variable / call / member access chain
-    else if(t.t==='id'){
-      consume();
-      emit(I.LOAD_VAR);emitName(t.v);
-      compileChain();
-    }
-    else{
-      return false;
-    }
-
-    // After any primary expression: check for binary operators
-    compileBinOps(minPrec);
-    return true;
-  }
-
-  // Compile a .prop / [idx] / (args) chain after an expression is on the stack
-  function compileChain(){
-    while(true){
-      skipWs();
-      const n=peek();
-      if(n.v==='.'){
-        consume();skipWs();
-        const prop=consume();
-        if(prop.t!=='id'){litBuf+='.'+prop.v;break;}
-        skipWs();
-        if(peek().v==='('){
-          // method call: ctx=DUP, prop=LOAD_PROP, then args
-          consume();skipWs();
-          emit(I.DUP);emit(I.LOAD_PROP);emitName(prop.v);
-          let argc=0;
-          while(peek().v!==')'&&peek().t!=='eof'){
-            if(argc>0){skipWs();if(peek().v===',')consume();skipWs();}
-            compileExpr();skipWs();argc++;
-          }
-          expect(')');emit(I.CALL);emitU8(argc);
-        } else {
-          emit(I.LOAD_PROP);emitName(prop.v);
-        }
-      } else if(n.v==='['){
-        consume();skipWs();
-        emit(I.DUP);
-        compileExpr();
-        skipWs();expect(']');
-        if(peek().v==='('){
-          consume();skipWs();
-          emit(I.SWAP);
-          let argc=0;
-          while(peek().v!==')'&&peek().t!=='eof'){
-            if(argc>0){skipWs();if(peek().v===',')consume();skipWs();}
-            compileExpr();skipWs();argc++;
-          }
-          expect(')');emit(I.CALL);emitU8(argc);
-        } else {
-          emit(I.LOAD_IDX);
-        }
-      } else if(n.v==='('){
-        // direct call — no context
-        consume();skipWs();
-        emit(I.PUSH_UNDEF);emit(I.SWAP);
-        let argc=0;
-        while(peek().v!==')'&&peek().t!=='eof'){
-          if(argc>0){skipWs();if(peek().v===',')consume();skipWs();}
-          compileExpr();skipWs();argc++;
-        }
-        expect(')');emit(I.CALL);emitU8(argc);
-      } else {
-        break;
-      }
-    }
-  }
-
-  function compileBlock(){
-    skipWs();
-    if(peek().v==='{'){
-      consume();
-      while(peek().v!=='}'&&peek().t!=='eof')compileStmt();
-      expect('}');
-    } else {
-      compileStmt();
-    }
-  }
-
-  function compileStmt(){
-    skipWs();
-    const t=peek();
-    if(t.t==='eof')return false;
-    if(t.t==='ws'||t.t==='comment'){consume();return true;}
-
-    // var / let / const declaration
-    if(t.v==='var'||t.v==='let'||t.v==='const'){
-      const kw=t.v;
-      consume();skipWs();
-      while(true){
-        const name=peek();
-        if(name.t!=='id'){litBuf+=kw+' ';break;}
-        consume();
-        emit(I.DECLARE);emitName(name.v);
-        skipWs();
-        if(peek().v==='='){
-          consume();skipWs();
-          compileExpr();
-          emit(I.STORE_VAR);emitName(name.v);
-        }
-        skipWs();
-        if(peek().v===','){consume();skipWs();continue;}
-        break;
-      }
-      skipWs();if(peek().v===';')consume();
-      return true;
-    }
-
-    // return
-    if(t.v==='return'){
-      consume();skipWs();
-      if(peek().v!==';'&&peek().t!=='eof'&&peek().v!=='}'){
-        compileExpr();
-      } else {
-        emit(I.PUSH_UNDEF);
-      }
-      skipWs();if(peek().v===';')consume();
-      emit(I.RET);return true;
-    }
-
-    // throw
-    if(t.v==='throw'){
-      consume();skipWs();compileExpr();
-      skipWs();if(peek().v===';')consume();
-      emit(I.THROW_V);return true;
-    }
-
-    // if/else
-    if(t.v==='if'){
-      consume();skipWs();expect('(');skipWs();
-      compileExpr();
-      skipWs();expect(')');skipWs();
-      emit(I.JUMP_FALSE);const patchPos=bc.length;emitI16(0);
-      compileBlock();skipWs();
-      if(peek().v==='else'){
-        consume();skipWs();
-        emit(I.JUMP);const elseEnd=bc.length;emitI16(0);
-        patchI16(patchPos,bc.length-patchPos-2);
-        compileBlock();
-        patchI16(elseEnd,bc.length-elseEnd-2);
-      } else {
-        patchI16(patchPos,bc.length-patchPos-2);
-      }
-      return true;
-    }
-
-    // while
-    if(t.v==='while'){
-      consume();skipWs();
-      const loopTop=bc.length;
-      expect('(');skipWs();compileExpr();skipWs();expect(')');skipWs();
-      emit(I.JUMP_FALSE);const exitP=bc.length;emitI16(0);
-      compileBlock();
-      emit(I.JUMP);emitI16(loopTop-bc.length-2);
-      patchI16(exitP,bc.length-exitP-2);
-      return true;
-    }
-
-    // for(init;cond;inc){body}
-    if(t.v==='for'){
-      consume();skipWs();expect('(');skipWs();
-      // init
-      if(peek().v!==';'){
-        const kw=peek().v;
-        if(kw==='var'||kw==='let'||kw==='const'){
-          consume();skipWs();
-          const name=peek();
-          if(name.t==='id'){
-            consume();emit(I.DECLARE);emitName(name.v);
-            skipWs();
-            if(peek().v==='='){consume();skipWs();compileExpr();emit(I.STORE_VAR);emitName(name.v);}
-          }
-        } else {
-          compileExpr();emit(I.POP);
-        }
-      }
-      skipWs();if(peek().v===';')consume();skipWs();
-      // cond
-      const condTop=bc.length;
-      let hasExit=false;let exitP=0;
-      if(peek().v!==';'){
-        compileExpr();
-        emit(I.JUMP_FALSE);exitP=bc.length;emitI16(0);hasExit=true;
-      }
-      skipWs();if(peek().v===';')consume();skipWs();
-      // inc — save as string, compile after body
-      const incStart=tp;let incDepth=0;
-      while(peek().v!==')'||incDepth>0){
-        const tok=consume();
-        if(tok.v==='(')incDepth++;else if(tok.v===')')incDepth--;
-        if(tok.t==='eof')break;
-      }
-      const incEnd=tp-1;
-      expect(')');skipWs();
-      // body
-      compileBlock();
-      // inc
-      const savedTp=tp;tp=incStart;skipWs();
-      if(tp<incEnd)compileExpr();
-      tp=savedTp;
-      if(hasExit)emit(I.POP);
-      emit(I.JUMP);emitI16(condTop-bc.length-2);
-      if(hasExit)patchI16(exitP,bc.length-exitP-2);
-      return true;
-    }
-
-    // function declaration
-    if(t.v==='function'){
-      // Compile as LITERAL_EXEC — function declarations affect scope
-      // in ways the simple var-dict approach can't fully replicate
-      consume();skipWs();
-      const name=peek();
-      let funcSrc='function ';
-      if(name.t==='id'){consume();funcSrc+=name.v;}
-      // Collect param list and body
-      skipWs();if(peek().v!=='('){litBuf+=funcSrc;return true;}
-      let src=funcSrc;let depth=0;
-      // consume the param list
-      src+=peek().v;consume();depth++;
-      while(depth>0&&peek().t!=='eof'){
-        const tok=consume();src+=tok.v;
-        if(tok.v==='(')depth++;else if(tok.v===')')depth--;
-      }
-      skipWs();
-      // consume the body
-      if(peek().v!=='{'){litBuf+=src;return true;}
-      src+=peek().v;consume();depth=1;
-      while(depth>0&&peek().t!=='eof'){
-        const tok=consume();src+=tok.v;
-        if(tok.v==='{')depth++;else if(tok.v==='}')depth--;
-      }
-      const b=new TextEncoder().encode(src.trim());
-      emit(I.LITERAL_EXEC);emitU32(b.length);b.forEach(x=>bc.push(x));
-      return true;
-    }
-
-    // Expression statement: assignment, call, compound assignment
-    if(t.t==='id'){
-      let saved=tp;
-      consume();skipWs();
-      const next=peek();
-      // Simple assignment: id = expr
-      if(next.v==='='&&toks[tp+1]&&toks[tp+1].v!=='='){
-        consume();skipWs();
-        compileExpr();
-        emit(I.STORE_VAR);emitName(t.v);
-        skipWs();if(peek().v===';')consume();
-        return true;
-      }
-      // Compound assignment: id += expr etc.
-      const compRe=/^(\+=|-=|\*=|\/=|%=|&=|\|=|\^=|<<=|>>=|>>>=)$/;
-      if(compRe.test(next.v)){
-        const op=next.v.slice(0,-1);
-        consume();skipWs();
-        emit(I.LOAD_VAR);emitName(t.v);
-        compileExpr();
-        const opi=BINOP[op];if(opi!==undefined)emit(opi);
-        emit(I.STORE_VAR);emitName(t.v);
-        skipWs();if(peek().v===';')consume();
-        return true;
-      }
-      // Property assignment: id.prop = expr  or  id[idx] = expr
-      if(next.v==='.'||next.v==='['||next.v==='('){
-        // Could be a.b = x or a.b.c() etc — compile as expression
-        tp=saved;
-        compileExpr();emit(I.POP);
-        skipWs();if(peek().v===';')consume();
-        return true;
-      }
-      // Increment/decrement: id++ / id--
-      if(next.v==='++'||next.v==='--'){
-        const op=next.v;consume();
-        emit(I.LOAD_VAR);emitName(t.v);
-        emit(I.PUSH_NUM);emitF64(1);
-        emit(op==='++'?I.ADD:I.BIN_SUB);
-        emit(I.STORE_VAR);emitName(t.v);
-        skipWs();if(peek().v===';')consume();
-        return true;
-      }
-      tp=saved;
-      litBuf+=consume().v;
-      return true;
-    }
-
-    if(t.v===';'){consume();return true;}
-    if(t.v==='{'){compileBlock();return true;}
-
-    // Anything else → literal buffer
-    litBuf+=consume().v;
-    return true;
-  }
-
-  // ── TOP-LEVEL COMPILE ─────────────────────────────────────────
-  try{
-    while(tp<toks.length){
-      const before=tp;
-      flushLit();
-      compileStmt();
-      flushLit();
-      if(tp===before)tp++;// safety advance
-    }
-    flushLit();
-  } catch(e){
-    // Total fallback: encode entire source as one LITERAL_EXEC
-    bc.length=0;
-    const fb=new TextEncoder().encode(code);
-    emit(I.LITERAL_EXEC);emitU32(fb.length);
-    fb.forEach(x=>bc.push(x));
-  }
-
-  st.bytecodes=(st.bytecodes||0)+bc.length;
-
-  // ── LFSR ENCRYPTION ───────────────────────────────────────────
-  // 32-bit Galois LFSR XOR'd over the bytecode. Attacker needs both
-  // the seed AND the polynomial to decrypt.
-  const lfsrSeed=(RNG.int(0x7fffffff)+1)>>>0;
-  const POLY=0xB4BCD35C;
-  {
-    let reg=lfsrSeed;
-    for(let i=0;i<bc.length;i++){
-      reg=(reg>>>1)^(-(reg&1)&POLY)>>>0;
-      bc[i]^=(reg&0xff);
-    }
-  }
-
-  // PC XOR mask — program counter stored XOR'd to hide control flow
-  const pcMask=(RNG.int(0x7fff)+1);
-
-  // ── RUNTIME CODE GENERATION ───────────────────────────────────
-  const v=()=>freshId();
-
-  // Runtime identifiers
-  const vProg=v(),vNames=v(),vStk=v(),vSP=v(),vVars=v(),vPC=v();
-  const vRun=v(),vLfsr=v(),vLk=v();
-  const hR8=v(),hR16=v(),hRI16=v(),hR32=v(),hRF=v(),hRS=v(),hRN=v();
-  const hPush=v(),hPop=v(),hPeek=v(),hCall=v(),hJump=v();
-  const vGT=v(),vAdFn=v(),vEv=v();
-  const vLoop=v();
-
-  // Chunk the bytecode into separate array vars
-  const chunkSz=opts.bc_dynop?(opts.bcchunk||300):bc.length;
-  const chunks=[];
-  for(let i=0;i<bc.length;i+=chunkSz)chunks.push(Array.from(bc.slice(i,i+chunkSz)));
-  const cNames=chunks.map(()=>v());
-
-  function rc(n){
-    // Emit a runtime constant — optionally constant-blinded
-    if(!opts.bc_stateful)return hexInt(n>>>0);
-    const blind=(RNG.int(0xfffe)+1)>>>0;
-    return `(${hexInt((n^blind)>>>0)}^${hexInt(blind)})`;
-  }
-
-  const nameTableLit='['+nameTable.map(n=>JSON.stringify(n)).join(',')+']';
-
-  let rt='';
-
-  // Anti-debug
-  if(opts.bc_antidebug||opts.shd_antidebug){
-    rt+=`var ${vAdFn}=function(){try{(function(){return![];})[${JSON.stringify('constructor')}](${JSON.stringify('debugger')})[${JSON.stringify('call')}](${JSON.stringify('action')});}catch(${vEv}){debugger;}};\n`;
-    rt+=`${vAdFn}();setInterval(${vAdFn},${hexInt(2000)});\n`;
-  }
-
-  // Bytecode chunks
-  cNames.forEach((cn,i)=>{rt+=`var ${cn}=[${chunks[i].map(hexInt).join(',')}];\n`;});
-  rt+=chunks.length===1
-    ?`var ${vProg}=${cNames[0]};\n`
-    :`var ${vProg}=[].concat(${cNames.join(',')});\n`;
-
-  // Name table
-  rt+=`var ${vNames}=${nameTableLit};\n`;
-
-  // LFSR decrypt
-  rt+=`(function(){var ${vLfsr}=${rc(lfsrSeed)}>>>0;`;
-  rt+=`for(var ${vLk}=0;${vLk}<${vProg}.length;${vLk}++){`;
-  rt+=`${vLfsr}=(${vLfsr}>>>1)^(-(${vLfsr}&1)&${rc(POLY)})>>>0;`;
-  rt+=`${vProg}[${vLk}]^=(${vLfsr}&0xff);}})();\n`;
-
-  // Global context
-  rt+=`var ${vGT}=typeof globalThis!=='undefined'?globalThis:typeof window!=='undefined'?window:this;\n`;
-
-  // Variable environment — pre-seed with globals
-  rt+=`var ${vVars}=Object.create(null);\n`;
-  rt+=`(function(){try{var _ks=Object.getOwnPropertyNames(${vGT});for(var _i=0;_i<_ks.length;_i++){try{${vVars}[_ks[_i]]=${vGT}[_ks[_i]];}catch(_e2){}};}catch(_e){}})();\n`;
-
-  // Stack
-  rt+=`var ${vStk}=[],${vSP}=0;\n`;
-
-  // PC — stored XOR'd with pcMask
-  const pcMaskC=rc(pcMask);
-  rt+=`var ${vPC}=${hexInt(0^pcMask)};\n`;// initial pc=0, stored as 0^pcMask
-
-  // Read helpers — pc is always unmasked before use, re-masked after
-  rt+=`function ${hR8}(){var _p=${vPC}^${pcMaskC};var _b=${vProg}[_p];${vPC}=(_p+1)^${pcMaskC};return _b;};\n`;
-  rt+=`function ${hR16}(){var _h=${hR8}(),_l=${hR8}();return(_h<<8)|_l;};\n`;
-  rt+=`function ${hRI16}(){var _v=${hR16}();return _v>=0x8000?_v-0x10000:_v;};\n`;
-  rt+=`function ${hR32}(){var _a=${hR8}(),_b=${hR8}(),_c=${hR8}(),_d=${hR8}();return((_a<<24)|(_b<<16)|(_c<<8)|_d)>>>0;};\n`;
-  rt+=`function ${hRF}(){var _u=new Uint8Array(8);for(var _i=0;_i<8;_i++)_u[_i]=${hR8}();return new DataView(_u.buffer).getFloat64(0,true);};\n`;
-  // String read: blind-decode
-  rt+=`function ${hRS}(){var _l=${hR16}();var _u=new Uint8Array(_l);for(var _i=0;_i<_l;_i++)_u[_i]=${hR8}()^${rc(BLIND_S)};return new TextDecoder().decode(_u);};\n`;
-  // Name read: blind-decode index
-  rt+=`function ${hRN}(){return ${vNames}[${hR16}()^${rc(BLIND_N)}];};\n`;
-
-  // Stack helpers
-  rt+=`function ${hPush}(v){${vStk}[${vSP}++]=v;};\n`;
-  rt+=`function ${hPop}(){return ${vStk}[--${vSP}];};\n`;
-  rt+=`function ${hPeek}(){return ${vStk}[${vSP}-1];};\n`;
-
-  // Jump — adds offset to real pc
-  rt+=`function ${hJump}(off){${vPC}=(${vPC}^${pcMaskC})+off;${vPC}^=${pcMaskC};};\n`;
-
-  // Call helper — fixes `Illegal invocation` for native methods
-  rt+=`function ${hCall}(argc,ret){\n`;
-  rt+=`  var _as=new Array(argc);for(var _ci=argc-1;_ci>=0;_ci--)_as[_ci]=${hPop}();\n`;
-  rt+=`  var _fn=${hPop}(),_ct=${hPop}();\n`;
-  rt+=`  if(_ct==null||_ct===undefined)_ct=${vGT};\n`;
-  rt+=`  var _r=typeof _fn==='function'?_fn.apply(_ct,_as):undefined;\n`;
-  rt+=`  if(ret)${hPush}(_r);\n`;
-  rt+=`};\n`;
-
-  // LITERAL_EXEC: run raw bytes as JS via aliased constructor
-  // This is the ONLY place Function() is used — only for unsupported constructs
-  const le1=v(),le2=v(),le3=v();
-  rt+=`function ${vRun}_le(){\n`;
-  rt+=`  var _l=${hR32}(),_u=new Uint8Array(_l);\n`;
-  rt+=`  for(var _i=0;_i<_l;_i++)_u[_i]=${hR8}();\n`;
-  rt+=`  try{\n`;
-  rt+=`    var _s=new TextDecoder().decode(_u);\n`;
-  rt+=`    var ${le1}={},${le2}=${le1}['constructor'],${le3}=${le2}['constructor'];\n`;
-  // Execute fragment: function decls are hoisted to the enclosing Function() scope.
-  // After execution, sync any newly-declared top-level functions into vVars
-  // by regex-scanning _s for function names and using direct eval() to read them.
-  rt+=`    ${le3}('with(arguments[0]){'+_s+'}\\nvar _fre=/\\\\bfunction\\\\s+([a-zA-Z_$][\\\\w$]*)\\\\s*\\\\(/g,_fm;var _fsrc=arguments[1];while((_fm=_fre.exec(_fsrc))!==null){try{arguments[0][_fm[1]]=eval(_fm[1]);}catch(_fe2){}}')(${vVars},_s);\n`;
-  rt+=`  }catch(_e){}\n`;
-  rt+=`}\n`;
-
-  // End condition — real pc >= bytecode length
-  const progLen=bc.length;
-  const hAtEnd=`(${vPC}^${pcMaskC})>=${rc(progLen)}`;
-
-  // ── DISPATCH LOOP ─────────────────────────────────────────────
-  rt+=`var ${vLoop}=true;\n`;
-  rt+=`try{\n`;
-  rt+=`while(${vLoop}&&!(${hAtEnd})){\n`;
-
-  // Build case map: ISA opcode → encoded byte → handler body
-  const cases={};
-
-  function defCase(iop,body){cases[encMap[iop]]=body;}
-
-  defCase(I.PUSH_STR,  `${hPush}(${hRS}());`);
-  defCase(I.PUSH_NUM,  `${hPush}(${hRF}());`);
-  defCase(I.PUSH_TRUE, `${hPush}(true);`);
-  defCase(I.PUSH_FALSE,`${hPush}(false);`);
-  defCase(I.PUSH_NULL, `${hPush}(null);`);
-  defCase(I.PUSH_UNDEF,`${hPush}(undefined);`);
-  defCase(I.PUSH_THIS, `${hPush}(${vGT});`);
-  defCase(I.LOAD_VAR,  `${hPush}(${vVars}[${hRN}()]);`);
-  defCase(I.STORE_VAR, `var _n=${hRN}();${vVars}[_n]=${hPop}();`);
-  defCase(I.DECLARE,   `var _n=${hRN}();if(!(_n in ${vVars}))${vVars}[_n]=undefined;`);
-  defCase(I.LOAD_PROP, `var _n=${hRN}();var _o=${hPop}();${hPush}(_o==null?undefined:_o[_n]);`);
-  defCase(I.STORE_PROP,`var _n=${hRN}();var _v=${hPop}();var _o=${hPop}();if(_o!=null)_o[_n]=_v;`);
-  defCase(I.LOAD_IDX,  `var _idx=${hPop}();var _o=${hPop}();${hPush}(_o==null?undefined:_o[_idx]);`);
-  defCase(I.STORE_IDX, `var _v=${hPop}();var _idx=${hPop}();var _o=${hPop}();if(_o!=null)_o[_idx]=_v;`);
-  defCase(I.CALL,      `${hCall}(${hR8}(),true);`);
-  defCase(I.CALL_VOID, `${hCall}(${hR8}(),false);`);
-  defCase(I.NEW_CALL,  `var _ac=${hR8}();var _as=new Array(_ac);for(var _ci=_ac-1;_ci>=0;_ci--)_as[_ci]=${hPop}();var _fn=${hPop}();${hPop}();${hPush}(new(Function.prototype.bind.apply(_fn,[null].concat(_as)))());`);
-  defCase(I.JUMP,      `${hJump}(${hRI16}());`);
-  defCase(I.JUMP_TRUE, `var _off=${hRI16}();if(${hPop}())${hJump}(_off);`);
-  defCase(I.JUMP_FALSE,`var _off=${hRI16}();if(!${hPop}())${hJump}(_off);`);
-  defCase(I.RET,       `${vLoop}=false;`);
-  defCase(I.ADD,       `var _b=${hPop}(),_a=${hPop}();${hPush}(_a+_b);`);
-  defCase(I.BIN_SUB,   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a-_b);`);
-  defCase(I.BIN_MUL,   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a*_b);`);
-  defCase(I.BIN_DIV,   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a/_b);`);
-  defCase(I.BIN_MOD,   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a%_b);`);
-  defCase(I.BIN_AND,   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a&_b);`);
-  defCase(I.BIN_OR,    `var _b=${hPop}(),_a=${hPop}();${hPush}(_a|_b);`);
-  defCase(I.BIN_XOR,   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a^_b);`);
-  defCase(I.BIN_SHL,   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a<<_b);`);
-  defCase(I.BIN_SHR,   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a>>_b);`);
-  defCase(I.BIN_USHR,  `var _b=${hPop}(),_a=${hPop}();${hPush}(_a>>>_b);`);
-  defCase(I.CMP_EQ,    `var _b=${hPop}(),_a=${hPop}();${hPush}(_a==_b);`);
-  defCase(I.CMP_NEQ,   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a!=_b);`);
-  defCase(I.CMP_SEQ,   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a===_b);`);
-  defCase(I.CMP_SNEQ,  `var _b=${hPop}(),_a=${hPop}();${hPush}(_a!==_b);`);
-  defCase(I.CMP_LT,    `var _b=${hPop}(),_a=${hPop}();${hPush}(_a<_b);`);
-  defCase(I.CMP_LTE,   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a<=_b);`);
-  defCase(I.CMP_GT,    `var _b=${hPop}(),_a=${hPop}();${hPush}(_a>_b);`);
-  defCase(I.CMP_GTE,   `var _b=${hPop}(),_a=${hPop}();${hPush}(_a>=_b);`);
-  defCase(I.LOGIC_AND, `var _b=${hPop}(),_a=${hPop}();${hPush}(_a&&_b);`);
-  defCase(I.LOGIC_OR,  `var _b=${hPop}(),_a=${hPop}();${hPush}(_a||_b);`);
-  defCase(I.UNI_NEG,   `${hPush}(-${hPop}());`);
-  defCase(I.UNI_NOT,   `${hPush}(!${hPop}());`);
-  defCase(I.UNI_BNOT,  `${hPush}(~${hPop}());`);
-  defCase(I.UNI_TYPEOF,`${hPush}(typeof ${hPop}());`);
-  defCase(I.UNI_VOID,  `${hPop}();${hPush}(undefined);`);
-  defCase(I.DUP,       `${hPush}(${hPeek}());`);
-  defCase(I.POP,       `${hPop}();`);
-  defCase(I.SWAP,      `var _sb=${hPop}(),_sa=${hPop}();${hPush}(_sb);${hPush}(_sa);`);
-  defCase(I.ARRAY_NEW, `var _c=${hR16}();var _ar=new Array(_c);for(var _ci=_c-1;_ci>=0;_ci--)_ar[_ci]=${hPop}();${hPush}(_ar);`);
-  defCase(I.OBJ_NEW,   `var _p=${hR16}();var _oo={};for(var _pi=0;_pi<_p;_pi++){var _ov=${hPop}(),_ok=${hPop}();_oo[_ok]=_ov;}${hPush}(_oo);`);
-  defCase(I.IN_OP,     `var _b=${hPop}(),_a=${hPop}();${hPush}(_a in _b);`);
-  defCase(I.INSTANCEOF,`var _b=${hPop}(),_a=${hPop}();${hPush}(_a instanceof _b);`);
-  defCase(I.THROW_V,   `throw ${hPop}();`);
-  defCase(I.LITERAL_EXEC,`${vRun}_le();`);
-
-  // Add decoy dead cases if requested
-  if(opts.bc_decoy||opts.shd_decoy){
-    const used=new Set(Object.values(cases).map(Number));// already encoded bytes
-    // Reuse the encoded-byte keys from cases map
-    const usedEnc=new Set(Object.keys(cases).map(Number));
-    let deadAdded=0;
-    for(let i=0;i<256&&deadAdded<8;i++){
-      if(!usedEnc.has(i)){
-        const dv=v();
-        cases[i]=`var ${dv}=${rc(RNG.int(0xffff))};void ${dv};`;
-        deadAdded++;
-      }
-    }
-  }
-
-  // Emit dispatch: indirect table (opts.bc_compact) or if/else chain
-  if(opts.bc_compact){
-    const dt=v(),opv=v();
-    rt+=`var ${dt}={};\n`;
-    Object.entries(cases).forEach(([enc,body])=>{
-      rt+=`${dt}[${rc(Number(enc))}]=function(){${body}};\n`;
-    });
-    rt+=`var ${opv}=${hR8}();var _h=${dt}[${opv}];if(typeof _h==='function')_h();else ${vLoop}=false;\n`;
-  } else {
-    const opv=v();
-    rt+=`var ${opv}=${hR8}();\n`;
-    let first=true;
-    Object.entries(cases).forEach(([enc,body])=>{
-      rt+=(first?'if':'else if')+`(${opv}===${rc(Number(enc))}){${body}}\n`;
-      first=false;
-    });
-    rt+=`else{${vLoop}=false;}\n`;
-  }
-
-  rt+=`}\n`;// end while
-  rt+=`}catch(_cvm_e){}\n`;// runtime errors swallowed — prevents undefined-is-not-a-function crashes
-
-  let out=`(function(){\n${rt}})();\n`;
-  if(opts.bc_wrapinit||opts.shd_wrapinit){
-    const initFn=v();
-    out=`var ${initFn}=function(){\n`+out+`\n};\n${initFn}();\n`;
-  }
-  return out;
-}
-
 function _stripComments(code){
   let r='',i=0,n=code.length;
   while(i<n){
@@ -3590,25 +2843,9 @@ function obfuscate(src,opts){
   if(opts.native)code=passNativeCheck(code);
   if(opts.dbg)   code=passDbg(code,INT('o_dbgint',2000));
   if(opts.tamp)  code=passTamp(code);
-  // VM dispatch — none / bytecode / cyphervm / both
+  // VM dispatch — none / bytecode
   const _vmMode=opts.vm_mode||'none';
-  if(_vmMode==='both'){
-    // Shadow VM (inner) first, then Bytecode VM wraps its output
-    // Pass shadow-specific opts through; bc_antidebug applies to both if both_antidebug
-    const _shadowOpts={...opts,bc_antidebug:opts.both_antidebug||opts.bc_antidebug};
-    const _bcOpts={...opts,bc_antidebug:opts.both_antidebug||opts.bc_antidebug};
-    code=passCipherVM(code,_shadowOpts,st);
-    if(opts.both_integ){
-      // Embed an integrity marker that would be destroyed if the Shadow output is tampered
-      const _mk=freshId();
-      code=`var ${_mk}=${hexInt(RNG.int(0x7fff)+1)};
-`+code+`
-void ${_mk};`;
-    }
-    code=passBytecodeVM(code,_bcOpts,st);
-  } else if(_vmMode==='cyphervm'||opts.ovm){
-    code=passCipherVM(code,opts,st);
-  } else if(_vmMode==='bytecode'||opts.bc){
+  if(_vmMode==='bytecode'||opts.bc){
     code=passBytecodeVM(code,opts,st);
   }
   if(opts.mini)       code=minify(code,opts);
@@ -3633,9 +2870,7 @@ void ${_mk};`;
 let currentTarget='browser';
 const TARGET_OFF={
   'browser':[],
-  'browser-no-eval':['o_bc','o_bc_arrenc','o_bc_jmpenc','o_bc_stackenc','o_bc_compact',
-    'o_bc_dynop','o_bc_stateful','o_bc_wrapinit','o_bc_decoy','o_bc_dead',
-    'o_bc_macro','o_bc_antidebug','o_bc_sarrbconly','o_chunk'],
+  'browser-no-eval':['o_bc','o_bc_dynop','o_bc_stateful','o_bc_wrapinit','o_bc_decoy','o_bc_dead','o_bc_antidebug','o_bc_sarrbconly','o_chunk'],
   'node':['o_dom','o_dbg','o_native','o_atob','o_html','o_bc_antidebug'],
   'tampermonkey':['o_dom','o_native','o_html']
 };
@@ -3663,8 +2898,7 @@ function liveCheck(){
   const body=G('conflicts-inner');if(!body)return;
   const w=[];
   const _vm=VAL('o_vm_mode')||'none';
-  if(currentTarget==='browser-no-eval'&&(_vm==='bytecode'||_vm==='both'))w.push('⚠ Bytecode VM uses new Function() — disabled in no-eval environments');
-  if(_vm==='both')w.push('ℹ Both VMs: Cipher VM compiles to bytecode (inner), Bytecode VM wraps with ChaCha8 (outer).');
+  if(currentTarget==='browser-no-eval'&&(_vm==='bytecode'))w.push('⚠ Bytecode VM uses new Function() — disabled in no-eval environments');
 
   if(currentTarget==='node'&&CHK('o_dom'))w.push('ℹ Domain Lock checks window.location — no-op in Node.js');
   if(currentTarget==='node'&&CHK('o_dbg'))w.push('ℹ Debug Protection uses DevTools tricks — no-op in Node.js');
@@ -3680,9 +2914,7 @@ function liveCheck(){
   if(CHK('o_bc_antidebug')&&!CHK('o_bc'))w.push('ℹ VM Anti-Debug only runs inside Bytecode VM');
   if(CHK('o_ptrenc')&&!CHK('o_ren'))w.push('ℹ Pointer Encoding works best when Rename Variables is also on');
   if(CHK('o_unimangle')&&!CHK('o_ren'))w.push('⚠ Unicode Mangle needs Rename Variables to have identifiers to mangle');
-  if(CHK('o_ovm')&&CHK('o_bc'))w.push('ℹ Both VMs active: Cipher VM (inner) compiles to bytecode, Bytecode VM (outer) wraps with ChaCha8.');
   if(CHK('o_unimangle')&&CHK('o_bc'))w.push('⚠ Unicode Mangle + Bytecode VM: \\uNNNN inside new Function() string causes SyntaxError — disable one');
-  if(CHK('o_unimangle')&&CHK('o_ovm'))w.push('⚠ Unicode Mangle + Cipher VM: \\uNNNN in LITERAL_EXEC fallback strings may cause SyntaxError — disable Unicode Mangle when using Shadow VM');
   body.innerHTML=w.length
     ?w.map(x=>`<div class="ci-item" style="color:${x.startsWith('⚠')?'var(--red)':'var(--amb)'}">${x}</div>`).join('')
     :'<div class="ci-ok">✓ No issues</div>';
@@ -3737,20 +2969,15 @@ function getOpts(){
     comma:    CHK('o_comma'),
     objkeys:  CHK('o_objkeys'),
     bc:       CHK('o_bc'),
-    bc_rc4:   CHK('o_bc_rc4'),
-    bc_arrenc:CHK('o_bc_arrenc'),
-    bc_jmpenc:CHK('o_bc_jmpenc'),
-    bc_stackenc:CHK('o_bc_stackenc'),
-    bc_compact:CHK('o_bc_compact'),
     bc_dynop: CHK('o_bc_dynop'),
     bc_stateful:CHK('o_bc_stateful'),
+    bc_jmpenc:CHK('o_bc_jmpenc'),
     bc_wrapinit:CHK('o_bc_wrapinit'),
     bc_decoy: CHK('o_bc_decoy'),
     bc_dead:  CHK('o_bc_dead'),
-    bc_macro: CHK('o_bc_macro'),
     bc_antidebug:CHK('o_bc_antidebug'),
     bc_sarrbconly:CHK('o_bc_sarrbconly'),
-    bc_opcode_pos:VAL('o_bc_opcode_pos')||'inside',
+    bc_opcount: INT('o_bc_opcount',128),
     oprot:false,
     chunk:    CHK('o_chunk'),
     bcchunk:  INT('o_bcchunk',300),
@@ -3773,91 +3000,43 @@ function getOpts(){
     timingcanary: CHK('o_timingcanary'),
     homoglyph:    CHK('o_homoglyph'),
     cfhash:       CHK('o_cfhash'),
-    // Opcode VM
-    vm_mode:      VAL('o_vm_mode')||'none',  // 'none','bytecode','opcode'
-    ovm:            CHK('o_ovm'),
-    // Shadow VM options (reuse o_ovm_* checkboxes with new meanings)
-    shd_decoy:      CHK('o_ovm_shuffle'),   // Decoy thunks
-    shd_tablekey:   CHK('o_ovm_lfsr'),      // Table XOR masking
-    shd_scope:      CHK('o_ovm_indirect'),  // Shared scope object
-    shd_integrity:  CHK('o_ovm_guards'),    // Per-thunk integrity tags
-    shd_antidebug:  CHK('o_ovm_xorop'),    // Anti-debug inside Shadow VM
-    shd_wrapinit:   CHK('o_ovm_regmap'),   // Wrap in init fn
-    // Both VM opts
-    both_antidebug: CHK('o_both_antidebug'),
-    both_integ:     CHK('o_both_integ'),
+    vm_mode:      VAL('o_vm_mode')||'none',
   };
 }
 
-// VM mode selector
-function toggleVmPill(mode){
-  // Not used in current UI (seg-btn onclick calls applyVmMode directly)
-  applyVmMode(mode);
+// VM helpers — Bytecode VM only
+function updateOpcodeDisplay(){
+  const total=INT('o_bc_opcount',128);
+  const decoy=Math.max(0,total-34);
+  SETD('v-op-decoy',decoy);
+  SETD('v-op-total',total);
 }
+// All state lives in: o_vm_enable (checkbox), o_bc (hidden checkbox), o_vm_mode (hidden input)
 
 function _syncVmState(){
-  const bcOn=!!document.querySelector('.seg-btn.vm-seg[data-vm="bytecode"].active');
-  const ovmOn=!!document.querySelector('.seg-btn.vm-seg[data-vm="cyphervm"].active');
-  const mode=bcOn&&ovmOn?'both':bcOn?'bytecode':ovmOn?'cyphervm':'none';
-  SETV('o_vm_mode',mode);
-  // Sync legacy checkboxes
-  const bcEl=G('o_bc'),ovmEl=G('o_ovm'),enEl=G('o_vm_enable');
-  if(bcEl)bcEl.checked=bcOn||(mode==='both');
-  if(ovmEl)ovmEl.checked=ovmOn;
-  if(enEl)enEl.checked=mode!=='none';
-  // Show/hide mode row
-  const modeRow=G('vm-mode-row');
-  if(modeRow)modeRow.style.display=(mode!=='none')?'block':'none';
-  // Show/hide sub-panels
-  showSub('bc-sub',bcOn);
-  showSub('ovm-sub',ovmOn);
-  showSub('both-sub',bcOn&&ovmOn);
-  // Update info boxes
-  ['none','bc','cyphervm','both'].forEach(k=>{const e=G('vm-info-'+k);if(e)e.style.display='none';});
-  const infoKey=mode==='both'?'both':mode==='bytecode'?'bc':mode==='cyphervm'?'cyphervm':'none';
-  const infoEl=G('vm-info-'+infoKey);if(infoEl)infoEl.style.display='block';
+  const on=CHK('o_vm_enable');
+  // Keep hidden inputs in sync
+  const bcEl=G('o_bc');if(bcEl)bcEl.checked=on;
+  SETV('o_vm_mode',on?'bytecode':'none');
+  // Show/hide sub-panel and info boxes
+  showSub('bc-sub',on);
+  const infoNone=G('vm-info-none'),infoBc=G('vm-info-bc');
+  if(infoNone)infoNone.style.display=on?'none':'block';
+  if(infoBc)infoBc.style.display=on?'block':'none';
   liveCheck();saveSettings();
 }
 
-// applyVmMode — called by presets, fixSubPanels, seg-btn onclick, and applyVmEnable
-// mode = 'none' | 'bytecode' | 'cyphervm' | 'both'
-// When absolute=false (default, UI button click), toggle single-mode buttons.
-// When absolute=true (presets, loadSettings), force-set buttons to exact state.
+// applyVmMode: mode='bytecode' enables VM, anything else disables.
+// Used by presets and loadSettings (absolute always true from those sites).
 function applyVmMode(mode, absolute){
-  const bcBtn=document.querySelector('.seg-btn.vm-seg[data-vm="bytecode"]');
-  const ovmBtn=document.querySelector('.seg-btn.vm-seg[data-vm="cyphervm"]');
-  if(!absolute && (mode==='bytecode'||mode==='cyphervm')){
-    // Toggle the clicked button (UI interaction only)
-    const btn=mode==='bytecode'?bcBtn:ovmBtn;
-    if(btn)btn.classList.toggle('active');
-  } else {
-    // Absolute set (presets, load, 'none', 'both', or explicit absolute=true)
-    const bcOn=mode==='bytecode'||mode==='both';
-    const ovmOn=mode==='cyphervm'||mode==='both';
-    if(bcBtn)bcBtn.classList.toggle('active',bcOn);
-    if(ovmBtn)ovmBtn.classList.toggle('active',ovmOn);
-  }
-  // Sync enable checkbox + mode-row visibility based on resulting state
-  const nowBcOn=!!(bcBtn&&bcBtn.classList.contains('active'));
-  const nowOvmOn=!!(ovmBtn&&ovmBtn.classList.contains('active'));
-  const nowMode=nowBcOn&&nowOvmOn?'both':nowBcOn?'bytecode':nowOvmOn?'cyphervm':'none';
-  const enEl=G('o_vm_enable');
-  if(enEl)enEl.checked=nowMode!=='none';
-  const modeRow=G('vm-mode-row');
-  if(modeRow)modeRow.style.display=(nowMode!=='none')?'block':'none';
+  const on=(mode==='bytecode');
+  const enEl=G('o_vm_enable');if(enEl)enEl.checked=on;
   _syncVmState();
 }
+
 function applyVmEnable(on){
-  const modeRow=G('vm-mode-row');
-  if(modeRow)modeRow.style.display=on?'block':'none';
-  if(!on){
-    applyVmMode('none',true);
-  } else {
-    // Default to bytecode when enabling for the first time
-    const cur=VAL('o_vm_mode');
-    if(!cur||cur==='none') applyVmMode('bytecode',true);
-    else applyVmMode(cur,true);
-  }
+  // Called directly by the toggle's onchange
+  _syncVmState();
 }
 
 
@@ -3869,8 +3048,6 @@ function applyPreset(){
   const p=G('preset').value;
   const TRAP_IDS=['o_opaque','o_canary','o_envfp','o_deobtrap','o_proxywrap','o_junkpoly','o_hashlocked','o_interntrap'];
   const ADV_IDS=['o_scopefog','o_tdztrap','o_protguard','o_timingcanary','o_callmutate','o_homoglyph','o_cfhash'];
-  const OVM_IDS=['o_ovm','o_ovm_xorop','o_ovm_shuffle','o_ovm_lfsr','o_ovm_indirect','o_ovm_regmap','o_ovm_guards'];// cyphervm checkboxes
-  const BOTH_IDS=['o_both_antidebug','o_both_integ'];
   const ALL=['o_html','o_strict','o_mini','o_semi','o_simplify','o_ignimport','o_con',
     'o_self','o_antib','o_native','o_tamp','o_dbg','o_dom','o_srcmap',
     'o_sarr','o_srot','o_sshuf','o_calltrans','o_wchain',
@@ -3878,22 +3055,20 @@ function applyPreset(){
     'o_ren','o_renglobal','o_renprop','o_prop','o_unimangle','o_fakeproto',
     'o_hexn','o_nsplit','o_math','o_evaldisguise',
     'o_cff','o_dead','o_iife','o_comma','o_objkeys',
-    'o_bc','o_bc_arrenc','o_bc_jmpenc','o_bc_stackenc','o_bc_compact',
-    'o_bc_dynop','o_bc_stateful','o_bc_wrapinit','o_bc_decoy','o_bc_dead',
-    'o_bc_rc4','o_bc_macro','o_bc_antidebug','o_bc_sarrbconly','o_chunk',
-    ...TRAP_IDS,...ADV_IDS,...OVM_IDS,...BOTH_IDS];
+    'o_bc','o_bc_dynop','o_bc_stateful','o_bc_jmpenc','o_bc_wrapinit',
+    'o_bc_decoy','o_bc_dead','o_bc_antidebug','o_bc_sarrbconly','o_chunk',
+    ...TRAP_IDS,...ADV_IDS];
   ALL.forEach(id=>{const e=G(id);if(e){e.disabled=false;e.checked=false;}});
 
   if(p==='light'){
     SETV('o_vm_mode','none');applyVmMode('none',true);
-    // Minimal: basic string escaping, rename, compact output — no traps
     ['o_senc','o_ren','o_hexn','o_mini'].forEach(id=>SET(id,true));
     setEnc(false,false,false);setIdx(true,false);
     SETV('o_namegen','hexadecimal');SETV('o_wcount','1');SETD('v-wc','1');
+    SETV('o_bc_opcount','34');SETD('v-bc-opcount','34');
 
   }else if(p==='medium'){
     SETV('o_vm_mode','none');applyVmMode('none',true);
-    // Solid obfuscation, no VM — string array, renaming, dead code, basic traps
     ['o_sarr','o_srot','o_sshuf','o_calltrans',
      'o_senc','o_atob',
      'o_ren','o_prop','o_hexn','o_nsplit',
@@ -3903,34 +3078,31 @@ function applyPreset(){
      'o_opaque','o_junkpoly'].forEach(id=>SET(id,true));
     setEnc(false,true,false);setIdx(true,false);
     SETV('o_namegen','hexadecimal');SETV('o_wcount','1');SETD('v-wc','1');
+    SETV('o_bc_opcount','34');SETD('v-bc-opcount','34');
 
   }else if(p==='high'){
     SETV('o_vm_mode','bytecode');applyVmMode('bytecode',true);
-    // Strong: full string obfuscation, Bytecode VM, all runtime defenses, most traps
     ['o_sarr','o_srot','o_sshuf','o_calltrans',
      'o_senc','o_atob','o_tmpl','o_ssplit',
      'o_ren','o_prop','o_hexn','o_nsplit','o_math',
      'o_cff','o_dead','o_iife','o_comma',
-     'o_bc','o_bc_arrenc','o_bc_jmpenc','o_bc_stackenc','o_bc_rc4',
-     'o_bc_dynop','o_bc_stateful','o_bc_decoy','o_bc_dead','o_bc_macro','o_bc_antidebug',
+     'o_bc','o_bc_jmpenc','o_bc_dynop','o_bc_stateful','o_bc_decoy','o_bc_dead','o_bc_antidebug',
      'o_chunk',
      'o_self','o_antib','o_native','o_tamp','o_dbg',
      'o_mini','o_semi',
      'o_clfold','o_ptrenc','o_unimangle','o_fakeproto','o_evaldisguise',
-     // Standard traps (no proxywrap — reserved for max)
      'o_opaque','o_canary','o_envfp','o_deobtrap','o_junkpoly','o_hashlocked','o_interntrap',
-     // Advanced traps (all except homoglyph + cfhash which are experimental)
      'o_scopefog','o_tdztrap','o_protguard','o_timingcanary','o_callmutate',
     ].forEach(id=>SET(id,true));
     setEnc(true,true,false);setIdx(true,false);
     SETV('o_namegen','hexadecimal');SETV('o_wcount','2');SETD('v-wc','2');
     SETV('o_idxshift','13');SETD('v-idxsh','13');
+    SETV('o_bc_opcount','128');SETD('v-bc-opcount','128');
 
   }else if(p==='max'){
-    SETV('o_vm_mode','both');applyVmMode('both',true);
-    // Max: everything on except a small safe-skip list
+    SETV('o_vm_mode','bytecode');applyVmMode('bytecode',true);
     const skip=['o_html','o_dom','o_con','o_charcode','o_srcmap','o_renprop','o_renglobal',
-                'o_simplify','o_bc_sarrbconly','o_bc_wrapinit','o_bc_compact'];
+                'o_simplify','o_bc_sarrbconly','o_bc_wrapinit'];
     ALL.filter(id=>!skip.includes(id)).forEach(id=>SET(id,true));
     setEnc(true,true,false);setIdx(true,true);
     SETV('o_namegen','hexadecimal');
@@ -3938,6 +3110,7 @@ function applyPreset(){
     SETV('o_wparams','3');SETD('v-wp','3');
     SETV('o_idxshift','29');SETD('v-idxsh','29');
     SETV('o_thresh','1');SETD('v-thresh','1.00');
+    SETV('o_bc_opcount','220');SETD('v-bc-opcount','220');
   }
 
   // 'custom' = user-defined; don't touch any checkbox state
@@ -3953,10 +3126,9 @@ function applyPreset(){
 
   applyTargetConstraints();
   showSub('sarr-sub',CHK('o_sarr'));
-  // Refresh all slider fills after preset change
   if(typeof refreshAllSliders==='function') refreshAllSliders();
+  if(typeof updateOpcodeDisplay==='function') updateOpcodeDisplay();
   showSub('bc-sub',CHK('o_bc'));
-  showSub('ovm-sub',CHK('o_ovm'));
   showSub('ct-sub',CHK('o_calltrans'));
   showSub('ssplit-chunk-sub',CHK('o_ssplit'));
   showSub('cff-sub',CHK('o_cff'));
@@ -4165,9 +3337,9 @@ function acBuildRecs(s,level){
   if(!s.evalRisk&&(level==='high'||level==='max')){
     on('Bytecode VM','Source → int[] + dispatcher',()=>{
       SET('o_bc',true);showSub('bc-sub',true);
-      SET('o_bc_arrenc',true);SET('o_bc_jmpenc',true);SET('o_bc_stackenc',true);
+      SET('o_bc_jmpenc',true);
       SET('o_bc_dynop',true);SET('o_bc_stateful',true);SET('o_bc_decoy',true);
-      SET('o_bc_dead',true);SET('o_bc_macro',true);SET('o_bc_antidebug',true);
+      SET('o_bc_dead',true);SET('o_bc_antidebug',true);
     });
   }else if(s.evalRisk&&level==='max'){
     on('Bytecode VM — WARNING','Code uses eval; VM adds another new Function layer',()=>{
@@ -4232,19 +3404,16 @@ function applyAutoConfig(){
     'o_ren','o_renglobal','o_renprop','o_prop','o_unimangle','o_fakeproto',
     'o_hexn','o_nsplit','o_math','o_evaldisguise',
     'o_cff','o_dead','o_iife','o_comma','o_objkeys',
-    'o_bc','o_bc_arrenc','o_bc_jmpenc','o_bc_stackenc','o_bc_compact',
-    'o_bc_dynop','o_bc_stateful','o_bc_wrapinit','o_bc_decoy','o_bc_dead',
-    'o_bc_rc4','o_bc_macro','o_bc_antidebug','o_bc_sarrbconly','o_chunk',
+    'o_bc','o_bc_dynop','o_bc_stateful','o_bc_jmpenc','o_bc_wrapinit',
+    'o_bc_decoy','o_bc_dead','o_bc_antidebug','o_bc_sarrbconly','o_chunk',
     'o_opaque','o_canary','o_envfp','o_deobtrap','o_proxywrap','o_junkpoly','o_hashlocked','o_interntrap',
-    'o_callmutate','o_scopefog','o_tdztrap','o_protguard','o_timingcanary','o_homoglyph','o_cfhash',
-    'o_ovm','o_ovm_xorop','o_ovm_shuffle','o_ovm_lfsr','o_ovm_indirect','o_ovm_regmap','o_ovm_guards'];
+    'o_callmutate','o_scopefog','o_tdztrap','o_protguard','o_timingcanary','o_homoglyph','o_cfhash'];
   ALL.forEach(id=>{const e=G(id);if(e){e.disabled=false;e.checked=false;}});
   _acRecs.forEach(r=>{if(r.fn)r.fn();});
   if(_acScan)setTarget(_acScan.detectedTarget||'browser');
   SETV('preset','custom');
   showSub('sarr-sub',CHK('o_sarr'));
   showSub('bc-sub',CHK('o_bc'));
-  showSub('ovm-sub',CHK('o_ovm'));
   showSub('ct-sub',CHK('o_calltrans'));
   showSub('ssplit-chunk-sub',CHK('o_ssplit'));
   showSub('cff-sub',CHK('o_cff'));
@@ -4262,11 +3431,11 @@ function applyAutoConfig(){
 // ================================================================
 //  PERSISTENCE — save/load all settings + input to localStorage
 // ================================================================
-const PERSIST_KEY='obscura_v5'; // v5: cyphervm rename, fixed preset ALL array, both_antidebug/integ in ALL
+const PERSIST_KEY='obscura_v7'; // v7: VM tab redesign, opcode count slider, dead bc_ opts removed
 
 function saveSettings(){
   try{
-    const data={v:5};
+    const data={v:7};
     data.preset=VAL('preset');
     data.target=currentTarget;
     // Every checkbox that has an id
@@ -4278,7 +3447,7 @@ function saveSettings(){
       data['sl_'+el.id]=el.value;
     });
     // Text inputs / selects
-    ['seed-val','o_idpfx','o_namegen','o_domredir','o_smap_url','o_smap_root','o_vm_mode','o_strict_mode','o_bc_opcode_pos'].forEach(id=>{
+    ['seed-val','o_idpfx','o_namegen','o_domredir','o_smap_url','o_smap_root','o_vm_mode','o_strict_mode'].forEach(id=>{
       const e=G(id);if(e)data['tx_'+id]=e.value;
     });
     // Tag inputs
@@ -4296,7 +3465,7 @@ function loadSettings(){
     const raw=localStorage.getItem(PERSIST_KEY);
     if(!raw)return false;
     const data=JSON.parse(raw);
-    if(!data||data.v!==5)return false;// reject stale saves from older versions
+    if(!data||data.v!==7)return false;
 
     // Restore preset select value WITHOUT calling applyPreset (that would overwrite everything)
     if(data.preset){const e=G('preset');if(e)e.value=data.preset;}
@@ -4312,7 +3481,7 @@ function loadSettings(){
     // Restore sliders + their display spans
     const DISP={'o_thresh':'v-thresh','o_idxshift':'v-idxsh','o_cff_t':'v-cff',
       'o_dead_t':'v-dead','o_dbgint':'v-dbg','o_wcount':'v-wc','o_wparams':'v-wp',
-      'o_sschunk':'v-ssc','o_bcchunk':'v-bcc'};
+      'o_sschunk':'v-ssc','o_bcchunk':'v-bcc','o_bc_opcount':'v-bc-opcount'};
     document.querySelectorAll('input[type=range][id]').forEach(el=>{
       if(data['sl_'+el.id]!==undefined){
         el.value=data['sl_'+el.id];
@@ -4327,7 +3496,7 @@ function loadSettings(){
     });
 
     // Text inputs + selects
-    ['seed-val','o_idpfx','o_namegen','o_domredir','o_smap_url','o_smap_root','o_vm_mode','o_strict_mode','o_bc_opcode_pos'].forEach(id=>{
+    ['seed-val','o_idpfx','o_namegen','o_domredir','o_smap_url','o_smap_root','o_vm_mode','o_strict_mode'].forEach(id=>{
       if(data['tx_'+id]!==undefined){const e=G(id);if(e)e.value=data['tx_'+id];}
     });
 
@@ -4357,7 +3526,6 @@ function loadSettings(){
     applyVmMode(_restoredVmMode, true);
     showSub('sarr-sub',CHK('o_sarr'));
     showSub('bc-sub',CHK('o_bc'));
-    showSub('ovm-sub',CHK('o_ovm'));
     showSub('ct-sub',CHK('o_calltrans'));
     showSub('ssplit-chunk-sub',CHK('o_ssplit'));
     showSub('cff-sub',CHK('o_cff'));
@@ -4371,6 +3539,7 @@ function loadSettings(){
 
     // Multi-select display text
     msSync('enc');msSync('idx');
+    if(typeof updateOpcodeDisplay==='function')updateOpcodeDisplay();
 
     // Apply visual dimming for target (no disabling)
     applyTargetConstraints();
@@ -4404,6 +3573,7 @@ window.addEventListener('load',()=>{
   const ok=loadSettings();
   // Refresh slider fills after loadSettings may have changed values
   if(typeof refreshAllSliders==='function') setTimeout(refreshAllSliders,10);
+  if(typeof updateOpcodeDisplay==='function') setTimeout(updateOpcodeDisplay,10);
   if(!ok){applyPreset();}
   // Force-correct all sub-panel visibility after init
   (function fixSubPanels(){
@@ -4423,10 +3593,10 @@ window.addEventListener('load',()=>{
     showSub('sarr-sub',CHK('o_sarr'));
     // dict-sub: only when namegen=dictionary
     showSub('dict-sub',VAL('o_namegen')==='dictionary');
-    // VM mode — default off
+    // Sync VM enable toggle + bc-sub from restored o_vm_mode
     const vm=VAL('o_vm_mode')||'none';
-    // Sync pills and sub-panels for restored vm mode
-    applyVmMode(vm, true);
+    const enEl=G('o_vm_enable');if(enEl)enEl.checked=(vm==='bytecode');
+    applyVmMode(vm,true);
   })();
   // Wire up auto-save after load so save isn't triggered during init
   // Checkboxes and ranges that are NOT the preset select itself: also mark as "custom"
