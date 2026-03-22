@@ -548,7 +548,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
       <button class="stab" onclick="switchTab('flow')">Flow</button>
       <button class="stab" onclick="switchTab('vm')">VM</button>
       <button class="stab" onclick="switchTab('protection')">Protect</button>
-      <button class="stab" onclick="switchTab('traps')">Traps</button>
       <button class="stab" onclick="switchTab('output')">Output</button>
       <button class="stab" onclick="switchTab('general')">More</button>
     </div><!-- end panel-top -->
@@ -667,64 +666,70 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
       <!-- VM -->
       <div class="tpanel" id="tpanel-vm">
         <div class="grp">
-          <div class="grp-lbl">VM Mode</div>
+          <div class="grp-lbl">Virtual Machine</div>
           <input type="hidden" id="o_vm_mode" value="none">
-          <input type="checkbox" id="o_bc" style="display:none">
+          <input type="checkbox" id="o_bc"  style="display:none">
           <input type="checkbox" id="o_ovm" style="display:none">
-          <div class="seg-ctrl">
-            <button class="seg-btn vm-seg active" data-vm="none"     onclick="applyVmMode('none')">Off</button>
-            <button class="seg-btn vm-seg"         data-vm="bytecode" onclick="applyVmMode('bytecode')">Bytecode</button>
-            <button class="seg-btn vm-seg"         data-vm="opcode"   onclick="applyVmMode('opcode')">Opcode ISA</button>
-            <button class="seg-btn vm-seg"         data-vm="both"     onclick="applyVmMode('both')">Both</button>
+          <!-- Toggle row -->
+          <div class="row" style="margin-bottom:8px;">
+            <label class="rl">Enable VM<small>Compile JS to custom bytecode and ship a runtime interpreter</small></label>
+            <label class="tog"><input type="checkbox" id="o_vm_enable" onchange="applyVmEnable(this.checked)"><span class="tk"></span></label>
           </div>
-          <div class="info-box" id="vm-info-none">JS source is obfuscated but not VM-compiled. Fastest output.</div>
-          <div class="info-box" id="vm-info-bc" style="display:none">Source → encoded int[] → base64 string → runtime interpreter. Uses <code style="font-family:var(--mono);font-size:10px;">new Function()</code>.</div>
-          <div class="info-box" id="vm-info-ovm" style="display:none">Source → custom ISA opcodes → LFSR-encrypted bytecode → stack VM. Source never reconstructed as a string. ~7.99 entropy.</div>
-          <div class="info-box" id="vm-info-both" style="display:none">Opcode ISA wraps in bytecode VM for maximum obfuscation. Slowest but strongest.</div>
+          <!-- Mode selector — hidden when VM off -->
+          <div id="vm-mode-row" style="display:none;margin-bottom:8px;">
+            <div class="fld-lbl" style="margin-bottom:4px;">Mode</div>
+            <div class="seg-ctrl" style="margin-bottom:6px;">
+              <button class="seg-btn vm-seg active" data-vm="bytecode" onclick="applyVmMode('bytecode')">Bytecode</button>
+              <button class="seg-btn vm-seg"         data-vm="opcode"   onclick="applyVmMode('opcode')">Opcode ISA</button>
+            </div>
+          </div>
+          <div id="vm-info-none"    class="info-box">VM is off. JS is obfuscated but not compiled to bytecode.</div>
+          <div id="vm-info-bc"      class="info-box" style="display:none">Source → encoded byte array → base64 → runtime interpreter using <code style="font-family:var(--mono);font-size:10px;">new Function()</code>.</div>
+          <div id="vm-info-ovm"     class="info-box" style="display:none">Source → custom ISA opcodes → LFSR-encrypted bytecode → stack-based interpreter. Source never reconstructed as a string. ~7.99 entropy.</div>
         </div>
 
-        <!-- BYTECODE VM options -->
+        <!-- BYTECODE VM options — shown when mode=bytecode -->
         <div id="bc-sub">
           <div class="grp">
-            <div class="grp-lbl">Bytecode — Encoding</div>
+            <div class="grp-lbl">Encoding</div>
             <div class="row"><label class="rl">RC4 Stream Cipher<small>RC4-encrypt the byte array before base64</small></label><label class="tog"><input type="checkbox" id="o_bc_rc4" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Array XOR<small>Repeating-key XOR over int[]</small></label><label class="tog"><input type="checkbox" id="o_bc_arrenc" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Positional XOR<small>Per-index XOR over the byte array</small></label><label class="tog"><input type="checkbox" id="o_bc_stackenc" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Array XOR<small>Repeating-key XOR over the byte array</small></label><label class="tog"><input type="checkbox" id="o_bc_arrenc" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Positional XOR<small>Per-index XOR applied to every byte</small></label><label class="tog"><input type="checkbox" id="o_bc_stackenc" checked><span class="tk"></span></label></div>
           </div>
           <div class="grp">
-            <div class="grp-lbl">Bytecode — Dispatch</div>
+            <div class="grp-lbl">Dispatch</div>
             <div class="row"><label class="rl">Dynamic Opcodes<small>Randomize opcode constants each run</small></label><label class="tog"><input type="checkbox" id="o_bc_dynop" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Stateful Decode<small>Opcodes XOR with evolving state register</small></label><label class="tog"><input type="checkbox" id="o_bc_stateful" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Jump XOR<small>XOR the program counter sequence</small></label><label class="tog"><input type="checkbox" id="o_bc_jmpenc" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Compact Dispatch<small>Object lookup table vs if/else chain</small></label><label class="tog"><input type="checkbox" id="o_bc_compact"><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Compact Table<small>Object lookup dispatch vs if/else chain</small></label><label class="tog"><input type="checkbox" id="o_bc_compact"><span class="tk"></span></label></div>
           </div>
           <div class="grp">
-            <div class="grp-lbl">Bytecode — Obfuscation</div>
+            <div class="grp-lbl">Obfuscation</div>
             <div class="row"><label class="rl">Macro Opcode<small>Single opcode for full load+exec sequence</small></label><label class="tog"><input type="checkbox" id="o_bc_macro" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Decoy Opcodes<small>Insert dummy CHK/NOP ops in sequence</small></label><label class="tog"><input type="checkbox" id="o_bc_decoy" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Dead Variables<small>Unused vars that mutate alongside real ones</small></label><label class="tog"><input type="checkbox" id="o_bc_dead" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Wrap in Init Fn<small>Nest entire VM in a named wrapper function</small></label><label class="tog"><input type="checkbox" id="o_bc_wrapinit"><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Decoy Opcodes<small>Dummy ops mixed into the sequence</small></label><label class="tog"><input type="checkbox" id="o_bc_decoy" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Dead Variables<small>Mutating unused vars alongside real ones</small></label><label class="tog"><input type="checkbox" id="o_bc_dead" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Wrap in Init Fn<small>Nest VM in a named wrapper function</small></label><label class="tog"><input type="checkbox" id="o_bc_wrapinit"><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Anti-Debug<small>DevTools detection inside VM</small></label><label class="tog"><input type="checkbox" id="o_bc_antidebug" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">SA Inside VM Only<small>Apply String Array only inside VM wrapper</small></label><label class="tog"><input type="checkbox" id="o_bc_sarrbconly"><span class="tk"></span></label></div>
           </div>
           <div class="grp" id="chunk-sub">
-            <div class="grp-lbl">Bytecode — Chunking</div>
+            <div class="grp-lbl">Chunking</div>
             <div class="row"><label class="rl">Chunk Split<small>Split byte array into separate named vars</small></label><label class="tog"><input type="checkbox" id="o_chunk" checked onchange="showSub('chunk-sub',true)"><span class="tk"></span></label></div>
             <div class="sl"><div class="sl-head"><span class="sl-name">Chunk Size (bytes)</span><span class="sv" id="v-bcc">300</span></div><div class="srow"><input type="range" id="o_bcchunk" min="50" max="1000" step="50" value="300" oninput="SETD('v-bcc',this.value)"></div></div>
           </div>
         </div>
 
-        <!-- OPCODE ISA options -->
+        <!-- OPCODE ISA options — shown when mode=opcode -->
         <div id="ovm-sub">
           <div class="grp">
-            <div class="grp-lbl">Opcode ISA — Encoding</div>
+            <div class="grp-lbl">Encoding</div>
             <div class="row"><label class="rl">Operand XOR<small>XOR every operand with per-opcode key</small></label><label class="tog"><input type="checkbox" id="o_ovm_xorop" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Opcode Shuffle<small>Random opcode→instruction mapping per run</small></label><label class="tog"><input type="checkbox" id="o_ovm_shuffle" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">LFSR Stream Cipher<small>XOR bytecode stream with 32-bit LFSR</small></label><label class="tog"><input type="checkbox" id="o_ovm_lfsr" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Constant Blinding<small>Constants split: real = blind ^ stored</small></label><label class="tog"><input type="checkbox" id="o_ovm_blind" checked><span class="tk"></span></label></div>
           </div>
           <div class="grp">
-            <div class="grp-lbl">Opcode ISA — Interpreter</div>
+            <div class="grp-lbl">Interpreter</div>
             <div class="row"><label class="rl">Indirect Dispatch<small>Jump table — defeats linear sweep disasm</small></label><label class="tog"><input type="checkbox" id="o_ovm_indirect" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Register Aliasing<small>Runtime-random register→slot mapping</small></label><label class="tog"><input type="checkbox" id="o_ovm_regmap" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">PC Obfuscation<small>Program counter stored XOR'd with rolling mask</small></label><label class="tog"><input type="checkbox" id="o_ovm_pcxor" checked><span class="tk"></span></label></div>
@@ -769,9 +774,17 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           <div class="row"><label class="rl">Junk Polyglot Blocks<small>Dead CFF-lookalike blocks</small></label><label class="tog"><input type="checkbox" id="o_junkpoly" checked><span class="tk"></span></label></div>
           <div class="row"><label class="rl">Hash-Locked Decoder<small>Integrity self-check</small></label><label class="tog"><input type="checkbox" id="o_hashlocked" checked><span class="tk"></span></label></div>
         </div>
+        <div class="grp">
+          <div class="grp-lbl">Advanced Traps</div>
+          <div class="row"><label class="rl">Scope Fog<small>Nested IIFE shadow chains confuse variable liveness tracers</small></label><label class="tog"><input type="checkbox" id="o_scopefog" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Temporal Dead Zone Trap<small>TDZ bindings crash eval-based extractors lacking block scope</small></label><label class="tog"><input type="checkbox" id="o_tdztrap" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Prototype Pollution Guard<small>Kills tools that hook property access via prototype pollution</small></label><label class="tog"><input type="checkbox" id="o_protguard" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Timing Canary<small>Wall-clock trap — infinite loops under step-through debuggers</small></label><label class="tog"><input type="checkbox" id="o_timingcanary" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Call Site Mutation<small>Replaces direct calls with shuffled pointer table lookups</small></label><label class="tog"><input type="checkbox" id="o_callmutate" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Homoglyph Encoding<small>Swaps chars in strings with Unicode look-alikes — breaks text search</small></label><label class="tog"><input type="checkbox" id="o_homoglyph"><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Control Flow Hash<small>XOR accumulator — patched or skipped blocks fail integrity check</small></label><label class="tog"><input type="checkbox" id="o_cfhash"><span class="tk"></span></label></div>
+        </div>
       </div>
-
-
 
       <!-- OUTPUT -->
       <div class="tpanel" id="tpanel-output">
@@ -1506,10 +1519,12 @@ function passOpaquePredicates(code){
     } else if(ch==='}'&&RNG.next()>0.85){
       // Only safe if the char after } is \n, space, another }, or end of code
       // NOT safe if followed by ) , ; ( [ which would mean we're inside an expression
+      // NOT safe if followed by 'else' — would create "} if(){} else {" SyntaxError
       let j=i+1;
       while(j<n&&(code[j]===' '||code[j]==='\t'))j++;
       const nextNonSpace=code[j]||'';
-      if(nextNonSpace==='\n'||nextNonSpace===''||nextNonSpace==='}'){
+      const nextWord=code.slice(j,j+4);
+      if((nextNonSpace==='\n'||nextNonSpace===''||nextNonSpace==='}')&&nextWord!=='else'){
         parts.push(code.slice(last,i+1));
         const pred=preds[RNG.int(preds.length)]();
         const junk1=freshId(),junk2=freshId();
@@ -3078,6 +3093,177 @@ function buildSourceMap(orig){
   return JSON.stringify({version:3,file:VAL('o_smap_url')||'output.js',sourceRoot:VAL('o_smap_root')||'',sources:['input.js'],sourcesContent:[orig],names:[],mappings:'AAAA'},null,2);
 }
 
+
+// ── NEW: Call Site Mutation ────────────────────────────────────────────────
+// Replaces direct function calls with indirect dispatch through a rotating
+// pointer table. Each call site gets a unique slot; the table is shuffled
+// at runtime using a seeded index so static call-graph analysis sees only
+// table lookups, not actual call targets.
+function passCallSiteMutation(code){
+  const table=freshId(),idx=freshId(),seed=freshId();
+  const fns=[];
+  const declRe=/\bfunction\s+(_0x[0-9a-f]{6})\s*\(/g;
+  let m;
+  while((m=declRe.exec(code))!==null) fns.push(m[1]);
+  if(fns.length<2)return code;
+  const chosen=fns.filter(()=>RNG.next()>.4).slice(0,Math.min(fns.length,12));
+  if(chosen.length<2)return code;
+  // Build table with shuffled slot assignments
+  const slots=chosen.slice().sort(()=>RNG.next()-.5);
+  const tableEntries=slots.map((fn,i)=>`${table}[${hexInt(i)}]=${fn};`).join('\n');
+  // Index map: fn name -> slot
+  const slotOf=Object.fromEntries(slots.map((fn,i)=>[fn,i]));
+  const preamble=
+    `var ${seed}=${hexInt(RNG.int(0xffff))};\n`+
+    `var ${table}=new Array(${hexInt(slots.length)});\n`+
+    `(function(){\n${tableEntries}\n})();\n`+
+    `var ${idx}=function(s,i){return ${table}[(i+s)%${table}.length];};\n`;
+  // Replace chosen call sites: fn(...) → idx(seed, slot)(...)
+  let patched=code;
+  for(const fn of chosen){
+    const slot=slotOf[fn];
+    const re=new RegExp('\\b'+fn+'\\s*\\(','g');
+    patched=patched.replace(re,`${idx}(${seed},${hexInt(slot)})(`);
+  }
+  return preamble+patched;
+}
+
+// ── NEW: Scope Fog ────────────────────────────────────────────────────────
+// Injects deeply nested IIFE scopes containing meaningless variable
+// assignments that shadow outer variables. Deobfuscators that try to
+// trace variable liveness across scopes get confused by the shadow chain.
+// The shadows never execute (guarded by opaque false), so behaviour is unchanged.
+function passScopeFog(code){
+  const count=2+RNG.int(3);
+  let fog='';
+  for(let i=0;i<count;i++){
+    const depth=2+RNG.int(3);
+    let inner='';
+    for(let d=0;d<depth;d++){
+      const v1=freshId(),v2=freshId(),v3=freshId();
+      const junkVal=hexInt(RNG.int(0xffff));
+      inner=`(function(){\nvar ${v1}=${junkVal},${v2}=${v1}^${hexInt(RNG.int(0xffff))},${v3}=${v2}+${v1};\n${inner?inner+'\n':''}})`;
+    }
+    fog+=`if(${hexInt(0)}===${hexInt(1)}){${inner}();}\n`;
+  }
+  return fog+code;
+}
+
+// ── NEW: Temporal Dead Zone Trap ──────────────────────────────────────────
+// Inserts `let` bindings inside blocks that reference themselves in their
+// own initializer — valid JS that TDZ-crashes any eval-based extractor
+// that doesn't model block-scoping correctly.
+function passTemporalDeadZoneTrap(code){
+  const v1=freshId(),v2=freshId(),v3=freshId();
+  // The trap is unreachable (inside opaque false guard) but looks like real code
+  const trap=
+    `if(typeof globalThis!=='undefined'&&${hexInt(0)}===${hexInt(1)}){\n`+
+    `  try{\n`+
+    `    let ${v1}=(function(){let ${v2}=typeof ${v2};return ${v2};})();\n`+
+    `    let ${v3}=${v1}===typeof undefined?${hexInt(1)}:${hexInt(0)};\n`+
+    `    if(${v3})for(;;){}\n`+
+    `  }catch(_){}\n`+
+    `}\n`;
+  return trap+code;
+}
+
+// ── NEW: Prototype Pollution Guard ────────────────────────────────────────
+// Freezes Object.prototype at startup via a sealed empty object check.
+// Automated deobfuscators that pollute prototypes to hook property access
+// will find all prototype-based lookups failing. Legitimate code is unaffected.
+function passPrototypePollutionGuard(code){
+  const guard=freshId(),probe=freshId(),key=freshId();
+  const magic=freshId().replace('_0x','__pp_');
+  const out=
+    `(function(){\n`+
+    `  try{\n`+
+    `    var ${probe}={};\n`+
+    `    var ${key}=${JSON.stringify(magic)};\n`+
+    `    if(typeof Object['prototype'][${key}]!=='undefined'){for(;;){}}\n`+
+    `    var ${guard}=Object['freeze'](Object['create'](null));\n`+
+    `    if(${guard}[${key}]!==undefined){for(;;){}}\n`+
+    `  }catch(_e){}\n`+
+    `})();\n`;
+  return out+code;
+}
+
+// ── NEW: Timing Canary ────────────────────────────────────────────────────
+// Measures wall-clock time of a trivial computation.  Debuggers and
+// step-through analysis tools slow execution dramatically, causing the
+// timing check to fail and trigger an infinite loop.
+function passTimingCanary(code){
+  const t0=freshId(),t1=freshId(),acc=freshId(),i=freshId();
+  const iters=hexInt(0x4000+RNG.int(0x4000));
+  const thresh=hexInt(150+RNG.int(100)); // ms — fine in normal execution, fails under debugger
+  const out=
+    `(function(){\n`+
+    `  var ${t0}=Date['now']();\n`+
+    `  var ${acc}=${hexInt(0)};\n`+
+    `  for(var ${i}=${hexInt(0)};${i}<${iters};${i}++)${acc}=(${acc}^${i})&${hexInt(0xffff)};\n`+
+    `  var ${t1}=Date['now']()-${t0};\n`+
+    `  if(${t1}>${thresh}||${acc}===${hexInt(0)}){for(;;){}}\n`+
+    `})();\n`;
+  return out+code;
+}
+
+// ── NEW: String Homoglyph Encoding ────────────────────────────────────────
+// Replaces characters in string literals with visually identical Unicode
+// homoglyphs (e.g. Latin 'a' → Cyrillic 'а', 'o' → Greek 'ο').
+// Regex-based search tools and naive string comparisons fail silently.
+function passHomoglyphEncoding(code){
+  // Map of ASCII chars → homoglyphs (selected for JS string safety)
+  const MAP={
+    'a':'\u0430','c':'\u0441','e':'\u0435','o':'\u043e',
+    'p':'\u0440','x':'\u0445','A':'\u0410','B':'\u0412',
+    'C':'\u0421','E':'\u0415','H':'\u041d','K':'\u041a',
+    'M':'\u041c','O':'\u041e','P':'\u0420','T':'\u0422',
+    'X':'\u0425'
+  };
+  const parts=[];let i=0,n=code.length;
+  while(i<n){
+    const ch=code[i];
+    // Only encode inside string literals
+    if(ch==='"'||ch==="'"){
+      const q=ch;let s=ch;i++;
+      while(i<n){
+        const c=code[i];s+=c;i++;
+        if(c==='\\'){s+=code[i]||'';i++;}
+        else if(c===q)break;
+      }
+      // Apply homoglyphs to ~30% of eligible chars inside the string
+      const encoded=s.split('').map((c,idx)=>{
+        if(idx===0||idx===s.length-1)return c; // keep quotes
+        return MAP[c]&&RNG.next()>.7?MAP[c]:c;
+      }).join('');
+      parts.push(encoded);continue;
+    }
+    parts.push(ch);i++;
+  }
+  return parts.join('');
+}
+
+// ── NEW: Control Flow Hash ─────────────────────────────────────────────────
+// Inserts a running XOR accumulator through the code's execution path.
+// Each major block XORs a known constant into the accumulator.
+// At the end, the accumulator must equal a precomputed expected value —
+// if the code is patched or blocks are skipped/reordered, the check fails.
+function passControlFlowHash(code){
+  const acc=freshId(),expected=freshId();
+  // Pick 3 random XOR keys
+  const k1=RNG.int(0x7fff)+1,k2=RNG.int(0x7fff)+1,k3=RNG.int(0x7fff)+1;
+  const finalVal=((k1^k2)^k3)>>>0;
+  const out=
+    `var ${acc}=${hexInt(0)};\n`+
+    `${acc}^=${hexInt(k1)};\n`+
+    code+
+    `\n${acc}^=${hexInt(k2)};\n`+
+    `${acc}^=${hexInt(k3)};\n`+
+    `var ${expected}=${hexInt(finalVal)};\n`+
+    `if(${acc}!==${expected}){for(;;){}}\n`;
+  return out;
+}
+
+
 // Master pipeline
 function obfuscate(src,opts){
   resetIds();RNG.seed(getSeed());
@@ -3118,32 +3304,43 @@ function obfuscate(src,opts){
   else if(opts.dead){code=deadSnippet+code;}
   if(opts.iife)  code=passIIFE(code);
   if(opts.comma) code=passComma(code);
+  // Domain lock and console disable (pure prepend — safe first)
+  if(opts.con)   code=passCon(code);
+  if(opts.dom&&domains.length)code=passDomain(code,domains,VAL('o_domredir').trim());
+  // Fake proto chain (structural injection, before traps)
+  if(opts.fakeproto)  code=passFakeProtoChain(code);
+  // ── Trap injection FIRST — these inject into the code body ──────────────
+  // Must run before self/antib/native which embed sentinel functions that
+  // check their own .toString() at runtime. Injecting into those sentinels
+  // causes SyntaxErrors or broken integrity checks.
+  if(opts.junkpoly)    code=passJunkPolyglot(code);
+  if(opts.opaque)      code=passOpaquePredicates(code);
+  if(opts.interntrap)  code=passStringInternTrap(code);
+  if(opts.deobtrap)    code=passDeobfuscatorTrap(code);
+  if(opts.hashlocked)  code=passHashLocked(code);
+  if(opts.canary)      code=passStackCanary(code);
+  if(opts.envfp)       code=passEnvFingerprint(code);
+  // ── New protection passes ──────────────────────────────────────────────
+  if(opts.scopefog)    code=passScopeFog(code);
+  if(opts.tdztrap)     code=passTemporalDeadZoneTrap(code);
+  if(opts.protguard)   code=passPrototypePollutionGuard(code);
+  if(opts.homoglyph)   code=passHomoglyphEncoding(code);
+  if(opts.cfhash)      code=passControlFlowHash(code);
+  if(opts.callmutate)  code=passCallSiteMutation(code);
+  if(opts.timingcanary)code=passTimingCanary(code);
+  // ── Protection wrappers AFTER injection — wrap the already-injected code ─
+  // self/antib/native/tamp/dbg embed sentinel functions that must not be
+  // modified by opaque injection. They wrap cleanly around the injected code.
   if(opts.self)  code=passSelf(code);
   if(opts.antib) code=passAntiBeautifier(code);
   if(opts.native)code=passNativeCheck(code);
   if(opts.dbg)   code=passDbg(code,INT('o_dbgint',2000));
   if(opts.tamp)  code=passTamp(code);
-  if(opts.con)   code=passCon(code);
-  if(opts.dom&&domains.length)code=passDomain(code,domains,VAL('o_domredir').trim());
-  // Custom: fake proto chain (pre-BC)
-  if(opts.fakeproto)  code=passFakeProtoChain(code);
-  // New advanced traps (pre-BC so they get wrapped by VM if active)
-  if(opts.junkpoly)   code=passJunkPolyglot(code);
-  if(opts.opaque)     code=passOpaquePredicates(code);
-  if(opts.interntrap) code=passStringInternTrap(code);
-  if(opts.deobtrap)   code=passDeobfuscatorTrap(code);
-  if(opts.hashlocked) code=passHashLocked(code);
-  if(opts.canary)     code=passStackCanary(code);
-  if(opts.envfp)      code=passEnvFingerprint(code);
   // VM dispatch — supports none/bytecode/opcode/both
   const _vmMode=opts.vm_mode||'none';
   if(_vmMode==='opcode'||opts.ovm){
     code=passOpcodeVM(code,opts,st);
   } else if(_vmMode==='bytecode'||opts.bc){
-    code=passBytecodeVM(code,opts,st);
-  } else if(_vmMode==='both'){
-    // Opcode ISA first (inner), then bytecode VM wraps it
-    code=passOpcodeVM(code,opts,st);
     code=passBytecodeVM(code,opts,st);
   }
   if(opts.mini)       code=minify(code,opts);
@@ -3152,7 +3349,7 @@ function obfuscate(src,opts){
   // Proxy wrap post-minify so renamed identifiers are targeted
   if(opts.proxywrap)  code=passProxyWrap(code);
   // Unicode mangle — skip when Bytecode VM or Opcode VM active (causes SyntaxError in new Function string)
-  if(opts.unimangle&&_vmMode==='none')code=passUnicodeMangle(code);
+  if(opts.unimangle&&(_vmMode==='none'))code=passUnicodeMangle(code);
   if(opts.strict)code="'use strict';\n"+code;
   if(importLines.length)code=importLines.join('\n')+'\n'+code;
   if(_tmHdr)code=_tmHdr+code;
@@ -3194,7 +3391,7 @@ function liveCheck(){
   const w=[];
   const _vm=VAL('o_vm_mode')||'none';
   if(currentTarget==='browser-no-eval'&&(_vm==='bytecode'||_vm==='both'))w.push('⚠ Bytecode VM uses new Function() — disabled in no-eval environments');
-  if(_vm==='both')w.push('ℹ Both VMs active: Opcode ISA output is wrapped by Bytecode VM. Largest output, maximum protection.');
+
   if(currentTarget==='node'&&CHK('o_dom'))w.push('ℹ Domain Lock checks window.location — no-op in Node.js');
   if(currentTarget==='node'&&CHK('o_dbg'))w.push('ℹ Debug Protection uses DevTools tricks — no-op in Node.js');
   if(currentTarget==='tampermonkey'&&CHK('o_dom'))w.push('ℹ Domain Lock may not apply in Tampermonkey context');
@@ -3293,6 +3490,14 @@ function getOpts(){
     junkpoly:   CHK('o_junkpoly'),
     hashlocked: CHK('o_hashlocked'),
     interntrap: CHK('o_interntrap'),
+    // New protection passes
+    callmutate:   CHK('o_callmutate'),
+    scopefog:     CHK('o_scopefog'),
+    tdztrap:      CHK('o_tdztrap'),
+    protguard:    CHK('o_protguard'),
+    timingcanary: CHK('o_timingcanary'),
+    homoglyph:    CHK('o_homoglyph'),
+    cfhash:       CHK('o_cfhash'),
     // Opcode VM
     vm_mode:      VAL('o_vm_mode')||'none',  // 'none','bytecode','opcode'
     ovm:          CHK('o_ovm'),
@@ -3308,24 +3513,53 @@ function getOpts(){
 }
 
 // VM mode selector
+function applyVmEnable(on){
+  const modeRow=G('vm-mode-row');
+  if(modeRow) modeRow.style.display=on?'block':'none';
+  if(!on){
+    // Turn off completely
+    SETV('o_vm_mode','none');
+    showSub('bc-sub',false);
+    showSub('ovm-sub',false);
+    const bcEl=G('o_bc'),ovmEl=G('o_ovm');
+    if(bcEl)bcEl.checked=false;
+    if(ovmEl)ovmEl.checked=false;
+    // Update info boxes
+    ['none','bc','ovm'].forEach(k=>{const e=G('vm-info-'+k);if(e)e.style.display='none';});
+    const ni=G('vm-info-none');if(ni)ni.style.display='block';
+    // Reset mode buttons
+    document.querySelectorAll('.vm-seg').forEach(b=>b.classList.toggle('active',b.dataset.vm==='bytecode'));
+    liveCheck();saveSettings();
+  }else{
+    // Default to bytecode when first enabled
+    const cur=VAL('o_vm_mode');
+    applyVmMode(cur==='none'||!cur?'bytecode':cur);
+  }
+}
+
 function applyVmMode(mode){
+  if(mode==='none'){applyVmEnable(false);return;}
   SETV('o_vm_mode',mode);
+  // Keep enable toggle checked
+  const en=G('o_vm_enable');if(en)en.checked=true;
+  const modeRow=G('vm-mode-row');if(modeRow)modeRow.style.display='block';
+  // Update segment buttons (only bytecode/opcode now)
   document.querySelectorAll('.vm-seg').forEach(b=>b.classList.toggle('active',b.dataset.vm===mode));
-  // Show bc-sub for bytecode or both; ovm-sub for opcode or both
-  const showBc=mode==='bytecode'||mode==='both';
-  const showOvm=mode==='opcode'||mode==='both';
-  showSub('bc-sub',showBc);
-  showSub('ovm-sub',showOvm);
-  ['none','bc','ovm','both'].forEach(k=>{
-    const el=G('vm-info-'+k);if(el)el.style.display='none';
-  });
-  const infoMap={none:'none',bytecode:'bc',opcode:'ovm',both:'both'};
-  const el=G('vm-info-'+(infoMap[mode]||'none'));if(el)el.style.display='block';
+  // Show correct sub-panel
+  showSub('bc-sub',mode==='bytecode');
+  showSub('ovm-sub',mode==='opcode');
+  // Sync legacy checkboxes
   const bcEl=G('o_bc'),ovmEl=G('o_ovm');
-  if(bcEl) bcEl.checked=showBc;
-  if(ovmEl) ovmEl.checked=showOvm;
+  if(bcEl) bcEl.checked=(mode==='bytecode');
+  if(ovmEl) ovmEl.checked=(mode==='opcode');
+  // Update info boxes
+  ['none','bc','ovm'].forEach(k=>{const e=G('vm-info-'+k);if(e)e.style.display='none';});
+  const infoMap={bytecode:'bc',opcode:'ovm'};
+  const infoEl=G('vm-info-'+(infoMap[mode]||'none'));
+  if(infoEl)infoEl.style.display='block';
   liveCheck();saveSettings();
 }
+
 
 // Presets
 function setEnc(rc4,xor,none){SET('enc-rc4',rc4);SET('enc-xor',xor);SET('enc-none',none||false);msSync('enc');}
@@ -3361,7 +3595,7 @@ function applyPreset(){
     setEnc(false,true,false);setIdx(true,false);
     SETV('o_namegen','hexadecimal');SETV('o_wcount','1');SETD('v-wc','1');
   }else if(p==='high'){
-    SETV('o_vm_mode','both');applyVmMode('both');
+    SETV('o_vm_mode','bytecode');applyVmMode('bytecode');
     ['o_sarr','o_srot','o_sshuf','o_calltrans','o_senc','o_atob','o_tmpl','o_ssplit',
      'o_ren','o_prop','o_hexn','o_nsplit','o_math',
      'o_cff','o_dead','o_iife','o_comma',
@@ -3371,12 +3605,13 @@ function applyPreset(){
      'o_self','o_antib','o_native','o_tamp','o_dbg',
      'o_mini','o_semi',
      'o_clfold','o_ptrenc','o_unimangle','o_fakeproto','o_evaldisguise',
-     'o_opaque','o_canary','o_envfp','o_deobtrap','o_junkpoly','o_hashlocked','o_interntrap'].forEach(id=>SET(id,true));
+     'o_opaque','o_canary','o_envfp','o_deobtrap','o_junkpoly','o_hashlocked','o_interntrap',
+     'o_scopefog','o_tdztrap','o_protguard','o_timingcanary','o_callmutate'].forEach(id=>SET(id,true));
     setEnc(true,true,false);setIdx(true,false);
     SETV('o_namegen','hexadecimal');SETV('o_wcount','2');SETD('v-wc','2');
     SETV('o_idxshift','13');SETD('v-idxsh','13');
   }else if(p==='max'){
-    SETV('o_vm_mode','both');applyVmMode('both');
+    SETV('o_vm_mode','bytecode');applyVmMode('bytecode');
     const skip=['o_html','o_dom','o_con','o_charcode','o_srcmap','o_renprop','o_renglobal','o_simplify','o_bc_sarrbconly','o_bc_wrapinit','o_bc_compact'];
     ALL.filter(id=>!skip.includes(id)).forEach(id=>SET(id,true));
     setEnc(true,true,false);setIdx(true,true);
@@ -3671,6 +3906,7 @@ function applyAutoConfig(){
     'o_bc_dynop','o_bc_stateful','o_bc_wrapinit','o_bc_decoy','o_bc_dead',
     'o_bc_rc4','o_bc_macro','o_bc_antidebug','o_bc_sarrbconly','o_chunk',
     'o_opaque','o_canary','o_envfp','o_deobtrap','o_proxywrap','o_junkpoly','o_hashlocked','o_interntrap',
+    'o_callmutate','o_scopefog','o_tdztrap','o_protguard','o_timingcanary','o_homoglyph','o_cfhash',
     'o_ovm','o_ovm_xorop','o_ovm_shuffle','o_ovm_lfsr','o_ovm_indirect','o_ovm_regmap','o_ovm_guards','o_ovm_pcxor','o_ovm_blind'];
   ALL.forEach(id=>{const e=G(id);if(e){e.disabled=false;e.checked=false;}});
   _acRecs.forEach(r=>{if(r.fn)r.fn();});
@@ -3851,10 +4087,18 @@ window.addEventListener('load',()=>{
     showSub('dict-sub',VAL('o_namegen')==='dictionary');
     // VM mode — default off
     const vm=VAL('o_vm_mode')||'none';
-    const _showBc=vm==='bytecode'||vm==='both';
-    const _showOvm=vm==='opcode'||vm==='both';
+    const _showBc=vm==='bytecode';
+    const _showOvm=vm==='opcode';
+    const enEl=G('o_vm_enable');if(enEl)enEl.checked=(vm!=='none');
+    const modeRow=G('vm-mode-row');if(modeRow)modeRow.style.display=(vm!=='none')?'block':'none';
     showSub('bc-sub',_showBc);
     showSub('ovm-sub',_showOvm);
+    // Sync mode segment buttons
+    document.querySelectorAll('.vm-seg').forEach(b=>b.classList.toggle('active',b.dataset.vm===vm));
+    // Sync info boxes
+    const _infoMap={none:'none',bytecode:'bc',opcode:'ovm'};
+    ['none','bc','ovm'].forEach(k=>{const e=G('vm-info-'+k);if(e)e.style.display='none';});
+    const _infoEl=G('vm-info-'+(_infoMap[vm]||'none'));if(_infoEl)_infoEl.style.display='block';
   })();
   // Wire up auto-save after load so save isn't triggered during init
   document.querySelectorAll('input[id],select[id]').forEach(el=>{
