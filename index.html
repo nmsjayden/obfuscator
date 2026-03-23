@@ -205,7 +205,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 .stab:hover{color:var(--body);}
 .stab.active{color:var(--hi);border-bottom-color:var(--acc);}
 .conflict-badge{
-  display:none;width:7px;height:7px;background:var(--amb);
+  width:7px;height:7px;background:var(--amb);
   border-radius:50%;margin-left:4px;vertical-align:middle;
   display:inline-block;
 }
@@ -508,8 +508,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
   <div class="tsep"></div>
   <select id="preset" onchange="applyPreset()">
     <option value="light">Light</option>
-    <option value="medium">Medium</option>
-    <option value="high" selected>High</option>
+    <option value="medium" selected>Medium</option>
+    <option value="high">High</option>
     <option value="max">Max</option>
     <option value="custom">Custom</option>
   </select>
@@ -566,13 +566,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
   <div id="panel">
     <div id="panel-top-wrap">
     <div id="panel-top">
-      <button class="stab active" onclick="switchTab('strings')">Strings</button>
-      <button class="stab" onclick="switchTab('identifiers')">Idents</button>
-      <button class="stab" onclick="switchTab('flow')">Flow</button>
-      <button class="stab" onclick="switchTab('vm')">VM</button>
-      <button class="stab" onclick="switchTab('protection')">Protect</button>
-      <button class="stab" onclick="switchTab('output')">Output</button>
-      <button class="stab" onclick="switchTab('general')">More</button>
+      <button class="stab active" data-tab="strings"     onclick="switchTab('strings')">Strings</button>
+      <button class="stab"        data-tab="identifiers"  onclick="switchTab('identifiers')">Idents</button>
+      <button class="stab"        data-tab="flow"         onclick="switchTab('flow')">Flow</button>
+      <button class="stab"        data-tab="vm"           onclick="switchTab('vm')">VM</button>
+      <button class="stab"        data-tab="protection"   onclick="switchTab('protection')">Protect</button>
+      <button class="stab"        data-tab="output"       onclick="switchTab('output')">Output</button>
+      <button class="stab"        data-tab="general"      onclick="switchTab('general')">More</button>
     </div><!-- end panel-top -->
     <div id="tab-scroll-hint">
       <span id="tab-scroll-arrow">›</span>
@@ -687,7 +687,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
       </div>
 
       <!-- VM -->
-      <!-- VM -->
       <div class="tpanel" id="tpanel-vm">
 
         <!-- Enable -->
@@ -697,7 +696,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           <input type="checkbox" id="o_bc" style="display:none">
           <div class="row">
             <label class="rl">Enable<small>Wrap source in ChaCha8-encrypted fragments — runtime assembles and executes via aliased constructor chain</small></label>
-            <label class="tog"><input type="checkbox" id="o_vm_enable" onchange="applyVmEnable(this.checked)"><span class="tk"></span></label>
+            <label class="tog"><input type="checkbox" id="o_vm_enable" onchange="applyVmEnable()"><span class="tk"></span></label>
           </div>
           <div id="vm-info-none" class="info-box">VM off — source runs after standard obfuscation passes only.</div>
           <div id="vm-info-bc"   class="info-box" style="display:none">Source split into independently ChaCha8-keyed fragments. Runtime verifies Fletcher-16 integrity, decrypts in order, and executes. No literal <code style="font-family:var(--mono);font-size:10px;">new Function</code> string visible in output.</div>
@@ -959,17 +958,15 @@ function togglePanel(){
   });
 
   window._updateTabHint=updateTabHint;
-  window._updateBottomHint=updateBottomHint;
 })();
 
 /* ─── TABS ─── */
 function switchTab(name){
-  document.querySelectorAll('.stab').forEach(b=>
-    b.classList.toggle('active', b.getAttribute('onclick').includes("'"+name+"'")));
+  document.querySelectorAll('.stab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
   document.querySelectorAll('.tpanel,#tpanel-conflicts').forEach(p=>p.classList.remove('active'));
-  const p = document.getElementById('tpanel-'+name);
-  if(p) p.classList.add('active');
-  if(window._onTabSwitch) window._onTabSwitch();
+  const p=document.getElementById('tpanel-'+name);
+  if(p)p.classList.add('active');
+  if(window._onTabSwitch)window._onTabSwitch();
 }
 
 /* ─── SLIDERS ─── */
@@ -1015,11 +1012,6 @@ function showRunStats(){
   if(oh) oh.style.display='none';
 }
 
-/* ─── BOOT ─── */
-window.addEventListener('load',()=>{
-  setTimeout(fitEditors,80);
-});
-
 // ================================================================
 //  OBSCURA — JS Obfuscator Engine + UI
 // ================================================================
@@ -1044,8 +1036,6 @@ function showSub(id,show){
   }
   const e=G(id);if(e)e.style.display=show?'block':'none';
 }
-function toggleSec(h){h.classList.toggle('open');h.nextElementSibling.classList.toggle('open');}
-
 // Multi-select
 function msToggle(id){
   const btn=G('ms-panel-'+id).previousElementSibling;
@@ -1073,7 +1063,7 @@ const RNG={
   int(n){return Math.floor(this.next()*n);},
   hex(n){let r='';for(let i=0;i<n;i++)r+=(this.next()*16|0).toString(16);return r;}
 };
-function doRandomSeed(){SETV('seed-val',(Math.random()*0xffffffff|0).toString(16).padStart(8,'0'));}
+function doRandomSeed(){SETV('seed-val',(Math.random()*0xffffffff|0).toString(16).padStart(8,'0'));saveSettings();}
 function getSeed(){
   const v=VAL('seed-val').trim();
   if(!v)return Date.now()^(Math.random()*0xffffffff|0);
@@ -1112,20 +1102,21 @@ function tagKey(e,aId,iId){
     if(tags.length)tags[tags.length-1].remove();
   }
 }
-function addTag(aId,iId,val){
+function addTag(aId,iId,val,noSave){
   const area=G(aId),inp=G(iId);
   const t=document.createElement('div');
   t.className='tg';t.dataset.val=val;
-  t.innerHTML=val+'<button class="tx-btn" onclick="this.parentElement.remove();liveCheck()">×</button>';
+  t.innerHTML=val+'<button class="tx-btn" onclick="this.parentElement.remove();liveCheck();saveSettings()">×</button>';
   area.insertBefore(t,inp);
   liveCheck();
+  if(!noSave)saveSettings();
 }
 function getTags(aId){return Array.from(G(aId).querySelectorAll('.tg')).map(t=>t.dataset.val);}
 
 // Domain list
 let domains=[];
-function addDomain(){const inp=G('dom-inp'),v=inp.value.trim();if(!v||domains.includes(v)){inp.value='';return;}domains.push(v);inp.value='';renderDomains();liveCheck();}
-function removeDomain(d){domains=domains.filter(x=>x!==d);renderDomains();liveCheck();}
+function addDomain(){const inp=G('dom-inp'),v=inp.value.trim();if(!v||domains.includes(v)){inp.value='';return;}domains.push(v);inp.value='';renderDomains();liveCheck();saveSettings();}
+function removeDomain(d){domains=domains.filter(x=>x!==d);renderDomains();liveCheck();saveSettings();}
 function renderDomains(){G('dom-list').innerHTML=domains.map(d=>`<div class="di"><span>${d}</span><button class="dx" onclick="removeDomain('${d.replace(/'/g,"\\'")}')">×</button></div>`).join('');}
 
 // Crypto
@@ -1657,12 +1648,6 @@ function passProxyWrap(code){
   // can't reliably find the matching closing brace in a regex pass.
   // Instead: just wrap the function reference AFTER declaration using a reassignment.
   // This is safe for any function declaration regardless of body size.
-  const patched=code.replace(/\bfunction\s+(_0x[0-9a-f]{6})\s*(\([^)]*\))\s*\{/g,(m,name,params)=>{
-    if(RNG.next()>0.5)return m;
-    // Keep the declaration as-is, but add a self-reassignment after the closing brace
-    // by appending a sentinel comment we'll replace in a second pass
-    return `function ${name}${params}{`;
-  });
   // After all function bodies — safer: inject reassignments at top as a post-declaration block
   // Collect all _0x names that appear as function declarations
   const declNames=[];
@@ -1961,8 +1946,6 @@ function passObjKeys(code){
       while(i<code.length){const c=code[i];if(c==='\\'){result+=c+(code[i+1]||'');i+=2;continue;}result+=c;i++;if(c==='`')break;}
       continue;
     }
-    // Try to match an object key pattern at this position: "key": or 'key':
-    if((ch==='"'||ch==="'")&&false){/* unreachable, handled above */}
     // Check for identifier-like object key: word chars followed by optional space then colon
     // but NOT after a slash (regex) or inside other contexts
     const keyM=code.slice(i).match(/^([a-zA-Z_$][a-zA-Z0-9_$]{0,49})(\s*):/);
@@ -2897,7 +2880,7 @@ function obfuscate(src,opts){
   // Unicode mangle — skip when Bytecode VM or Opcode VM active (causes SyntaxError in new Function string)
   if(opts.unimangle&&(_vmMode==='none'||_vmMode===''))code=passUnicodeMangle(code);// skip for all VM modes — causes SyntaxError in indirect eval strings
   // strict mode handling
-  const _sm=opts.strict_mode||opts.strict||'always';
+  const _sm=opts.strict_mode||'always';
   if(_sm==='always'){code="'use strict';\n"+code;}
   else if(_sm==='auto'){if(/['"]use strict['"]/.test(src))code="'use strict';\n"+code;}
   // 'never' = strip any existing 'use strict'
@@ -2918,12 +2901,12 @@ const TARGET_OFF={
 function setTarget(t){
   currentTarget=t;
   document.querySelectorAll('.tp').forEach(p=>p.classList.toggle('active',p.dataset.t===t));
-  applyTargetConstraints();liveCheck();
+  applyTargetConstraints();liveCheck();saveSettings();
   const d=document.getElementById('sb-target-display');
   if(d)d.textContent='Target: '+({browser:'Browser','browser-no-eval':'No Eval',node:'Node.js',tampermonkey:'Tampermonkey'}[t]||t);
 }
 function applyTargetConstraints(){
-  document.querySelectorAll('.sbody .row').forEach(row=>{
+  document.querySelectorAll('#panel-scroll .row').forEach(row=>{
     row.classList.remove('dim');
     const chk=row.querySelector('input[type=checkbox]');
     if(chk)chk.disabled=false;
@@ -2964,7 +2947,7 @@ function liveCheck(){
 function getOpts(){
   return{
     html:     CHK('o_html'),
-    strict:   VAL('o_strict_mode')||'always',
+    strict_mode: VAL('o_strict_mode')||'always',
     mini:     CHK('o_mini'),
     semi:     CHK('o_semi'),
     simplify: CHK('o_simplify'),
@@ -2985,7 +2968,6 @@ function getOpts(){
     calltrans:CHK('o_calltrans'),
     wcount:   INT('o_wcount',1),
     wparams:  INT('o_wparams',2),
-    wchain:   CHK('o_wchain'),
     senc:     CHK('o_senc'),
     charcode: CHK('o_charcode'),
     atob:     CHK('o_atob'),
@@ -3064,20 +3046,21 @@ function _syncVmState(){
   const infoNone=G('vm-info-none'),infoBc=G('vm-info-bc');
   if(infoNone)infoNone.style.display=on?'none':'block';
   if(infoBc)infoBc.style.display=on?'block':'none';
-  liveCheck();saveSettings();
+  liveCheck();
 }
 
 // applyVmMode: mode='bytecode' enables VM, anything else disables.
-// Used by presets and loadSettings (absolute always true from those sites).
-function applyVmMode(mode, absolute){
+// Used by presets and loadSettings.
+function applyVmMode(mode){
   const on=(mode==='bytecode');
   const enEl=G('o_vm_enable');if(enEl)enEl.checked=on;
   _syncVmState();
 }
 
-function applyVmEnable(on){
+function applyVmEnable(){
   // Called directly by the toggle's onchange
   _syncVmState();
+  saveSettings();
 }
 
 
@@ -3089,9 +3072,9 @@ function applyPreset(){
   const p=G('preset').value;
   const TRAP_IDS=['o_opaque','o_canary','o_envfp','o_deobtrap','o_proxywrap','o_junkpoly','o_hashlocked','o_interntrap'];
   const ADV_IDS=['o_scopefog','o_tdztrap','o_protguard','o_timingcanary','o_callmutate','o_homoglyph','o_cfhash'];
-  const ALL=['o_html','o_strict','o_mini','o_semi','o_simplify','o_ignimport','o_con',
+  const ALL=['o_html','o_mini','o_semi','o_simplify','o_ignimport','o_con',
     'o_self','o_antib','o_native','o_tamp','o_dbg','o_dom','o_srcmap',
-    'o_sarr','o_srot','o_sshuf','o_calltrans','o_wchain',
+    'o_sarr','o_srot','o_sshuf','o_calltrans',
     'o_senc','o_charcode','o_atob','o_tmpl','o_ssplit','o_clfold','o_ptrenc',
     'o_ren','o_renglobal','o_renprop','o_prop','o_unimangle','o_fakeproto',
     'o_hexn','o_nsplit','o_math','o_evaldisguise',
@@ -3102,14 +3085,14 @@ function applyPreset(){
   ALL.forEach(id=>{const e=G(id);if(e){e.disabled=false;e.checked=false;}});
 
   if(p==='light'){
-    SETV('o_vm_mode','none');applyVmMode('none',true);
+    SETV('o_vm_mode','none');applyVmMode('none');
     ['o_senc','o_ren','o_hexn','o_mini'].forEach(id=>SET(id,true));
     setEnc(false,false,false);setIdx(true,false);
     SETV('o_namegen','hexadecimal');SETV('o_wcount','1');SETD('v-wc','1');
     SETV('o_bc_opcount','34');SETD('v-bc-opcount','34');
 
   }else if(p==='medium'){
-    SETV('o_vm_mode','none');applyVmMode('none',true);
+    SETV('o_vm_mode','none');applyVmMode('none');
     ['o_sarr','o_srot','o_sshuf','o_calltrans',
      'o_senc','o_atob',
      'o_ren','o_prop','o_hexn','o_nsplit',
@@ -3122,7 +3105,7 @@ function applyPreset(){
     SETV('o_bc_opcount','34');SETD('v-bc-opcount','34');
 
   }else if(p==='high'){
-    SETV('o_vm_mode','bytecode');applyVmMode('bytecode',true);
+    SETV('o_vm_mode','bytecode');applyVmMode('bytecode');
     ['o_sarr','o_srot','o_sshuf','o_calltrans',
      'o_senc','o_atob','o_tmpl','o_ssplit',
      'o_ren','o_prop','o_hexn','o_nsplit','o_math',
@@ -3141,7 +3124,7 @@ function applyPreset(){
     SETV('o_bc_opcount','128');SETD('v-bc-opcount','128');
 
   }else if(p==='max'){
-    SETV('o_vm_mode','bytecode');applyVmMode('bytecode',true);
+    SETV('o_vm_mode','bytecode');applyVmMode('bytecode');
     const skip=['o_html','o_dom','o_con','o_charcode','o_srcmap','o_renprop','o_renglobal',
                 'o_simplify','o_bc_sarrbconly','o_bc_wrapinit'];
     ALL.filter(id=>!skip.includes(id)).forEach(id=>SET(id,true));
@@ -3154,10 +3137,22 @@ function applyPreset(){
     SETV('o_bc_opcount','220');SETD('v-bc-opcount','220');
   }
 
-  // 'custom' = user-defined; don't touch any checkbox state
+  // 'custom' = user-defined checkboxes, but reset sliders + multiselects to neutral defaults
   if(p==='custom'){
+    SETV('o_thresh','1');    SETD('v-thresh','1.00');
+    SETV('o_idxshift','0'); SETD('v-idxsh','0');
+    SETV('o_cff_t','.75');  SETD('v-cff','0.75');
+    SETV('o_dead_t','.4');  SETD('v-dead','0.40');
+    SETV('o_dbgint','2000');SETD('v-dbg','2000');
+    SETV('o_wcount','1');   SETD('v-wc','1');
+    SETV('o_wparams','2');  SETD('v-wp','2');
+    SETV('o_sschunk','10'); SETD('v-ssc','10');
+    SETV('o_bcchunk','300');SETD('v-bcc','300');
+    SETV('o_bc_opcount','34');SETD('v-bc-opcount','34');
+    setEnc(false,false,false);setIdx(true,false);
     applyTargetConstraints();
-    if(typeof refreshAllSliders==='function') refreshAllSliders();
+    refreshAllSliders();
+    updateOpcodeDisplay();
     liveCheck();
     const pd2=document.getElementById('sb-preset-display');
     if(pd2)pd2.textContent='Preset: Custom';
@@ -3167,8 +3162,8 @@ function applyPreset(){
 
   applyTargetConstraints();
   showSub('sarr-sub',CHK('o_sarr'));
-  if(typeof refreshAllSliders==='function') refreshAllSliders();
-  if(typeof updateOpcodeDisplay==='function') updateOpcodeDisplay();
+  refreshAllSliders();
+  updateOpcodeDisplay();
   showSub('bc-sub',CHK('o_bc'));
   showSub('ct-sub',CHK('o_calltrans'));
   showSub('ssplit-chunk-sub',CHK('o_ssplit'));
@@ -3176,7 +3171,6 @@ function applyPreset(){
   showSub('dead-sub',CHK('o_dead'));
   showSub('dbg-sub',CHK('o_dbg'));
   showSub('ren-sub',CHK('o_ren'));
-  showSub('chunk-sub',CHK('o_chunk'));
   G('renprop-w').style.display='none';
   liveCheck();
   const pd=document.getElementById('sb-preset-display');
@@ -3195,11 +3189,7 @@ function runObfuscate(){
     let out=code;
     if(opts.srcmap){
       _lastMap=buildSourceMap(src);
-      if(VAL('o_smap_mode')==='inline'){
-        out=code+'\n//# sourceMappingURL=data:application/json;base64,'+btoa(unescape(encodeURIComponent(_lastMap)));
-      }else{
-        out=code+'\n//# sourceMappingURL='+(VAL('o_smap_url')||'output.js.map');
-      }
+      out=code+'\n//# sourceMappingURL='+(VAL('o_smap_url')||'output.js.map');
       G('btn-map').disabled=false;
     }else{
       _lastMap=null;G('btn-map').disabled=true;
@@ -3216,25 +3206,24 @@ function runObfuscate(){
     showRunStats();
   }catch(e){
     outputEditor.setValue('// ERROR: '+e.message+'\n//\n// '+(e.stack||''));
-    G('out-hint').textContent='Error';
+    outputEditor.refresh();
+    const rs=G('run-stats'),oh=G('out-hint');
+    if(rs)rs.style.display='none';
+    if(oh){oh.style.display='';oh.textContent='Error';}
+    _lastMap=null;G('btn-map').disabled=true;
   }
 }
 function clearInput(){inputEditor.setValue('');}
 function copyOut(){
   const v=outputEditor.getValue();if(!v)return;
-  navigator.clipboard.writeText(v).then(()=>{
-    const btn=G('btn-copy');
-    btn.textContent='Copied!';
-    setTimeout(()=>{btn.textContent='Copy';},1400);
-  }).catch(()=>{
+  function _setCopied(){const btn=G('btn-copy');btn.textContent='Copied!';setTimeout(()=>{btn.textContent='Copy';},1400);}
+  navigator.clipboard.writeText(v).then(_setCopied).catch(()=>{
     // Fallback for non-https
     const ta=document.createElement('textarea');
     ta.value=v;ta.style.position='fixed';ta.style.opacity='0';
     document.body.appendChild(ta);ta.select();
     document.execCommand('copy');document.body.removeChild(ta);
-    const btn=G('btn-copy');
-    btn.textContent='Copied!';
-    setTimeout(()=>{btn.textContent='Copy';},1400);
+    _setCopied();
   });
 }
 function dlMap(){
@@ -3414,16 +3403,16 @@ function acBuildRecs(s,level){
 
 function acRenderRecs(){
   const el=G('ac-recs');
-  if(!_acScan){el.innerHTML='<span style="color:var(--tx3);font-size:11px;">Paste code in the editor first.</span>';return;}
+  if(!_acScan){el.innerHTML='<span style="color:var(--mute);font-size:11px;">Paste code in the editor first.</span>';return;}
   _acRecs=acBuildRecs(_acScan,_acLevel);
-  if(!_acRecs.length){el.innerHTML='<span style="color:var(--tx3);font-size:11px;">No recommendations.</span>';return;}
+  if(!_acRecs.length){el.innerHTML='<span style="color:var(--mute);font-size:11px;">No recommendations.</span>';return;}
   el.innerHTML=_acRecs.map(r=>`<div class="ac-rec ${r.kind}"><span class="ac-rec-icon">${r.icon}</span><span class="ac-rec-text"><b>${r.label}</b><small>${r.reason}</small></span></div>`).join('');
 }
 
 function openAutoConfig(){
   const src=(typeof inputEditor!=='undefined'?inputEditor.getValue():'').trim();
   _acScan=src?scanScript(src):null;
-  G('ac-badges').innerHTML=_acScan?acBuildBadges(_acScan):'<span style="color:var(--tx3);font-size:11px;">Editor is empty.</span>';
+  G('ac-badges').innerHTML=_acScan?acBuildBadges(_acScan):'<span style="color:var(--mute);font-size:11px;">Editor is empty.</span>';
   const cur=G('preset').value;
   _acLevel=['light','medium','high','max'].includes(cur)?cur:'high';
   document.querySelectorAll('.ac-lvl').forEach(el=>el.classList.toggle('sel',el.dataset.l===_acLevel));
@@ -3438,9 +3427,9 @@ function acPickLevel(l){
 }
 function applyAutoConfig(){
   if(!_acScan&&!_acRecs.length){closeAutoConfig();return;}
-  const ALL=['o_html','o_strict','o_mini','o_semi','o_simplify','o_ignimport','o_con',
+  const ALL=['o_html','o_mini','o_semi','o_simplify','o_ignimport','o_con',
     'o_self','o_antib','o_native','o_tamp','o_dbg','o_dom','o_srcmap',
-    'o_sarr','o_srot','o_sshuf','o_calltrans','o_wchain',
+    'o_sarr','o_srot','o_sshuf','o_calltrans',
     'o_senc','o_charcode','o_atob','o_tmpl','o_ssplit','o_clfold','o_ptrenc',
     'o_ren','o_renglobal','o_renprop','o_prop','o_unimangle','o_fakeproto',
     'o_hexn','o_nsplit','o_math','o_evaldisguise',
@@ -3461,7 +3450,6 @@ function applyAutoConfig(){
   showSub('dead-sub',CHK('o_dead'));
   showSub('dbg-sub',CHK('o_dbg'));
   showSub('ren-sub',CHK('o_ren'));
-  showSub('chunk-sub',CHK('o_chunk'));
   G('renprop-w').style.display='none';
   applyTargetConstraints();
   liveCheck();
@@ -3513,10 +3501,7 @@ function loadSettings(){
 
     // Zero all checkboxes first so no preset bleed-through, then restore saved state
     document.querySelectorAll('input[type=checkbox][id]').forEach(el=>{
-      el.checked=false;
-    });
-    document.querySelectorAll('input[type=checkbox][id]').forEach(el=>{
-      if(data['ck_'+el.id]!==undefined)el.checked=data['ck_'+el.id];
+      el.checked=data['ck_'+el.id]!==undefined?data['ck_'+el.id]:false;
     });
 
     // Restore sliders + their display spans
@@ -3553,7 +3538,7 @@ function loadSettings(){
       if(Array.isArray(tags)&&tags.length){
         // derive input id: ta-force->ti-force, ta-resstr->ti-resstr etc
         const iid='ti-'+id.slice(3);
-        tags.forEach(v=>addTag(id,iid,v));
+        tags.forEach(v=>addTag(id,iid,v,true));
       }
     });
 
@@ -3564,7 +3549,7 @@ function loadSettings(){
 
     // Fix sub-panel visibility based on restored checkbox states
     const _restoredVmMode=data['tx_o_vm_mode']||VAL('o_vm_mode')||'none';
-    applyVmMode(_restoredVmMode, true);
+    applyVmMode(_restoredVmMode);
     showSub('sarr-sub',CHK('o_sarr'));
     showSub('bc-sub',CHK('o_bc'));
     showSub('ct-sub',CHK('o_calltrans'));
@@ -3573,18 +3558,19 @@ function loadSettings(){
     showSub('dead-sub',CHK('o_dead'));
     showSub('dbg-sub',CHK('o_dbg'));
     showSub('ren-sub',CHK('o_ren'));
-    showSub('chunk-sub',CHK('o_chunk'));
     showSub('dom-sub',CHK('o_dom'));
     if(VAL('o_namegen')==='dictionary')showSub('dict-sub',true);
     G('renprop-w').style.display=CHK('o_renprop')?'block':'none';
 
     // Multi-select display text
     msSync('enc');msSync('idx');
-    if(typeof updateOpcodeDisplay==='function')updateOpcodeDisplay();
+    updateOpcodeDisplay();
 
     // Apply visual dimming for target (no disabling)
     applyTargetConstraints();
     liveCheck();
+    // Restore btn-map enabled state
+    G('btn-map').disabled=!CHK('o_srcmap');
 
     // Update status bar displays to match restored state
     const sbPreset=G('sb-preset-display');
@@ -3612,16 +3598,15 @@ window.addEventListener('load',()=>{
   initSliders();
   setTimeout(fitEditors,80);
   const ok=loadSettings();
-  // Refresh slider fills after loadSettings may have changed values
-  if(typeof refreshAllSliders==='function') setTimeout(refreshAllSliders,10);
-  if(typeof updateOpcodeDisplay==='function') setTimeout(updateOpcodeDisplay,10);
+  setTimeout(refreshAllSliders,10);
+  setTimeout(updateOpcodeDisplay,10);
   if(!ok){applyPreset();}
   // Force-correct all sub-panel visibility after init
   (function fixSubPanels(){
     // These sub-panels are shown/hidden by their checkbox
     const pairs=[
       ['ct-sub','o_calltrans'],['cff-sub','o_cff'],['dead-sub','o_dead'],
-      ['dbg-sub','o_dbg'],['ren-sub','o_ren'],['chunk-sub','o_chunk'],
+      ['dbg-sub','o_dbg'],['ren-sub','o_ren'],
       ['dom-sub','o_dom'],['smap-sub','o_srcmap'],['ssplit-chunk-sub','o_ssplit'],
     ];
     pairs.forEach(([sub,chk])=>{
@@ -3636,8 +3621,7 @@ window.addEventListener('load',()=>{
     showSub('dict-sub',VAL('o_namegen')==='dictionary');
     // Sync VM enable toggle + bc-sub from restored o_vm_mode
     const vm=VAL('o_vm_mode')||'none';
-    const enEl=G('o_vm_enable');if(enEl)enEl.checked=(vm==='bytecode');
-    applyVmMode(vm,true);
+    applyVmMode(vm);
   })();
   // Wire up auto-save after load so save isn't triggered during init
   // Checkboxes and ranges that are NOT the preset select itself: also mark as "custom"
