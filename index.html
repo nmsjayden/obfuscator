@@ -525,9 +525,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
   <div class="tsep"></div>
   <select id="preset" onchange="applyPreset()">
     <option value="light">Light</option>
-    <option value="medium" selected>Medium</option>
+    <option value="medium">Medium</option>
     <option value="high">High</option>
-    <option value="max">Max</option>
+    <option value="max" selected>Max</option>
     <option value="custom">Custom</option>
   </select>
   <div class="tgap"></div>
@@ -951,7 +951,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
   <div class="sb-gap"></div>
   <span class="sb-item" id="sb-target-display">Target: Browser</span>
   <span class="sb-sep"></span>
-  <span class="sb-item" id="sb-preset-display">Preset: High</span>
+  <span class="sb-item" id="sb-preset-display">Preset: Max</span>
 </div>
 
 </div><!-- end app -->
@@ -1755,16 +1755,18 @@ function passStackCanary(code){
 // If any check fails → infinite loop. These are trivially true in real browsers
 // but Rhino, QuickJS-without-globals, or partial-eval engines often fail them.
 function passEnvFingerprint(code){
-  const chk=freshId(),bail=freshId(),ei=freshId();
+  const chk=freshId(),bail=freshId(),ei=freshId(),ftyp=freshId();
   const out=
     `(function(){\n`+
     `  var ${bail}=function(){for(;;){}};\n`+
+    `  var ${ftyp}=typeof Function;\n`+
     `  var ${chk}=[\n`+
     `    (NaN!==NaN),\n`+
     `    (typeof ({}+[])===typeof ''),\n`+
     `    ((![]+[])[${hexInt(2)}]==='l'),\n`+
     `    (isFinite(Math['random']())),\n`+
-    `    (typeof Function==='function'),\n`+
+    `    (${ftyp}===${ftyp}),\n`+
+    `    (typeof Function!==typeof ''),\n`+
     `    (([][[]]+[])[${hexInt(0)}]==='u'),\n`+
     `  ];\n`+
     `  for(var ${ei}=${hexInt(0)};${ei}<${chk}['length'];${ei}++){if(!${chk}[${ei}])${bail}();}\n`+
@@ -3390,15 +3392,16 @@ function passBytecodeVM(code,opts,st){
     out+=caseLines.join('\n')+'\n';
     out+=`  }\n}\n`;
   } else if(dispatchStyle==='trampoline'){
-    const vStep=freshId(),vNext=freshId();
+    // Real trampoline: each step returns the next thunk (or null), outer while loop drives it.
+    // Avoids call-stack growth — no recursion at all.
+    const vStep=freshId(),vThunk=freshId(),vCur=freshId();
     out+=`function ${vStep}(){\n`;
-    out+=`  if(${vE}['n'][0]>=${vBytecode}['length'])return;\n`;
+    out+=`  if(${vE}['n'][0]>=${vBytecode}['length'])return null;\n`;
     out+=`  var ${vOp}=${readOpInc};\n`;
     out+=`  if(${vV}[${vOp}])${vV}[${vOp}](${vE},${vBytecode});\n`;
-    out+=`  var ${vNext}=${vStep};\n`;
-    out+=`  ${vNext}();\n`;
+    out+=`  return ${vStep};\n`;
     out+=`}\n`;
-    out+=`${vStep}();\n`;
+    out+=`var ${vThunk}=${vStep};while(${vThunk}){var ${vCur}=${vThunk};${vThunk}=null;${vThunk}=${vCur}();}\n`;
   }else if(dispatchStyle==='table'){
     out+=`for(;${vE}['n'][0]<${vBytecode}['length'];){var ${vOp}=${readOpInc};if(${vV}[${vOp}])${vV}[${vOp}](${vE},${vBytecode});}\n`;
   }else{
@@ -3535,16 +3538,48 @@ function _stripComments(code){
 }
 function minify(code,opts){
   code=_stripComments(code);
+  // String-aware keyword space re-adder: operates token by token so keywords
+  // inside string literals are never touched.
+  function _kwFix(src){
+    const KWS=new Set(['return','typeof','instanceof','in','of','new','delete','void','throw',
+      'case','var','let','const','function','class','extends','else','if','do','while','for',
+      'switch','try','catch','finally','async','await','yield','export','import']);
+    const NOKW_AFTER=new Set([' ','\n','\r','\t','{','(','[',';',',']);
+    let out='',i=0,n=src.length;
+    while(i<n){
+      const ch=src[i];
+      // Pass string literals through verbatim
+      if(ch==='"'||ch==="'"){
+        const q=ch;out+=ch;i++;
+        while(i<n){const c=src[i];out+=c;i++;if(c==='\\'){out+=src[i]||'';i++;}else if(c===q)break;}
+        continue;
+      }
+      if(ch==='`'){
+        out+=ch;i++;let d=0;
+        while(i<n){const c=src[i];if(c==='\\'){out+=c+(src[i+1]||'');i+=2;continue;}
+          if(c==='$'&&src[i+1]==='{'){out+='${';i+=2;d++;continue;}
+          if(c==='}'&&d>0){out+=c;i++;d--;continue;}
+          out+=c;i++;if(c==='`'&&d===0)break;}
+        continue;
+      }
+      // Try to match an identifier/keyword
+      if(/[a-zA-Z_$]/.test(ch)){
+        let j=i;while(j<n&&/[a-zA-Z0-9_$]/.test(src[j]))j++;
+        const word=src.slice(i,j);
+        if(KWS.has(word)&&j<n&&!NOKW_AFTER.has(src[j])){
+          out+=word+' ';i=j;continue;
+        }
+        out+=word;i=j;continue;
+      }
+      out+=ch;i++;
+    }
+    return out;
+  }
   code=code.replace(/[ \t\r\n]+/g,' ');
   code=code.replace(/ ?([\{\}\[\]\(\);,]) ?/g,'$1');
   code=code.replace(/([\)\]\}0-9_$a-zA-Z]) ([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:])/g,'$1$2');
   code=code.replace(/([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:]) ([\(\[\{0-9_$a-zA-Z])/g,'$1$2');
-  ['return','typeof','instanceof','in','of','new','delete','void','throw','case','var','let',
-   'const','function','class','extends','else','if','do','while','for','switch','try','catch',
-   'finally','async','await','yield','export','import'].forEach(k=>{
-    const re=new RegExp('\\b('+k+')\\b([^ \\n\\r\\t\\{\\(\\[;,])','g');
-    code=code.replace(re,'$1 $2');
-  });
+  code=_kwFix(code);
   if(opts.semi){
     // Collapse consecutive var declarations: var a=1; var b=2; → var a=1,b=2;
     // Use a bounded match to avoid catastrophic backtracking on destructuring/long lines
@@ -3559,6 +3594,7 @@ function minify(code,opts){
 }
 
 function extractTmHeader(src){
+  const m=/^(\/\/\s*==UserScript==[\s\S]*?\/\/\s*==\/UserScript==\n?)/.exec(src);
   return m?{header:m[1],rest:src.slice(m[1].length)}:{header:'',rest:src};
 }
 
@@ -3860,6 +3896,9 @@ function obfuscate(src,opts){
   resetIds();RNG.seed(getSeed());
   const st={strings:0,bytecodes:0};
   if(opts.html){return{code:passHtmlParse(src,s=>obfuscate(s,{...opts,html:false}).code),st};}
+  const _tmExtract=extractTmHeader(src);
+  const _tmHdr=_tmExtract.header;
+  if(_tmHdr)src=_tmExtract.rest;
   let importLines=[],workSrc=src;
   if(opts.ignimport){const r=passIgnoreImports(src);importLines=r.importLines;workSrc=r.rest;}
   let toks=tokenize(workSrc),preamble='';
@@ -3939,14 +3978,14 @@ function obfuscate(src,opts){
   if(opts.unimangle&&(_vmMode==='none'||_vmMode===''))code=passUnicodeMangle(code);
   // When Bracket Access is OFF, convert generated ['prop'] back to .prop
   if(!opts.prop)      code=postConvertBracketsToDot(code);
-  // Final compaction — collapse any newlines/spaces left by post-minify passes
-  if(opts.mini)       code=code.replace(/\s*\n\s*/g,'').replace(/\s{2,}/g,' ');
-  // strict mode handling
+  // strict mode handling — must happen BEFORE final compaction so the newline gets stripped
   const _sm=opts.strict_mode||'always';
-  if(_sm==='always'){code="'use strict';\n"+code;}
-  else if(_sm==='auto'){if(/['"]use strict['"]/.test(src))code="'use strict';\n"+code;}
+  if(_sm==='always'){code="'use strict';"+code;}
+  else if(_sm==='auto'){if(/['"]use strict['"]/.test(src))code="'use strict';"+code;}
   // 'never' = strip any existing 'use strict'
   else if(_sm==='never'){code=code.replace(/^['"]use strict['"];?\n?/,'');}
+  // Final compaction — collapse any newlines/spaces left by post-minify passes
+  if(opts.mini)       code=code.replace(/\s*\n\s*/g,'').replace(/\s{2,}/g,' ');
   if(importLines.length)code=importLines.join('\n')+'\n'+code;
   if(_tmHdr)code=_tmHdr+code;
   return{code,st};
@@ -4449,6 +4488,7 @@ function scanScript(src){
     hasTypedArrays:/\b(Uint8Array|Int32Array|Float64Array|ArrayBuffer)\b/.test(src),
     bytes:src.length,lines:src.split('\n').length,
   };
+  if(s.hasWindowDoc&&!s.hasNodeApis)s.detectedTarget='browser';
   else if(s.hasNodeApis&&!s.hasWindowDoc)s.detectedTarget='node';
   else s.detectedTarget='browser';
   s.evalRisk=s.hasEval;
@@ -4484,6 +4524,8 @@ function acBuildRecs(s,level){
   const on=(label,reason,fn)=>recs.push({kind:'on',icon:'+',label,reason,fn});
   const off=(label,reason,fn)=>recs.push({kind:'off',icon:'−',label,reason,fn});
 
+  if(s.detectedTarget==='browser'){
+    on('Target: Browser','Browser APIs detected',()=>setTarget('browser'));
   }else if(s.detectedTarget==='node'){
     on('Target: Node.js','No browser APIs detected',()=>setTarget('node'));
   }else{
@@ -4648,7 +4690,7 @@ const PERSIST_KEY='obscura_v9'; // v9: added bc_compact, bc_macro, bc_alias, bc_
 
 function saveSettings(){
   try{
-    const data={v:8};
+    const data={v:9};
     data.preset=VAL('preset');
     data.target=currentTarget;
     // Every checkbox that has an id
@@ -4678,7 +4720,7 @@ function loadSettings(){
     const raw=localStorage.getItem(PERSIST_KEY);
     if(!raw)return false;
     const data=JSON.parse(raw);
-    if(!data||data.v!==8)return false;
+    if(!data||data.v!==9)return false;
 
     // Restore preset select value WITHOUT calling applyPreset (that would overwrite everything)
     if(data.preset){const e=G('preset');if(e)e.value=data.preset;}
