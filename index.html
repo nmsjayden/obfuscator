@@ -2965,8 +2965,6 @@ function passBytecodeVM(code,opts,st){
     sPop=(stk)=>`${stk}['pop']()`;
   }
 
-  // Override emitHandler to use hE/hK params instead of literal e/k
-  const _origEmitHandler=emitHandler;
   function emitHandlerH(opcode,body){
     if(opts.bc_tablescatter){
       const part=vParts.findIndex(p=>p[opcode]);
