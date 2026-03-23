@@ -753,7 +753,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           <!-- Constant Pool Encoding -->
           <div class="grp">
             <div class="grp-lbl">Constant Pool</div>
-            <div class="info-box" style="margin-bottom:6px;">All strings, identifiers, and literals are encrypted in a pool. The bytecode only references pool indices — no readable values in the K array.</div>
+            <div class="info-box" style="margin-bottom:6px;">All strings, identifiers, and literals are encrypted in a pool. The bytecode only references pool indices — no readable values in the bytecode array.</div>
 
             <div class="fld"><div class="fld-lbl">Pool Encoding</div>
               <select class="fsel" id="o_bc_poolenc" onchange="liveCheck()">
@@ -773,7 +773,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
               </select>
             </div>
 
-            <div class="row"><label class="rl">Pool Shuffling<small>Re-order pool entries at obfuscation time — indices in K are adjusted accordingly</small></label><label class="tog"><input type="checkbox" id="o_bc_poolshuf" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Pool Shuffling<small>Re-order pool entries at obfuscation time — bytecode indices are adjusted accordingly</small></label><label class="tog"><input type="checkbox" id="o_bc_poolshuf" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Null Padding Entries<small>Inject dummy pool entries between real ones — inflates and fragments the pool</small></label><label class="tog"><input type="checkbox" id="o_bc_poolpad" checked><span class="tk"></span></label></div>
           </div>
 
@@ -784,12 +784,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
               <select class="fsel" id="o_bc_dispatch">
                 <option value="while" selected>while + switch (standard)</option>
                 <option value="trampoline">Trampoline (mutual recursion — no loop visible)</option>
-                <option value="table">Direct table (V[K[ip++]]() — minimal loop body)</option>
+                <option value="table">Direct table (dispatch[bytecode[ip++]]() — minimal loop body)</option>
               </select>
             </div>
-            <div class="row"><label class="rl">IP in Array<small>Instruction pointer stored as E.n[0] — harder to patch than a plain variable</small></label><label class="tog"><input type="checkbox" id="o_bc_iparr" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">IP in Array<small>Instruction pointer stored as state.ip[0] — harder to patch than a plain variable</small></label><label class="tog"><input type="checkbox" id="o_bc_iparr" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Stack Obfuscation<small>Wrap push/pop with aliased helper fns — call-graph tracers lose the stack shape</small></label><label class="tog"><input type="checkbox" id="o_bc_stackob" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Opcode Table Scatter<small>Split V table into multiple objects merged at runtime — no single dispatch table visible</small></label><label class="tog"><input type="checkbox" id="o_bc_tablescatter"><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Opcode Table Scatter<small>Split dispatch table into multiple objects merged at runtime — no single dispatch table visible</small></label><label class="tog"><input type="checkbox" id="o_bc_tablescatter"><span class="tk"></span></label></div>
           </div>
 
           <!-- Execution Hardening -->
@@ -820,8 +820,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
                 <option value="mixed">Mixed radix (random per value)</option>
               </select>
             </div>
-            <div class="row"><label class="rl">Chunk K Array<small>Split bytecode array into N smaller vars joined at runtime — no single large literal</small></label><label class="tog"><input type="checkbox" id="o_bc_kchunk" checked><span class="tk"></span></label></div>
-            <div class="sl"><div class="sl-head"><span class="sl-name">K Chunk Size (opcodes)</span><span class="sv" id="v-bcc">64</span></div><div class="srow"><input type="range" id="o_bcchunk" min="8" max="256" step="8" value="64" oninput="SETD('v-bcc',this.value)"></div></div>
+            <div class="row"><label class="rl">Chunk Bytecode Array<small>Split bytecode array into N smaller vars joined at runtime — no single large literal</small></label><label class="tog"><input type="checkbox" id="o_bc_kchunk" checked><span class="tk"></span></label></div>
+            <div class="sl"><div class="sl-head"><span class="sl-name">Bytecode Chunk Size (opcodes)</span><span class="sv" id="v-bcc">64</span></div><div class="srow"><input type="range" id="o_bcchunk" min="8" max="256" step="8" value="64" oninput="SETD('v-bcc',this.value)"></div></div>
             <div class="row"><label class="rl">Watermark<small>Embed a hidden fingerprint in the opcode layout — survives re-obfuscation</small></label><label class="tog"><input type="checkbox" id="o_bc_watermark"><span class="tk"></span></label></div>
           </div>
 
@@ -2572,7 +2572,7 @@ function passBytecodeVM(code,opts,st){
   // ── 8. Encrypt constant pool ──────────────────────────────────
   // Encoding strategy chosen by opts.bc_poolenc
   const poolEnc=opts.bc_poolenc||'xor';
-  const vPool=freshId(),vDecC=freshId(),vK=freshId(),vE=freshId(),vV=freshId();
+  const vPool=freshId(),vDecC=freshId(),vBytecode=freshId(),vE=freshId(),vV=freshId();
 
   // Optional pool shuffling — re-order entries, update K indices
   let poolOrder=pool.map((_,i)=>i); // identity by default
@@ -2652,7 +2652,7 @@ function passBytecodeVM(code,opts,st){
   const remapIdx=(origIdx)=>opts.bc_poolpad?paddedPosOf[origIdx]:poolPosOf[origIdx];
 
   // ── 9. Index encoding for K ────────────────────────────────────
-  // Transform pool-reference values in K array
+  // Transform pool-reference values in bytecode array
   const idxEnc=opts.bc_idxenc||'xor';
   const idxSalt=RNG.int(0xffff)+1;
   // Determine whether fibonacci encoding is viable (requires bijection over pool indices)
@@ -2761,7 +2761,7 @@ function passBytecodeVM(code,opts,st){
   }
 
   // ── 12. Emit runtime ──────────────────────────────────────────
-  // Base encoding for integers in K array
+  // Base encoding for integers in bytecode array
   const baseEnc=opts.bc_baseenc||'hex';
   function encInt(n){
     if(!Number.isInteger(n))return String(n);
@@ -2777,7 +2777,7 @@ function passBytecodeVM(code,opts,st){
     return '0x'+n.toString(16); // hex default
   }
 
-  // K array — optionally chunked into multiple vars
+  // Bytecode array — optionally chunked into multiple vars
   let kOut;
   if(opts.bc_kchunk){
     const chunkSz=opts.bcchunk||64;
@@ -2785,9 +2785,9 @@ function passBytecodeVM(code,opts,st){
     for(let i=0;i<finalK.length;i+=chunkSz)chunks.push(finalK.slice(i,i+chunkSz));
     const chunkNames=chunks.map(()=>freshId());
     kOut=chunkNames.map((n,i)=>`var ${n}=[${chunks[i].map(encInt).join(',')}];`).join('\n')+'\n';
-    kOut+=`var ${vK}=[].concat(${chunkNames.join(',')});\n`;
+    kOut+=`var ${vBytecode}=[].concat(${chunkNames.join(',')});\n`;
   }else{
-    kOut=`var ${vK}=[${finalK.map(encInt).join(',')}];\n`;
+    kOut=`var ${vBytecode}=[${finalK.map(encInt).join(',')}];\n`;
   }
 
   // Pool array
@@ -2926,45 +2926,16 @@ function passBytecodeVM(code,opts,st){
   // Opcode dispatch table V
   out+=`var ${vV}={};\n`;
 
-  // ── Stack obfuscation helpers ────────────────────────────────
-  // If enabled, push/pop are aliased through obfuscated helper vars
-  // so the call graph doesn't show a uniform stack pattern.
-  let sPush,sPop;
-  if(opts.bc_stackob){
-    const vPushFn=freshId(),vPopFn=freshId();
-    out+=`var ${vPushFn}=function(stk,v){stk[stk['length']]=v;};\n`;
-    out+=`var ${vPopFn}=function(stk){return stk['length']?stk['splice'](stk['length']-1,1)[0]:undefined;};\n`;
-    sPush=(stk,v)=>`${vPushFn}(${stk},${v})`;
-    sPop=(stk)=>`${vPopFn}(${stk})`;
-  }else{
-    sPush=(stk,v)=>`${stk}['push'](${v})`;
-    sPop=(stk)=>`${stk}['pop']()`;
-  }
-  const ES=`${vE}['s']`; // shorthand for the stack
-
   // ── Table scatter: split V across multiple sub-objects ───────
-  // Creates N fragment objects, merged into V at runtime.
-  // Static tools looking for a single dispatch table won't find one.
   let vParts=[],vPartNames=[];
   if(opts.bc_tablescatter){
     const numParts=3+RNG.int(3);
     for(let p=0;p<numParts;p++){vPartNames.push(freshId());vParts.push({});}
-    // Distribute opcodes across parts
     OPNAMES.forEach((name,i)=>{
       const part=RNG.int(numParts);
       vParts[part][OP[name]]=true;
     });
     vPartNames.forEach((n,i)=>{out+=`var ${n}={};\n`;});
-  }
-  // Helper to emit into the right fragment or directly into vV
-  function emitHandler(opcode,body){
-    if(opts.bc_tablescatter){
-      const part=vParts.findIndex(p=>p[opcode]);
-      const target=part>=0?vPartNames[part]:vPartNames[0];
-      out+=`${target}[${encInt(opcode)}]=function(e,k){${body}};\n`;
-    }else{
-      out+=`${vV}[${encInt(opcode)}]=function(e,k){${body}};\n`;
-    }
   }
 
   // ── Opcode table init ────────────────────────────────────────
@@ -2972,154 +2943,188 @@ function passBytecodeVM(code,opts,st){
     out+=`var ${vV}={};\n`;
   }
 
-  // Pool index read helper (inlines vDecIdx call for pool-referencing ops)
-  const readPoolIdx=`${vDecIdx}(k[e['n'][0]++])`;
+  // Handler param names — all freshId so they look like the rest of the output
+  const hE=freshId(),hK=freshId(); // (execution-state, bytecode) params in every handler
+  // Per-handler local var names
+  const hN=freshId(),hV=freshId(),hP=freshId(),hO=freshId();
+  const hOff=freshId(),hIter=freshId(),hTmp=freshId(),hRes=freshId();
+  const hKV=freshId(),hPV=freshId(); // obj-key / obj-val temps for PUSH_OBJ
+  const hH1=freshId(),hH2=freshId(),hH3=freshId(),hK2=freshId(); // EXEC_RAW constructor chain + k2 for table-scatter
+
+  // Rebind stack/state accessors to use the new param names
+  const ES2=`${hE}['s']`;
+  if(opts.bc_stackob){
+    const vPushFn2=freshId(),vPopFn2=freshId();
+    // Override sPush/sPop to use hE-based stack
+    sPush=(stk,v)=>`${vPushFn2}(${stk},${v})`;
+    sPop=(stk)=>`${vPopFn2}(${stk})`;
+    out+=`var ${vPushFn2}=function(stk,v){stk[stk['length']]=v;};\n`;
+    out+=`var ${vPopFn2}=function(stk){return stk['length']?stk['splice'](stk['length']-1,1)[0]:undefined;};\n`;
+  }else{
+    sPush=(stk,v)=>`${stk}['push'](${v})`;
+    sPop=(stk)=>`${stk}['pop']()`;
+  }
+
+  // Override emitHandler to use hE/hK params instead of literal e/k
+  const _origEmitHandler=emitHandler;
+  function emitHandlerH(opcode,body){
+    if(opts.bc_tablescatter){
+      const part=vParts.findIndex(p=>p[opcode]);
+      const target=part>=0?vPartNames[part]:vPartNames[0];
+      out+=`${target}[${encInt(opcode)}]=function(${hE},${hK}){${body}};\n`;
+    }else{
+      out+=`${vV}[${encInt(opcode)}]=function(${hE},${hK}){${body}};\n`;
+    }
+  }
+
+  // Pool index read helper using hE/hK
+  const readPoolIdx=`${vDecIdx}(${hK}[${hE}['n'][0]++])`;
 
   // PUSH_K — read pool idx, decode, push constant value
-  emitHandler(OP.PUSH_K,`${sPush(ES,`${vDecC}(${readPoolIdx})`)};`);
+  emitHandlerH(OP.PUSH_K,`${sPush(ES2,`${vDecC}(${readPoolIdx})`)};`);
 
   // PUSH_V — read pool idx, decode, push name string (for LOAD/STORE)
-  emitHandler(OP.PUSH_V,`${sPush(ES,`${vDecC}(${readPoolIdx})`)};`);
+  emitHandlerH(OP.PUSH_V,`${sPush(ES2,`${vDecC}(${readPoolIdx})`)};`);
 
   // LOAD: pop name, push value
-  emitHandler(OP.LOAD,`var n=${sPop(ES)};${sPush(ES,`${vLoad}(n,e['sc'])`)};`);
+  emitHandlerH(OP.LOAD,`var ${hN}=${sPop(ES2)};${sPush(ES2,`${vLoad}(${hN},${hE}['sc'])`)};`);
 
   // STORE: pop name, pop val, store
-  emitHandler(OP.STORE,`var n=${sPop(ES)},v=${sPop(ES)};e['sc'][n]=v;`);
+  emitHandlerH(OP.STORE,`var ${hN}=${sPop(ES2)},${hV}=${sPop(ES2)};${hE}['sc'][${hN}]=${hV};`);
 
   // GET: pop key, pop obj, push obj[key]
-  emitHandler(OP.GET,`var p=${sPop(ES)},o=${sPop(ES)};${sPush(ES,'o[p]')};`);
+  emitHandlerH(OP.GET,`var ${hP}=${sPop(ES2)},${hO}=${sPop(ES2)};${sPush(ES2,`${hO}[${hP}]`)};`);
 
   // SET: pop key, pop obj, pop val, obj[key]=val
-  emitHandler(OP.SET,`var p=${sPop(ES)},o=${sPop(ES)},v=${sPop(ES)};o[p]=v;${sPush(ES,'v')};`);
+  emitHandlerH(OP.SET,`var ${hP}=${sPop(ES2)},${hO}=${sPop(ES2)},${hV}=${sPop(ES2)};${hO}[${hP}]=${hV};${sPush(ES2,hV)};`);
 
   // CALL argc
   const vAc=freshId(),vFn=freshId(),vArgs=freshId(),vObj=freshId();
-  emitHandler(OP.CALL,
-    `var ${vAc}=k[e['n'][0]++],${vArgs}=[];`+
-    `for(var _i=0;_i<${vAc};_i++)${vArgs}['unshift'](${sPop(ES)});`+
-    `var ${vFn}=${sPop(ES)};`+
-    `${sPush(ES,`typeof ${vFn}==='function'?${vFn}['apply'](undefined,${vArgs}):undefined`)};`
+  emitHandlerH(OP.CALL,
+    `var ${vAc}=${hK}[${hE}['n'][0]++],${vArgs}=[];`+
+    `for(var ${hIter}=0;${hIter}<${vAc};${hIter}++)${vArgs}['unshift'](${sPop(ES2)});`+
+    `var ${vFn}=${sPop(ES2)};`+
+    `${sPush(ES2,`typeof ${vFn}==='function'?${vFn}['apply'](undefined,${vArgs}):undefined`)};`
   );
 
   // MCALL argc — receiver on stack below fn
-  emitHandler(OP.MCALL,
-    `var ${vAc}=k[e['n'][0]++],${vArgs}=[];`+
-    `for(var _i=0;_i<${vAc};_i++)${vArgs}['unshift'](${sPop(ES)});`+
-    `var ${vFn}=${sPop(ES)},${vObj}=${sPop(ES)};`+
-    `${sPush(ES,`typeof ${vFn}==='function'?${vFn}['apply'](${vObj},${vArgs}):undefined`)};`
+  emitHandlerH(OP.MCALL,
+    `var ${vAc}=${hK}[${hE}['n'][0]++],${vArgs}=[];`+
+    `for(var ${hIter}=0;${hIter}<${vAc};${hIter}++)${vArgs}['unshift'](${sPop(ES2)});`+
+    `var ${vFn}=${sPop(ES2)},${vObj}=${sPop(ES2)};`+
+    `${sPush(ES2,`typeof ${vFn}==='function'?${vFn}['apply'](${vObj},${vArgs}):undefined`)};`
   );
 
   // NEW_C argc
-  emitHandler(OP.NEW_C,
-    `var ${vAc}=k[e['n'][0]++],${vArgs}=[];`+
-    `for(var _i=0;_i<${vAc};_i++)${vArgs}['unshift'](${sPop(ES)});`+
-    `var ${vFn}=${sPop(ES)};`+
-    `${sPush(ES,`new (Function['prototype']['bind']['apply'](${vFn},[null]['concat'](${vArgs})))()`)};`
+  emitHandlerH(OP.NEW_C,
+    `var ${vAc}=${hK}[${hE}['n'][0]++],${vArgs}=[];`+
+    `for(var ${hIter}=0;${hIter}<${vAc};${hIter}++)${vArgs}['unshift'](${sPop(ES2)});`+
+    `var ${vFn}=${sPop(ES2)};`+
+    `${sPush(ES2,`new (Function['prototype']['bind']['apply'](${vFn},[null]['concat'](${vArgs})))()`)};`
   );
 
   // BIN op-idx
   const BIN_OPS_RT=BINOPS.map(o=>JSON.stringify(o)).join(',');
-  const vBinOps=freshId(),vBinA=freshId(),vBinB=freshId(),vBinOp=freshId();
+  const vBinOps=freshId(),vBinA=freshId(),vBinB=freshId(),vBinOp=freshId(),vBinRes=freshId();
   out+=`var ${vBinOps}=[${BIN_OPS_RT}];\n`;
-  emitHandler(OP.BIN,
-    `var ${vBinOp}=${vBinOps}[k[e['n'][0]++]],${vBinB}=${sPop(ES)},${vBinA}=${sPop(ES)};var _r;`+
-    `if(${vBinOp}==='+')_r=${vBinA}+${vBinB};`+
-    `else if(${vBinOp}==='-')_r=${vBinA}-${vBinB};`+
-    `else if(${vBinOp}==='*')_r=${vBinA}*${vBinB};`+
-    `else if(${vBinOp}==='/')_r=${vBinA}/${vBinB};`+
-    `else if(${vBinOp}==='%')_r=${vBinA}%${vBinB};`+
-    `else if(${vBinOp}==='**')_r=${vBinA}**${vBinB};`+
-    `else if(${vBinOp}==='===')_r=${vBinA}===${vBinB};`+
-    `else if(${vBinOp}==='!==')_r=${vBinA}!==${vBinB};`+
-    `else if(${vBinOp}==='==')_r=${vBinA}==${vBinB};`+
-    `else if(${vBinOp}==='!=')_r=${vBinA}!=${vBinB};`+
-    `else if(${vBinOp}==='<')_r=${vBinA}<${vBinB};`+
-    `else if(${vBinOp}==='<=')_r=${vBinA}<=${vBinB};`+
-    `else if(${vBinOp}==='>')_r=${vBinA}>${vBinB};`+
-    `else if(${vBinOp}==='>=')_r=${vBinA}>=${vBinB};`+
-    `else if(${vBinOp}==='&&')_r=${vBinA}&&${vBinB};`+
-    `else if(${vBinOp}==='||')_r=${vBinA}||${vBinB};`+
-    `else if(${vBinOp}==='??')_r=${vBinA}??${vBinB};`+
-    `else if(${vBinOp}==='&')_r=${vBinA}&${vBinB};`+
-    `else if(${vBinOp}==='|')_r=${vBinA}|${vBinB};`+
-    `else if(${vBinOp}==='^')_r=${vBinA}^${vBinB};`+
-    `else if(${vBinOp}==='<<')_r=${vBinA}<<${vBinB};`+
-    `else if(${vBinOp}==='>>')_r=${vBinA}>>${vBinB};`+
-    `else if(${vBinOp}==='>>>')_r=${vBinA}>>>${vBinB};`+
-    `else if(${vBinOp}==='in')_r=${vBinA} in ${vBinB};`+
-    `else if(${vBinOp}==='instanceof')_r=${vBinA} instanceof ${vBinB};`+
-    `${sPush(ES,'_r')};`
+  emitHandlerH(OP.BIN,
+    `var ${vBinOp}=${vBinOps}[${hK}[${hE}['n'][0]++]],${vBinB}=${sPop(ES2)},${vBinA}=${sPop(ES2)};var ${vBinRes};`+
+    `if(${vBinOp}==='+')${vBinRes}=${vBinA}+${vBinB};`+
+    `else if(${vBinOp}==='-')${vBinRes}=${vBinA}-${vBinB};`+
+    `else if(${vBinOp}==='*')${vBinRes}=${vBinA}*${vBinB};`+
+    `else if(${vBinOp}==='/')${vBinRes}=${vBinA}/${vBinB};`+
+    `else if(${vBinOp}==='%')${vBinRes}=${vBinA}%${vBinB};`+
+    `else if(${vBinOp}==='**')${vBinRes}=${vBinA}**${vBinB};`+
+    `else if(${vBinOp}==='===')${vBinRes}=${vBinA}===${vBinB};`+
+    `else if(${vBinOp}==='!==')${vBinRes}=${vBinA}!==${vBinB};`+
+    `else if(${vBinOp}==='==')${vBinRes}=${vBinA}==${vBinB};`+
+    `else if(${vBinOp}==='!=')${vBinRes}=${vBinA}!=${vBinB};`+
+    `else if(${vBinOp}==='<')${vBinRes}=${vBinA}<${vBinB};`+
+    `else if(${vBinOp}==='<=')${vBinRes}=${vBinA}<=${vBinB};`+
+    `else if(${vBinOp}==='>')${vBinRes}=${vBinA}>${vBinB};`+
+    `else if(${vBinOp}==='>=')${vBinRes}=${vBinA}>=${vBinB};`+
+    `else if(${vBinOp}==='&&')${vBinRes}=${vBinA}&&${vBinB};`+
+    `else if(${vBinOp}==='||')${vBinRes}=${vBinA}||${vBinB};`+
+    `else if(${vBinOp}==='??')${vBinRes}=${vBinA}??${vBinB};`+
+    `else if(${vBinOp}==='&')${vBinRes}=${vBinA}&${vBinB};`+
+    `else if(${vBinOp}==='|')${vBinRes}=${vBinA}|${vBinB};`+
+    `else if(${vBinOp}==='^')${vBinRes}=${vBinA}^${vBinB};`+
+    `else if(${vBinOp}==='<<')${vBinRes}=${vBinA}<<${vBinB};`+
+    `else if(${vBinOp}==='>>')${vBinRes}=${vBinA}>>${vBinB};`+
+    `else if(${vBinOp}==='>>>')${vBinRes}=${vBinA}>>>${vBinB};`+
+    `else if(${vBinOp}==='in')${vBinRes}=${vBinA} in ${vBinB};`+
+    `else if(${vBinOp}==='instanceof')${vBinRes}=${vBinA} instanceof ${vBinB};`+
+    `${sPush(ES2,vBinRes)};`
   );
 
   // UNARY
   const vUOps=freshId(),vUA=freshId(),vUOp=freshId();
   const UNOPS_RT=UNOPS.map(o=>JSON.stringify(o)).join(',');
   out+=`var ${vUOps}=[${UNOPS_RT}];\n`;
-  emitHandler(OP.UNARY,
-    `var ${vUOp}=${vUOps}[k[e['n'][0]++]],${vUA}=${sPop(ES)};`+
-    `if(${vUOp}==='!')${sPush(ES,`!${vUA}`)};`+
-    `else if(${vUOp}==='-')${sPush(ES,`-${vUA}`)};`+
-    `else if(${vUOp}==='+')${sPush(ES,`+${vUA}`)};`+
-    `else if(${vUOp}==='~')${sPush(ES,`~${vUA}`)};`+
-    `else if(${vUOp}==='typeof')${sPush(ES,`typeof ${vUA}`)};`+
-    `else if(${vUOp}==='void')${sPush(ES,`void ${vUA}`)};`
+  emitHandlerH(OP.UNARY,
+    `var ${vUOp}=${vUOps}[${hK}[${hE}['n'][0]++]],${vUA}=${sPop(ES2)};`+
+    `if(${vUOp}==='!')${sPush(ES2,`!${vUA}`)};`+
+    `else if(${vUOp}==='-')${sPush(ES2,`-${vUA}`)};`+
+    `else if(${vUOp}==='+')${sPush(ES2,`+${vUA}`)};`+
+    `else if(${vUOp}==='~')${sPush(ES2,`~${vUA}`)};`+
+    `else if(${vUOp}==='typeof')${sPush(ES2,`typeof ${vUA}`)};`+
+    `else if(${vUOp}==='void')${sPush(ES2,`void ${vUA}`)};`
   );
 
   // POP
-  emitHandler(OP.POP, `${sPop(ES)};`);
+  emitHandlerH(OP.POP, `${sPop(ES2)};`);
 
   // DUP
-  emitHandler(OP.DUP, `var _t=${ES}[${ES}['length']-1];${sPush(ES,'_t')};`);
+  emitHandlerH(OP.DUP, `var ${hTmp}=${ES2}[${ES2}['length']-1];${sPush(ES2,hTmp)};`);
 
   // JMP / JIF / JIT
-  emitHandler(OP.JMP,  `var off=k[e['n'][0]++];e['n'][0]+=off;`);
-  emitHandler(OP.JIF,  `var off=k[e['n'][0]++];if(!${sPop(ES)})e['n'][0]+=off;`);
-  emitHandler(OP.JIT,  `var off=k[e['n'][0]++];if(${sPop(ES)})e['n'][0]+=off;`);
+  emitHandlerH(OP.JMP,  `var ${hOff}=${hK}[${hE}['n'][0]++];${hE}['n'][0]+=${hOff};`);
+  emitHandlerH(OP.JIF,  `var ${hOff}=${hK}[${hE}['n'][0]++];if(!${sPop(ES2)})${hE}['n'][0]+=${hOff};`);
+  emitHandlerH(OP.JIT,  `var ${hOff}=${hK}[${hE}['n'][0]++];if(${sPop(ES2)})${hE}['n'][0]+=${hOff};`);
 
   // PUSH_ARR
   const vPAc=freshId(),vPAr=freshId();
-  emitHandler(OP.PUSH_ARR,
-    `var ${vPAc}=k[e['n'][0]++],${vPAr}=[];`+
-    `for(var _i=0;_i<${vPAc};_i++)${vPAr}['unshift'](${sPop(ES)});`+
-    `${sPush(ES,vPAr)};`
+  emitHandlerH(OP.PUSH_ARR,
+    `var ${vPAc}=${hK}[${hE}['n'][0]++],${vPAr}=[];`+
+    `for(var ${hIter}=0;${hIter}<${vPAc};${hIter}++)${vPAr}['unshift'](${sPop(ES2)});`+
+    `${sPush(ES2,vPAr)};`
   );
 
   // PUSH_OBJ
   const vPOc=freshId(),vPOb=freshId();
-  emitHandler(OP.PUSH_OBJ,
-    `var ${vPOc}=k[e['n'][0]++],${vPOb}={};`+
-    `for(var _i=0;_i<${vPOc};_i++){var _v=${sPop(ES)},_p=${sPop(ES)};${vPOb}[_p]=_v;}`+
-    `${sPush(ES,vPOb)};`
+  emitHandlerH(OP.PUSH_OBJ,
+    `var ${vPOc}=${hK}[${hE}['n'][0]++],${vPOb}={};`+
+    `for(var ${hIter}=0;${hIter}<${vPOc};${hIter}++){var ${hPV}=${sPop(ES2)},${hKV}=${sPop(ES2)};${vPOb}[${hKV}]=${hPV};}`+
+    `${sPush(ES2,vPOb)};`
   );
 
   // EXEC_RAW — decode single statement, execute with scope bridging
   const vRawIdx=freshId(),vRawStmt=freshId(),vRawDecls=freshId(),vRawRet=freshId();
   const vRawBody=freshId(),vRawKeys=freshId(),vRawVals=freshId(),vRawRes=freshId();
-  const vRawRe2=freshId(),vRawM2=freshId();
-  emitHandler(OP.EXEC_RAW,
+  const vRawRe2=freshId(),vRawM2=freshId(),vRawN=freshId();
+  emitHandlerH(OP.EXEC_RAW,
     `var ${vRawIdx}=${readPoolIdx};`+
     `var ${vRawStmt}=${vDecC}(${vRawIdx});`+
     `var ${vRawRe2}=/\\b(?:var|function)\\s+([a-zA-Z_$][\\w$]*)/g,${vRawM2},${vRawDecls}=[];`+
     `while((${vRawM2}=${vRawRe2}['exec'](${vRawStmt}))!==null)${vRawDecls}['push'](${vRawM2}[1]);`+
-    `var ${vRawRet}=${vRawDecls}['length']?';return {'+${vRawDecls}['map'](function(n){return JSON['stringify'](n)+':typeof '+n+'!=="undefined"?'+n+':undefined';})['join'](',')+'}':'';`+
+    `var ${vRawRet}=${vRawDecls}['length']?';return {'+${vRawDecls}['map'](function(${vRawN}){return JSON['stringify'](${vRawN})+':typeof '+${vRawN}+'!=="undefined"?'+${vRawN}+':undefined';})['join'](',')+'}':'';`+
     `var ${vRawBody}=${vRawStmt}+${vRawRet};${vRawStmt}=null;`+
-    `var ${vRawKeys}=Object['keys'](e['sc']);`+
-    `var ${vRawVals}=${vRawKeys}['map'](function(n){return e['sc'][n];});`+
-    `var _h1={},_h2=_h1['constructor'],_h3=_h2['constructor'];`+
-    `var ${vRawRes}=_h3['apply'](null,${vRawKeys}['concat']([${vRawBody}]))['apply'](null,${vRawVals});`+
+    `var ${vRawKeys}=Object['keys'](${hE}['sc']);`+
+    `var ${vRawVals}=${vRawKeys}['map'](function(${vRawN}){return ${hE}['sc'][${vRawN}];});`+
+    `var ${hH1}={},${hH2}=${hH1}['constructor'],${hH3}=${hH2}['constructor'];`+
+    `var ${vRawRes}=${hH3}['apply'](null,${vRawKeys}['concat']([${vRawBody}]))['apply'](null,${vRawVals});`+
     `${vRawBody}=null;`+
-    `if(${vRawRes})${vRawDecls}['forEach'](function(n){if(n in ${vRawRes})e['sc'][n]=${vRawRes}[n];});`
+    `if(${vRawRes})${vRawDecls}['forEach'](function(${vRawN}){if(${vRawN} in ${vRawRes})${hE}['sc'][${vRawN}]=${vRawRes}[${vRawN}];});`
   );
 
   // RETURN — halt dispatcher
-  emitHandler(OP.RETURN, `e['n'][0]=${vK}['length'];`);
+  emitHandlerH(OP.RETURN, `${hE}['n'][0]=${vBytecode}['length'];`);
 
   // If table scatter: merge all fragments into V at runtime
   if(opts.bc_tablescatter){
     out+=`var ${vV}={};\n`;
     vPartNames.forEach(n=>{
-      out+=`Object['keys'](${n})['forEach'](function(k2){${vV}[k2]=${n}[k2];});\n`;
+      out+=`Object['keys'](${n})['forEach'](function(${hK2}){${vV}[${hK2}]=${n}[${hK2}];});\n`;
     });
   }
 
@@ -3145,19 +3150,19 @@ function passBytecodeVM(code,opts,st){
   if(dispatchStyle==='trampoline'){
     const vStep=freshId(),vNext=freshId();
     out+=`function ${vStep}(){\n`;
-    out+=`  if(${vE}['n'][0]>=${vK}['length'])return;\n`;
-    out+=`  var ${vOp}=${vK}[${vE}['n'][0]++];\n`;
-    out+=`  if(${vV}[${vOp}])${vV}[${vOp}](${vE},${vK});\n`;
+    out+=`  if(${vE}['n'][0]>=${vBytecode}['length'])return;\n`;
+    out+=`  var ${vOp}=${vBytecode}[${vE}['n'][0]++];\n`;
+    out+=`  if(${vV}[${vOp}])${vV}[${vOp}](${vE},${vBytecode});\n`;
     out+=`  var ${vNext}=${vStep};\n`;
     out+=`  ${vNext}();\n`;
     out+=`}\n`;
     out+=`${vStep}();\n`;
   }else if(dispatchStyle==='table'){
-    out+=`for(;${vE}['n'][0]<${vK}['length'];){var ${vOp}=${vK}[${vE}['n'][0]++];if(${vV}[${vOp}])${vV}[${vOp}](${vE},${vK});}\n`;
+    out+=`for(;${vE}['n'][0]<${vBytecode}['length'];){var ${vOp}=${vBytecode}[${vE}['n'][0]++];if(${vV}[${vOp}])${vV}[${vOp}](${vE},${vBytecode});}\n`;
   }else{
-    out+=`while(${vE}['n'][0]<${vK}['length']){\n`;
-    out+=`  var ${vOp}=${vK}[${vE}['n'][0]++];\n`;
-    out+=`  if(${vV}[${vOp}])${vV}[${vOp}](${vE},${vK});\n`;
+    out+=`while(${vE}['n'][0]<${vBytecode}['length']){\n`;
+    out+=`  var ${vOp}=${vBytecode}[${vE}['n'][0]++];\n`;
+    out+=`  if(${vV}[${vOp}])${vV}[${vOp}](${vE},${vBytecode});\n`;
     out+=`}\n`;
   }
 
