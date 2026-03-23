@@ -893,8 +893,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           <div class="fld" style="margin-bottom:6px;">
             <div class="fld-lbl">Strict Mode</div>
             <select class="fsel" id="o_strict_mode">
-              <option value="always" selected>'use strict' — always prepend</option>
-              <option value="auto">Auto — only if source has it</option>
+              <option value="always">'use strict' — always prepend</option>
+              <option value="auto" selected>Auto — only if source has it</option>
               <option value="never">Never — strip existing</option>
             </select>
           </div>
@@ -1158,8 +1158,13 @@ function freshId(){
   const pfx=typeof VAL==='function'?VAL('o_idpfx').trim():'';
   if(ng==='mangled'){
     const alpha='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    let n=_idc,s='';do{s=alpha[n%alpha.length]+s;n=Math.floor(n/alpha.length)-1;}while(n>=0);
-    _idc++;return pfx+s;
+    const JS_RESERVED=new Set(['do','if','in','for','let','new','try','var','case','else','enum','eval','null','this','void','with','break','catch','class','const','false','true','super','throw','while','yield','delete','export','import','return','switch','typeof','default','extends','finally','continue','debugger','function','arguments','instanceof','implements','interface','package','private','protected','public','static']);
+    let candidate;
+    do{
+      let n=_idc,s='';do{s=alpha[n%alpha.length]+s;n=Math.floor(n/alpha.length)-1;}while(n>=0);
+      _idc++;candidate=pfx+s;
+    }while(JS_RESERVED.has(candidate));
+    return candidate;
   }
   if(ng==='dictionary'){
     const dict=typeof getTags==='function'?getTags('ta-dict'):[];
@@ -1217,9 +1222,9 @@ function renderDomains(){G('dom-list').innerHTML=domains.map(d=>`<div class="di"
 // Crypto
 function rc4(key,data){
   const S=new Uint8Array(256);for(let i=0;i<256;i++)S[i]=i;
-  for(let i=0,j=0;i<256;i++){j=(j+S[i]+key.charCodeAt(i%key.length))&255;[S[i],S[j]]=[S[j],S[i]];}
+  for(let i=0,j=0;i<256;i++){j=(j+S[i]+key.charCodeAt(i%key.length))&255;const t=S[i];S[i]=S[j];S[j]=t;}
   const out=new Uint8Array(data.length);
-  for(let k=0,i=0,j=0;k<data.length;k++){i=(i+1)&255;j=(j+S[i])&255;[S[i],S[j]]=[S[j],S[i]];out[k]=data[k]^S[(S[i]+S[j])&255];}
+  for(let k=0,i=0,j=0;k<data.length;k++){i=(i+1)&255;j=(j+S[i])&255;const t=S[i];S[i]=S[j];S[j]=t;out[k]=data[k]^S[(S[i]+S[j])&255];}
   return out;
 }
 function xorEnc(data,key){
@@ -1241,7 +1246,7 @@ function buildDecoder(arrName,decName,enc,rk,xk,rotAmt,opts){
   let code='';
   if(enc==='rc4'||enc==='rc4xor'){
     const f=freshId();
-    code+=`function ${f}(k,d){var S=new Uint8Array(256);for(var i=0;i<256;i++)S[i]=i;for(var i=0,j=0;i<256;i++){j=(j+S[i]+k.charCodeAt(i%k.length))&255;[S[i],S[j]]=[S[j],S[i]];}var o=new Uint8Array(d.length);for(var n=0,i=0,j=0;n<d.length;n++){i=(i+1)&255;j=(j+S[i])&255;[S[i],S[j]]=[S[j],S[i]];o[n]=d[n]^S[(S[i]+S[j])&255];}return o;}\n`;
+    code+=`function ${f}(k,d){var S=new Uint8Array(256);for(var i=0;i<256;i++)S[i]=i;for(var i=0,j=0;i<256;i++){j=(j+S[i]+k.charCodeAt(i%k.length))&255;var t=S[i];S[i]=S[j];S[j]=t;}var o=new Uint8Array(d.length);for(var n=0,i=0,j=0;n<d.length;n++){i=(i+1)&255;j=(j+S[i])&255;var t2=S[i];S[i]=S[j];S[j]=t2;o[n]=d[n]^S[(S[i]+S[j])&255];}return o;}\n`;
     opts._rc4fn=f;
   }
   if(enc==='xor'||enc==='rc4xor'){
@@ -1265,7 +1270,9 @@ function buildDecoder(arrName,decName,enc,rk,xk,rotAmt,opts){
     code+=`  for(var ${dJ}=0;${dJ}<${dBin}.length;${dJ}++) ${dBytes}[${dJ}]=${dBin}.charCodeAt(${dJ});\n`;
     if(opts._rc4fn)code+=`  ${dBytes} = ${opts._rc4fn}(${JSON.stringify(rk)},${dBytes});\n`;
     if(opts._xorfn)code+=`  ${dBytes} = ${opts._xorfn}(${dBytes},${JSON.stringify(xk)});\n`;
-    code+=`  return new TextDecoder().decode(${dBytes});\n`;
+    const dOut=freshId(),dDi=freshId();
+    code+=`  var ${dOut}='';for(var ${dDi}=0;${dDi}<${dBytes}.length;${dDi}++)${dOut}+=String.fromCharCode(${dBytes}[${dDi}]);\n`;
+    code+=`  return ${dOut};\n`;
   }else{
     code+=`  return ${dE};\n`;
   }
@@ -1427,13 +1434,18 @@ function passCharcode(toks){
 }
 function passAtob(toks,st){
   return toks.map(tok=>{
+    // Skip template literals and very short strings (overhead not worth it)
+    if(tok.t!=='str'||tok.v[0]==='`')return tok;
     const raw=safeParseStr(tok);
-    if(raw===null||raw.length===0)return tok;
+    if(raw===null||raw.length<2)return tok;
     const bytes=new TextEncoder().encode(raw);
     let lat='';for(let i=0;i<bytes.length;i++)lat+=String.fromCharCode(bytes[i]);
     const b64=btoa(lat);st.strings++;
     const bv=freshId(),uv=freshId(),iv=freshId();
-    return{t:'ref',v:`(function(){var ${bv}=atob(${JSON.stringify(b64)});var ${uv}=new Uint8Array(${bv}.length);for(var ${iv}=0;${iv}<${bv}.length;${iv}++)${uv}[${iv}]=${bv}.charCodeAt(${iv});return new TextDecoder().decode(${uv});})()`};
+    // Use a single-line IIFE that avoids TextDecoder (not always available in TM sandboxes)
+    // Decode bytes back to string via fromCharCode to avoid TextDecoder dependency
+    const dfv=freshId();
+    return{t:'ref',v:`(function(){var ${bv}=atob(${JSON.stringify(b64)});var ${uv}=new Uint8Array(${bv}.length);for(var ${iv}=0;${iv}<${bv}.length;${iv}++)${uv}[${iv}]=${bv}.charCodeAt(${iv});var ${dfv}='';for(var ${iv}=0;${iv}<${uv}.length;${iv}++)${dfv}+=String.fromCharCode(${uv}[${iv}]);return ${dfv};})()`};
   });
 }
 function passTemplate(toks){
@@ -1493,10 +1505,14 @@ function passPointerEncoding(code){
   let pi=0;
   const ng=typeof VAL==='function'?VAL('o_namegen'):'hexadecimal';
   if(ng!=='hexadecimal'){return code;}
-  const patchRe=/_0x([0-9a-f]{6})\((0x[0-9a-f]+|\([^()]{1,40}\))\)/g;
+  // Only match hex-literal args (0x...) — avoid parens args that could be regex literals
+  const patchRe=/_0x([0-9a-f]{6})\((0x[0-9a-f]+)\)/g;
   let replaced=false;
-  const patched=code.replace(patchRe,(m,id,arg)=>{
+  const patched=code.replace(patchRe,(m,id,arg,offset)=>{
     if(RNG.next()>0.4)return m;
+    // Don't patch if immediately preceded by . (method call) or inside a regex context
+    const pre=code.slice(Math.max(0,offset-1),offset);
+    if(pre==='.')return m;
     replaced=true;
     const t=pool[pi++%pool.length];
     return `(${t}=_0x${id},${t}(${arg}))`;
@@ -2094,6 +2110,8 @@ function passObjKeys(code){
   // Walk the code skipping string literals, only transform keys found outside strings
   let result='';
   let i=0;
+  // Track brace depth to distinguish object literals from var decl commas
+  let braceDepth=0;
   while(i<code.length){
     const ch=code[i];
     // Skip string literals verbatim
@@ -2107,13 +2125,17 @@ function passObjKeys(code){
       while(i<code.length){const c=code[i];if(c==='\\'){result+=c+(code[i+1]||'');i+=2;continue;}result+=c;i++;if(c==='`')break;}
       continue;
     }
+    if(ch==='{')braceDepth++;
+    else if(ch==='}')braceDepth--;
     // Check for identifier-like object key: word chars followed by optional space then colon
     // but NOT after a slash (regex) or inside other contexts
     const keyM=code.slice(i).match(/^([a-zA-Z_$][a-zA-Z0-9_$]{0,49})(\s*):/);
     if(keyM&&result.slice(-1)!=='.'&&result.slice(-1)!==':'){
       // Only transform if previous non-space char suggests object context: { , (
       const prev=result.replace(/\s+$/,'').slice(-1);
-      if(prev==='{'||prev===','||prev==='('||prev==='['||prev===''){
+      // For comma context, only allow if we're inside a brace (object literal), not a var decl
+      const commaOk=prev===','&&braceDepth>0;
+      if(prev==='{'||commaOk||prev==='('||prev==='['){
         const k=keyM[1],sp=keyM[2];
         const codes=Array.from(k).map(c=>hexInt(c.charCodeAt(0))).join(',');
         result+=`[String['fromCharCode'](${codes})]${sp}:`;
@@ -3040,7 +3062,9 @@ function passBytecodeVM(code,opts,st){
   const vLoad=freshId(),vName=freshId();
   out+=`function ${vLoad}(${vName},sc){\n`;
   out+=`  if(${vName} in sc)return sc[${vName}];\n`;
-  out+=`  try{return (0,eval)(${vName});}catch(_){return undefined;}\n`;
+  // Use indirect eval for global lookup; also try direct eval for TM/GM closure-injected globals
+  out+=`  try{var _gv=(0,eval)(${vName});if(typeof _gv!=='undefined')return _gv;}catch(_){}\n`;
+  out+=`  try{return eval(${vName});}catch(_){return undefined;}\n`;
   out+=`}\n`;
 
   // Opcode dispatch table V
@@ -3307,6 +3331,19 @@ function passBytecodeVM(code,opts,st){
   }
 
   // ── Dispatcher ───────────────────────────────────────────────
+  // Pre-seed scope with Tampermonkey/Greasemonkey globals so GM_getValue etc. resolve
+  const vGmSeed=freshId(),vGmKey=freshId();
+  out+=`(function(){\n`;
+  out+=`  var ${vGmSeed}=['GM_getValue','GM_setValue','GM_deleteValue','GM_listValues',\n`;
+  out+=`    'GM_xmlhttpRequest','GM_openInTab','GM_notification','GM_setClipboard',\n`;
+  out+=`    'GM_getResourceText','GM_getResourceURL','GM_addStyle','GM_log',\n`;
+  out+=`    'GM_registerMenuCommand','GM_unregisterMenuCommand','GM_addValueChangeListener',\n`;
+  out+=`    'unsafeWindow','GM','cloneInto','exportFunction'];\n`;
+  out+=`  for(var _gi=0;_gi<${vGmSeed}.length;_gi++){\n`;
+  out+=`    var ${vGmKey}=${vGmSeed}[_gi];\n`;
+  out+=`    try{var _gv=eval(${vGmKey});if(typeof _gv!=='undefined')${vE}['sc'][${vGmKey}]=_gv;}catch(_){}\n`;
+  out+=`  }\n`;
+  out+=`})();\n`;
   const vOp=freshId();
   const dispatchStyle=opts.bc_dispatch||'while';
 
@@ -3985,7 +4022,18 @@ function obfuscate(src,opts){
   // 'never' = strip any existing 'use strict'
   else if(_sm==='never'){code=code.replace(/^['"]use strict['"];?\n?/,'');}
   // Final compaction — collapse any newlines/spaces left by post-minify passes
-  if(opts.mini)       code=code.replace(/\s*\n\s*/g,'').replace(/\s{2,}/g,' ');
+  // Must be regex-aware: a space between /regex/flags and a word is required
+  if(opts.mini){
+    // Step 1: collapse all whitespace sequences to a single space
+    code=code.replace(/[ \t\r\n]+/g,' ').trim();
+    // Step 2: remove spaces that are safe to remove (around punctuation)
+    // Do NOT remove a space between a regex-like slash sequence and an alphanumeric char
+    // Pattern: remove spaces around operators/punctuation, but preserve word boundaries
+    code=code.replace(/ ?([\{\}\[\]\(\);,]) ?/g,'$1');
+    // Step 3: ensure a space remains after regex literals followed by word chars
+    // Detect /.../ followed by optional flags then a letter/_ — insert space if missing
+    code=code.replace(/(\/[gimsuy]*)([a-zA-Z_$`"'])/g,'$1 $2');
+  }
   if(importLines.length)code=importLines.join('\n')+'\n'+code;
   if(_tmHdr)code=_tmHdr+code;
   return{code,st};
