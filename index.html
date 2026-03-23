@@ -269,7 +269,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 .srow input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--acc);border:2px solid var(--bg);cursor:pointer;}
 .srow input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:linear-gradient(to right,var(--acc) var(--pct,0%),var(--s5) var(--pct,0%));}
 
-/* ─── FIELD ─── */
+/* ─── EDITOR ACTIONS ─── */
+#input-preset option{background:var(--s3);color:var(--body);}
+
 .fld{margin-top:7px;}
 .fld-lbl{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin-bottom:3px;}
 .fi,.fsel{
@@ -483,8 +485,22 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 #ac-cancel{padding:6px 13px;background:none;border:1px solid var(--ln);color:var(--soft);font-family:var(--ui);font-size:12px;border-radius:var(--r);cursor:pointer;transition:all .12s;}
 #ac-cancel:hover{color:var(--hi);border-color:var(--ln2);}
 .grp-note{font-size:9px;color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px;}
-.perf{color:var(--acc);font-style:normal;font-size:9.5px;font-weight:600;}
-.perf-tag{font-size:9px;color:var(--dim);font-weight:400;}
+.perf{display:none;}
+.perf-tag{display:none;}
+
+/* Toggle perf tooltip */
+.tog[data-perf]{position:relative;}
+.tog[data-perf]:hover::after{
+  content:attr(data-perf);
+  position:absolute;
+  right:calc(100% + 8px);
+  top:50%;transform:translateY(-50%);
+  background:var(--s4);border:1px solid var(--ln2);
+  color:var(--acc);font-family:var(--mono);font-size:9.5px;font-weight:600;
+  padding:3px 7px;border-radius:4px;white-space:nowrap;
+  pointer-events:none;z-index:300;
+  box-shadow:0 2px 8px rgba(0,0,0,.4);
+}
 .op-stats{display:flex;gap:6px;margin:8px 0 10px;}
 .op-stat{flex:1;background:var(--s3);border:1px solid var(--ln);border-radius:var(--r);padding:8px 6px;text-align:center;}
 .op-stat-hi{border-color:var(--acc2);background:var(--acco);}
@@ -540,7 +556,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
       <div class="ed-header">
         <span class="ed-label">Input</span>
         <span class="ed-gap"></span>
-        <select id="input-preset" class="ed-act" style="font-family:var(--ui);font-size:11px;background:none;border:none;color:var(--dim);cursor:pointer;padding:2px 4px;border-radius:4px;" onchange="applyInputPreset(this.value)" title="Load a sample">
+        <select id="input-preset" class="ed-act" style="font-family:var(--ui);font-size:11px;background:var(--s3);border:1px solid var(--ln);color:var(--body);cursor:pointer;padding:2px 6px;border-radius:4px;outline:none;" onchange="applyInputPreset(this.value)" title="Load a sample">
           <option value="">Samples…</option>
           <option value="hello">Hello World</option>
           <option value="class">ES6 Class</option>
@@ -1127,7 +1143,20 @@ function getSeed(){
   return h>>>0;
 }
 let _idc=0;
-function freshId(){return '_0x'+(_idc++).toString(16).padStart(4,'0')+RNG.hex(2);}
+function freshId(){
+  const ng=typeof VAL==='function'?VAL('o_namegen'):'hexadecimal';
+  const pfx=typeof VAL==='function'?VAL('o_idpfx').trim():'';
+  if(ng==='mangled'){
+    const alpha='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let n=_idc,s='';do{s=alpha[n%alpha.length]+s;n=Math.floor(n/alpha.length)-1;}while(n>=0);
+    _idc++;return pfx+s;
+  }
+  if(ng==='dictionary'){
+    const dict=typeof getTags==='function'?getTags('ta-dict'):[];
+    if(dict.length){const word=dict[_idc%dict.length]+(_idc>=dict.length?Math.floor(_idc/dict.length):'');_idc++;return pfx+word;}
+  }
+  return pfx+'_0x'+(_idc++).toString(16).padStart(4,'0')+RNG.hex(2);
+}
 function resetIds(){_idc=0;}
 function hexInt(n){if(!Number.isInteger(n))return String(n);return n<0?'-0x'+(-n).toString(16):'0x'+n.toString(16);}
 
@@ -3531,6 +3560,55 @@ function passControlFlowHash(code){
 }
 
 
+// Post-process: convert bracket access in generated code to dot notation when prop is OFF
+// Generated passes (VM, canary, etc.) always emit obj['prop'] style.
+// When the user has Bracket Access OFF, we clean those back up to obj.prop.
+function postConvertBracketsToDot(code){
+  // Only convert single-quoted or double-quoted simple identifier keys: obj['foo'] → obj.foo
+  // Skip if key is not a valid JS identifier (can't use dot syntax for those)
+  let result='',i=0;
+  const n=code.length;
+  const ID_START=/[a-zA-Z_$]/,ID_CONT=/[a-zA-Z0-9_$]/;
+  while(i<n){
+    const ch=code[i];
+    // Skip string literals
+    if(ch==='"'||ch==="'"){
+      const q=ch;result+=ch;i++;
+      while(i<n){const c=code[i];result+=c;i++;if(c==='\\'){result+=code[i]||'';i++;}else if(c===q)break;}
+      continue;
+    }
+    // Skip template literals
+    if(ch==='`'){
+      result+=ch;i++;let d=0;
+      while(i<n){const c=code[i];if(c==='\\'){result+=c+(code[i+1]||'');i+=2;continue;}if(c==='$'&&code[i+1]==='{'){result+='${';i+=2;d++;continue;}if(c==='}'&&d>0){result+=c;i++;d--;continue;}result+=c;i++;if(c==='`'&&d===0)break;}
+      continue;
+    }
+    // Look for ['identifier'] or ["identifier"] pattern
+    if(ch==='['){
+      const q=code[i+1];
+      if(q==="'"||q==='"'){
+        // Try to read the key
+        let j=i+2,key='';
+        while(j<n&&code[j]!==q){
+          if(code[j]==='\\'){j+=2;continue;}
+          key+=code[j++];
+        }
+        // j now points at closing quote, j+1 should be ]
+        if(j<n&&code[j]===q&&code[j+1]===']'){
+          // Check key is a valid identifier
+          if(key.length>0&&ID_START.test(key[0])&&[...key].every((c,ci)=>ci===0?ID_START.test(c):ID_CONT.test(c))){
+            result+='.'+key;
+            i=j+2;
+            continue;
+          }
+        }
+      }
+    }
+    result+=ch;i++;
+  }
+  return result;
+}
+
 // Master pipeline
 function obfuscate(src,opts){
   resetIds();RNG.seed(getSeed());
@@ -3615,6 +3693,8 @@ function obfuscate(src,opts){
   if(opts.proxywrap)  code=passProxyWrap(code);
   // Unicode mangle — skip when Bytecode VM or Opcode VM active (causes SyntaxError in new Function string)
   if(opts.unimangle&&(_vmMode==='none'||_vmMode===''))code=passUnicodeMangle(code);// skip for all VM modes — causes SyntaxError in indirect eval strings
+  // When Bracket Access is OFF, convert generated ['prop'] back to .prop in all generated code
+  if(!opts.prop)      code=postConvertBracketsToDot(code);
   // strict mode handling
   const _sm=opts.strict_mode||'always';
   if(_sm==='always'){code="'use strict';\n"+code;}
@@ -4438,6 +4518,18 @@ function loadSettings(){
     return true;
   }catch(e){console.warn('load failed',e);return false;}
 }
+
+// Move perf text from labels to toggle tooltips
+(function(){
+  document.querySelectorAll('.row').forEach(row=>{
+    const perfEl=row.querySelector('b.perf, .perf-tag');
+    if(!perfEl)return;
+    const tog=row.querySelector('.tog');
+    if(!tog)return;
+    const txt=perfEl.textContent.trim();
+    if(txt)tog.setAttribute('data-perf',txt);
+  });
+})();
 
 // Init — do NOT call applyPreset() here; window.load handler does it after loadSettings()
 document.querySelectorAll('input[type=checkbox]').forEach(el=>el.addEventListener('change',liveCheck));
