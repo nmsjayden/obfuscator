@@ -2296,7 +2296,7 @@ function passBytecodeVM(code,opts,st){
   }
 
   // ── 1. Randomised opcode assignments ─────────────────────────
-  const OPNAMES=['PUSH_K','PUSH_V','LOAD','STORE','GET','SET',
+  const OPNAMES=['PUSH_G','PUSH_L','LOAD','STORE','GET','SET',
     'CALL','MCALL','NEW_C','BIN','UNARY','POP','DUP',
     'JMP','JIF','JIT','EXEC_RAW','PUSH_ARR','PUSH_OBJ','RETURN'];
   const total=Math.max(OPNAMES.length, opts.bc_opcount||128);
@@ -2398,7 +2398,7 @@ function passBytecodeVM(code,opts,st){
         eat();
         // Stack: [..., obj] → dup obj for MCALL receiver, then get property
         emit(OP.DUP);                      // [..., obj, obj]
-        emit(OP.PUSH_K,addStr(prop.v));
+        emit(OP.PUSH_G,addStr(prop.v));
         emit(OP.GET);                      // [..., obj, fn]
         isMethod=true;
       }else if(v==='['){
@@ -2441,32 +2441,32 @@ function passBytecodeVM(code,opts,st){
     if(!tok)return false;
     const {t,v}=tok;
     // Literals
-    if(t==='num'){eat();emit(OP.PUSH_K,addNum(parseFloat(v)));return true;}
+    if(t==='num'){eat();emit(OP.PUSH_G,addNum(parseFloat(v)));return true;}
     if(t==='str'){
       eat();
       try{
         let raw=v;
         if(raw[0]==='"'||raw[0]==="'")raw=JSON.parse(raw[0]==='"'?raw:'"'+raw.slice(1,-1).replace(/(?<!\\)"/g,'\\"')+'"');
         else raw=raw.slice(1,-1);
-        emit(OP.PUSH_K,addStr(raw));return true;
+        emit(OP.PUSH_G,addStr(raw));return true;
       }catch(e){return false;}
     }
     if(t==='regex'){eat();emit(OP.EXEC_RAW,addC(C_RAW,v));return false;}// fallback
     if(t==='id'){
-      if(v==='true'){eat();emit(OP.PUSH_K,addC(C_BOOL,true));return true;}
-      if(v==='false'){eat();emit(OP.PUSH_K,addC(C_BOOL,false));return true;}
-      if(v==='null'){eat();emit(OP.PUSH_K,addC(C_NULL,null));return true;}
-      if(v==='undefined'){eat();emit(OP.PUSH_K,addC(C_UNDEF,undefined));return true;}
+      if(v==='true'){eat();emit(OP.PUSH_G,addC(C_BOOL,true));return true;}
+      if(v==='false'){eat();emit(OP.PUSH_G,addC(C_BOOL,false));return true;}
+      if(v==='null'){eat();emit(OP.PUSH_G,addC(C_NULL,null));return true;}
+      if(v==='undefined'){eat();emit(OP.PUSH_G,addC(C_UNDEF,undefined));return true;}
       if(v==='typeof'){eat();if(compileExpr()===false)return false;emit(OP.UNARY,UNOPS.indexOf('typeof'));return true;}
       if(v==='void'){eat();if(compileExpr()===false)return false;emit(OP.UNARY,UNOPS.indexOf('void'));return true;}
       if(v==='new'){
         eat();skipWs();
         const ctorTok=peek();
         if(!ctorTok||ctorTok.t!=='id')return false;
-        eat();emit(OP.PUSH_V,addStr(ctorTok.v));emit(OP.LOAD);
+        eat();emit(OP.PUSH_L,addStr(ctorTok.v));emit(OP.LOAD);
         // handle chained new e.g. new Foo.Bar
         skipWs();
-        while(peekv()==='.'){eat();skipWs();const p=peek();if(!p||p.t!=='id')return false;eat();emit(OP.PUSH_K,addStr(p.v));emit(OP.GET);}
+        while(peekv()==='.'){eat();skipWs();const p=peek();if(!p||p.t!=='id')return false;eat();emit(OP.PUSH_G,addStr(p.v));emit(OP.GET);}
         if(!expect('('))return false;
         const argc=compileArgList();if(argc===false)return false;
         if(!expect(')'))return false;
@@ -2478,7 +2478,7 @@ function passBytecodeVM(code,opts,st){
         emit(OP.UNARY,UNOPS.indexOf(v));return true;
       }
       // Plain identifier
-      eat();emit(OP.PUSH_V,addStr(v));emit(OP.LOAD);return true;
+      eat();emit(OP.PUSH_L,addStr(v));emit(OP.LOAD);return true;
     }
     if(t==='op'){
       if(v==='('){eat();if(compileExpr(0)===false)return false;return expect(')');}
@@ -2528,17 +2528,17 @@ function passBytecodeVM(code,opts,st){
         eat();
         if(compileExpr(0)===false)return false;
       }else{
-        emit(OP.PUSH_K,addC(C_UNDEF,undefined));
+        emit(OP.PUSH_G,addC(C_UNDEF,undefined));
       }
-      emit(OP.PUSH_V,addStr(name.v));
+      emit(OP.PUSH_L,addStr(name.v));
       emit(OP.STORE);
       // handle , x=... chains
       while(peekv()===','){
         eat();skipWs();
         const n2=peek();if(!n2||n2.t!=='id')return false;eat();
         if(peekv()==='='){eat();if(compileExpr(0)===false)return false;}
-        else emit(OP.PUSH_K,addC(C_UNDEF,undefined));
-        emit(OP.PUSH_V,addStr(n2.v));emit(OP.STORE);
+        else emit(OP.PUSH_G,addC(C_UNDEF,undefined));
+        emit(OP.PUSH_L,addStr(n2.v));emit(OP.STORE);
       }
       return true;
     }
@@ -2547,7 +2547,7 @@ function passBytecodeVM(code,opts,st){
     if(first.t==='id'&&first.v==='return'){
       eat();skipWs();
       if(peek()&&peekv()!==';'){if(compileExpr(0)===false)return false;}
-      else emit(OP.PUSH_K,addC(C_UNDEF,undefined));
+      else emit(OP.PUSH_G,addC(C_UNDEF,undefined));
       emit(OP.RETURN);return true;
     }
 
@@ -2555,7 +2555,7 @@ function passBytecodeVM(code,opts,st){
     if(first.t==='id'&&T[1]&&T[1].v==='='){
       eat();eat();
       if(compileExpr(0)===false)return false;
-      emit(OP.PUSH_V,addStr(first.v));
+      emit(OP.PUSH_L,addStr(first.v));
       emit(OP.STORE);return true;
     }
 
@@ -2697,13 +2697,13 @@ function passBytecodeVM(code,opts,st){
     if(idxEnc==='xor'||(idxEnc==='fibonacci'&&!fibViable))return v^idxSalt;
     return v; // raw
   }
-  // Patch all PUSH_K and PUSH_V opcode arguments in K to use remapped+encoded indices
-  // K entries: opcode, then for PUSH_K/PUSH_V the next entry is a pool index
+  // Patch all PUSH_G and PUSH_L opcode arguments in K to use remapped+encoded indices
+  // K entries: opcode, then for PUSH_G/PUSH_L the next entry is a pool index
   const patchedK=[];
   for(let ki=0;ki<K.length;ki++){
     const op=K[ki];
     patchedK.push(op);
-    if(op===OP.PUSH_K||op===OP.PUSH_V||op===OP.EXEC_RAW){
+    if(op===OP.PUSH_G||op===OP.PUSH_L||op===OP.EXEC_RAW){
       ki++;
       const origIdx=K[ki];
       const remapped=remapIdx(origIdx);
@@ -2718,7 +2718,7 @@ function passBytecodeVM(code,opts,st){
     for(let ki=0;ki<patchedK.length;ki++){
       const op=patchedK[ki];
       deltaK.push(op);
-      if(op===OP.PUSH_K||op===OP.PUSH_V||op===OP.EXEC_RAW){
+      if(op===OP.PUSH_G||op===OP.PUSH_L||op===OP.EXEC_RAW){
         ki++;
         const idx=patchedK[ki];
         deltaK.push(idx-lastIdx);
@@ -2731,8 +2731,8 @@ function passBytecodeVM(code,opts,st){
 
   // ── Macro Operands ────────────────────────────────────────────
   // Folds common instruction sequences into single macro opcodes.
-  // PUSH_V + LOAD  →  MACRO_LOAD_VAR  (load variable by name direct)
-  // PUSH_K + PUSH_V + LOAD + BIN + PUSH_V + STORE  →  MACRO_BINOP_TO_VAR
+  // PUSH_L + LOAD  →  MACRO_LOAD_VAR  (load variable by name direct)
+  // PUSH_G + PUSH_L + LOAD + BIN + PUSH_L + STORE  →  MACRO_BINOP_TO_VAR
   // This breaks sequence-pattern recognition tools and reduces bytecode size.
   let macroOps={};
   if(opts.bc_macro){
@@ -2740,9 +2740,9 @@ function passBytecodeVM(code,opts,st){
     const usedSlots=new Set(slots.slice(0,OPNAMES.length));
     const freeSlots=slots.filter(s=>!usedSlots.has(s));
     let msi=OPNAMES.length; // index into slots array for macros
-    const MACRO_LOAD_VAR   = slots[msi++]; // PUSH_V idx + LOAD → pops name, pushes value
-    const MACRO_STORE_VAR  = slots[msi++]; // val + PUSH_V idx + STORE → stores TOS to named var
-    const MACRO_PUSH_LOAD  = slots[msi++]; // PUSH_K idx → pushes constant then immediately loads as var
+    const MACRO_LOAD_VAR   = slots[msi++]; // PUSH_L idx + LOAD → pops name, pushes value
+    const MACRO_STORE_VAR  = slots[msi++]; // val + PUSH_L idx + STORE → stores TOS to named var
+    const MACRO_PUSH_LOAD  = slots[msi++]; // PUSH_G idx → pushes constant then immediately loads as var
     macroOps={MACRO_LOAD_VAR,MACRO_STORE_VAR,MACRO_PUSH_LOAD};
 
     // Fold patterns in finalK
@@ -2750,19 +2750,19 @@ function passBytecodeVM(code,opts,st){
     let ki=0;
     while(ki<finalK.length){
       const op=finalK[ki];
-      // Pattern: PUSH_V idx, LOAD  →  MACRO_LOAD_VAR idx
-      if(op===OP.PUSH_V&&ki+2<finalK.length&&finalK[ki+2]===OP.LOAD){
+      // Pattern: PUSH_L idx, LOAD  →  MACRO_LOAD_VAR idx
+      if(op===OP.PUSH_L&&ki+2<finalK.length&&finalK[ki+2]===OP.LOAD){
         folded.push(MACRO_LOAD_VAR,finalK[ki+1]);
         ki+=3;continue;
       }
-      // Pattern: PUSH_V idx, STORE  →  MACRO_STORE_VAR idx
-      if(op===OP.PUSH_V&&ki+2<finalK.length&&finalK[ki+2]===OP.STORE){
+      // Pattern: PUSH_L idx, STORE  →  MACRO_STORE_VAR idx
+      if(op===OP.PUSH_L&&ki+2<finalK.length&&finalK[ki+2]===OP.STORE){
         folded.push(MACRO_STORE_VAR,finalK[ki+1]);
         ki+=3;continue;
       }
       folded.push(op);
       // carry operand if this opcode has one
-      if(op===OP.PUSH_K||op===OP.PUSH_V||op===OP.EXEC_RAW||
+      if(op===OP.PUSH_G||op===OP.PUSH_L||op===OP.EXEC_RAW||
          op===OP.CALL||op===OP.MCALL||op===OP.NEW_C||
          op===OP.BIN||op===OP.UNARY||op===OP.PUSH_ARR||
          op===OP.PUSH_OBJ||op===OP.JMP||op===OP.JIF||op===OP.JIT){
@@ -2793,7 +2793,7 @@ function passBytecodeVM(code,opts,st){
         // ~25% chance to insert a phantom constant-push + smear-pop pair
         if(RNG.next()<0.25&&finalK.length<4000){
           // push a dummy pool constant (use index 0 — always exists) then smear-pop it
-          smeared.push(OP.PUSH_K, encodeKIdx(remapIdx(0)));
+          smeared.push(OP.PUSH_G, encodeKIdx(remapIdx(0)));
           smeared.push(smearOp);
         }
       }
@@ -2855,7 +2855,7 @@ function passBytecodeVM(code,opts,st){
     finalK.push(...wmPadding);
 
     // Mark argument positions
-    const opcWithArg=new Set([OP.PUSH_K,OP.PUSH_V,OP.EXEC_RAW,OP.CALL,OP.MCALL,
+    const opcWithArg=new Set([OP.PUSH_G,OP.PUSH_L,OP.EXEC_RAW,OP.CALL,OP.MCALL,
       OP.NEW_C,OP.BIN,OP.UNARY,OP.PUSH_ARR,OP.PUSH_OBJ,OP.JMP,OP.JIF,OP.JIT]);
     const isArgPos=new Set();
     for(let ki=0;ki<finalK.length;ki++){
@@ -3098,11 +3098,11 @@ function passBytecodeVM(code,opts,st){
   // Pool index read helper using hE/hK
   const readPoolIdx=`${vDecIdx}(${hK}[${hE}['n'][0]++])`;
 
-  // PUSH_K — read pool idx, decode, push constant value
-  emitHandlerH(OP.PUSH_K,`${sPush(ES2,`${vDecC}(${readPoolIdx})`)};`);
+  // PUSH_G — read pool idx, decode, push constant value
+  emitHandlerH(OP.PUSH_G,`${sPush(ES2,`${vDecC}(${readPoolIdx})`)};`);
 
-  // PUSH_V — read pool idx, decode, push name string (for LOAD/STORE)
-  emitHandlerH(OP.PUSH_V,`${sPush(ES2,`${vDecC}(${readPoolIdx})`)};`);
+  // PUSH_L — read pool idx, decode, push name string (for LOAD/STORE)
+  emitHandlerH(OP.PUSH_L,`${sPush(ES2,`${vDecC}(${readPoolIdx})`)};`);
 
   // LOAD: pop name, push value
   emitHandlerH(OP.LOAD,`var ${hN}=${sPop(ES2)};${sPush(ES2,`${vLoad}(${hN},${hE}['sc'])`)};`);
@@ -3337,8 +3337,8 @@ function passBytecodeVM(code,opts,st){
       caseLines.push(`${cases}{${body}}break;`);
     }
     const cN=freshId(),cV=freshId(),cP=freshId(),cO=freshId(),cOff=freshId(),cTmp=freshId(),cIter=freshId();
-    emitCase(OP.PUSH_K,  `${cPush(cES,`${vDecC}(${cReadIdx})`)};`);
-    emitCase(OP.PUSH_V,  `${cPush(cES,`${vDecC}(${cReadIdx})`)};`);
+    emitCase(OP.PUSH_G,  `${cPush(cES,`${vDecC}(${cReadIdx})`)};`);
+    emitCase(OP.PUSH_L,  `${cPush(cES,`${vDecC}(${cReadIdx})`)};`);
     emitCase(OP.LOAD,    `var ${cN}=${cPop(cES)};${cPush(cES,`${vLoad}(${cN},${vE}['sc'])`)};`);
     emitCase(OP.STORE,   `var ${cN}=${cPop(cES)},${cV}=${cPop(cES)};${vE}['sc'][${cN}]=${cV};`);
     emitCase(OP.GET,     `var ${cP}=${cPop(cES)},${cO}=${cPop(cES)};${cPush(cES,`${cO}[${cP}]`)};`);
