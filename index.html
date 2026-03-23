@@ -584,8 +584,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
       <div class="tpanel active" id="tpanel-strings">
         <div class="grp">
           <div class="grp-lbl">String Array</div>
+          <div class="row"><label class="rl">Enable<small>Extract all strings into encrypted pool</small></label><label class="tog"><input type="checkbox" id="o_sarr" checked onchange="showSub('sarr-sub',this.checked);liveCheck()"><span class="tk"></span></label></div>
           <div id="sarr-sub">
-            <div class="row"><label class="rl">Enable<small>Extract all strings into encrypted pool</small></label><label class="tog"><input type="checkbox" id="o_sarr" checked onchange="showSub('sarr-sub',this.checked);liveCheck()"><span class="tk"></span></label></div>
             <div class="fld"><div class="fld-lbl">Encoding</div>
               <div class="msw" id="msw-enc">
                 <button class="ms-btn" type="button" onclick="msToggle('enc')"><span class="ms-text" id="ms-enc-text">RC4 + XOR</span><span class="ms-arrow">▾</span></button>
@@ -642,8 +642,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
       <div class="tpanel" id="tpanel-identifiers">
         <div class="grp">
           <div class="grp-lbl">Renaming</div>
+          <div class="row"><label class="rl">Rename Variables<small>Replace all local identifier names</small></label><label class="tog"><input type="checkbox" id="o_ren" checked onchange="showSub('ren-sub',this.checked)"><span class="tk"></span></label></div>
           <div id="ren-sub">
-            <div class="row"><label class="rl">Rename Variables<small>Replace all local identifier names</small></label><label class="tog"><input type="checkbox" id="o_ren" checked onchange="showSub('ren-sub',this.checked)"><span class="tk"></span></label></div>
             <div class="fld"><div class="fld-lbl">Generator</div><select class="fsel" id="o_namegen" onchange="showSub('dict-sub',this.value==='dictionary')"><option value="hexadecimal">Hexadecimal (_0x…)</option><option value="mangled">Mangled (a,b,c…)</option><option value="dictionary">Dictionary</option></select></div>
             <div class="fld"><div class="fld-lbl">Prefix</div><input class="fi" id="o_idpfx" type="text" placeholder="e.g. _x (optional)"></div>
             <div id="dict-sub"><div class="fld"><div class="fld-lbl">Dictionary Words</div><div class="tagw" id="ta-dict" onclick="G('ti-dict').focus()"><input class="ti" id="ti-dict" placeholder="word, Enter…" onkeydown="tagKey(event,'ta-dict','ti-dict')"></div></div></div>
@@ -672,12 +672,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
       <div class="tpanel" id="tpanel-flow">
         <div class="grp">
           <div class="grp-lbl">Flow Obfuscation</div>
+          <div class="row"><label class="rl">Control Flow Flattening<small>Shuffle into while/switch dispatch</small></label><label class="tog"><input type="checkbox" id="o_cff" checked onchange="showSub('cff-sub',this.checked)"><span class="tk"></span></label></div>
           <div id="cff-sub">
-            <div class="row"><label class="rl">Control Flow Flattening<small>Shuffle into while/switch dispatch</small></label><label class="tog"><input type="checkbox" id="o_cff" checked onchange="showSub('cff-sub',this.checked)"><span class="tk"></span></label></div>
             <div class="sl"><div class="sl-head"><span class="sl-name">CFF Threshold</span><span class="sv" id="v-cff">0.75</span></div><div class="srow"><input type="range" id="o_cff_t" min="0" max="1" step=".05" value=".75" oninput="SETD('v-cff',parseFloat(this.value).toFixed(2))"></div></div>
           </div>
+          <div class="row"><label class="rl">Dead Code Injection<small>Opaque always-false branches</small></label><label class="tog"><input type="checkbox" id="o_dead" checked onchange="showSub('dead-sub',this.checked)"><span class="tk"></span></label></div>
           <div id="dead-sub">
-            <div class="row"><label class="rl">Dead Code Injection<small>Opaque always-false branches</small></label><label class="tog"><input type="checkbox" id="o_dead" checked onchange="showSub('dead-sub',this.checked)"><span class="tk"></span></label></div>
             <div class="sl"><div class="sl-head"><span class="sl-name">Dead Code Threshold</span><span class="sv" id="v-dead">0.40</span></div><div class="srow"><input type="range" id="o_dead_t" min="0" max="1" step=".05" value=".4" oninput="SETD('v-dead',parseFloat(this.value).toFixed(2))"></div></div>
           </div>
           <div class="row"><label class="rl">IIFE Wrap<small>(function(){…})()</small></label><label class="tog"><input type="checkbox" id="o_iife" checked><span class="tk"></span></label></div>
@@ -763,17 +763,21 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           <div class="row"><label class="rl">Tamper Detection<small>Runtime sentinel variable guard</small></label><label class="tog"><input type="checkbox" id="o_tamp" checked><span class="tk"></span></label></div>
           <div class="row"><label class="rl">Disable Console<small>Nulls console.log/warn/error</small></label><label class="tog"><input type="checkbox" id="o_con"><span class="tk"></span></label></div>
         </div>
-        <div class="grp" id="dbg-sub">
+        <div class="grp">
           <div class="grp-lbl">Debug Protection</div>
           <div class="row"><label class="rl">DevTools Freeze<small>setInterval debugger trap</small></label><label class="tog"><input type="checkbox" id="o_dbg" checked onchange="showSub('dbg-sub',this.checked)"><span class="tk"></span></label></div>
-          <div class="sl"><div class="sl-head"><span class="sl-name">Interval (ms)</span><span class="sv" id="v-dbg">2000</span></div><div class="srow"><input type="range" id="o_dbgint" min="0" max="5000" step="100" value="2000" oninput="SETD('v-dbg',this.value)"></div></div>
+          <div id="dbg-sub">
+            <div class="sl"><div class="sl-head"><span class="sl-name">Interval (ms)</span><span class="sv" id="v-dbg">2000</span></div><div class="srow"><input type="range" id="o_dbgint" min="0" max="5000" step="100" value="2000" oninput="SETD('v-dbg',this.value)"></div></div>
+          </div>
         </div>
-        <div class="grp" id="dom-sub">
+        <div class="grp">
           <div class="grp-lbl">Domain Lock</div>
           <div class="row"><label class="rl">Enable<small>Restrict to listed hostnames</small></label><label class="tog"><input type="checkbox" id="o_dom" onchange="showSub('dom-sub',this.checked);liveCheck()"><span class="tk"></span></label></div>
-          <div class="drow"><input class="fi" id="dom-inp" type="text" placeholder="example.com" onkeydown="if(event.key==='Enter')addDomain()"><button class="btn-add" onclick="addDomain()">+ Add</button></div>
-          <div class="dlist" id="dom-list"></div>
-          <div class="fld"><div class="fld-lbl">Redirect URL</div><input class="fi" id="o_domredir" type="text" placeholder="https://example.com/blocked"></div>
+          <div id="dom-sub" style="display:none">
+            <div class="drow"><input class="fi" id="dom-inp" type="text" placeholder="example.com" onkeydown="if(event.key==='Enter')addDomain()"><button class="btn-add" onclick="addDomain()">+ Add</button></div>
+            <div class="dlist" id="dom-list"></div>
+            <div class="fld"><div class="fld-lbl">Redirect URL</div><input class="fi" id="o_domredir" type="text" placeholder="https://example.com/blocked"></div>
+          </div>
         </div>
 
         <div class="grp">
@@ -819,12 +823,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           <div class="row"><label class="rl">Ignore Imports<small>Pass import/require through unchanged</small></label><label class="tog"><input type="checkbox" id="o_ignimport"><span class="tk"></span></label></div>
           <div class="row"><label class="rl">HTML Mode<small>Obfuscate &lt;script&gt; blocks in HTML</small></label><label class="tog"><input type="checkbox" id="o_html"><span class="tk"></span></label></div>
         </div>
-        <div class="grp" id="smap-sub">
+        <div class="grp">
           <div class="grp-lbl">Source Map</div>
           <div class="row"><label class="rl">Generate<small>Map output back to original source</small></label><label class="tog"><input type="checkbox" id="o_srcmap" onchange="showSub('smap-sub',this.checked);G('btn-map').disabled=!this.checked"><span class="tk"></span></label></div>
-          <div class="fld"><div class="fld-lbl">Map URL</div><input class="fi" id="o_smap_url" type="text" placeholder="output.js.map"></div>
-          <div class="fld"><div class="fld-lbl">Source Root</div><input class="fi" id="o_smap_root" type="text" placeholder="/"></div>
-          <div class="info-box">Keep .map files private — they contain original source.</div>
+          <div id="smap-sub" style="display:none">
+            <div class="fld"><div class="fld-lbl">Map URL</div><input class="fi" id="o_smap_url" type="text" placeholder="output.js.map"></div>
+            <div class="fld"><div class="fld-lbl">Source Root</div><input class="fi" id="o_smap_root" type="text" placeholder="/"></div>
+            <div class="info-box">Keep .map files private — they contain original source.</div>
+          </div>
         </div>
       </div>
 
@@ -1030,10 +1036,6 @@ function SETV(id,v){
 }
 function SETD(id,v){const e=G(id);if(e)e.textContent=v;}
 function showSub(id,show){
-  // sarr-sub is always visible (contains the sarr enable toggle itself)
-  if(id==='sarr-sub'){
-    const e=G(id);if(e)e.style.display='block';return;
-  }
   const e=G(id);if(e)e.style.display=show?'block':'none';
 }
 // Multi-select
@@ -3074,12 +3076,12 @@ function applyPreset(){
   const ADV_IDS=['o_scopefog','o_tdztrap','o_protguard','o_timingcanary','o_callmutate','o_homoglyph','o_cfhash'];
   const ALL=['o_html','o_mini','o_semi','o_simplify','o_ignimport','o_con',
     'o_self','o_antib','o_native','o_tamp','o_dbg','o_dom','o_srcmap',
-    'o_sarr','o_srot','o_sshuf','o_calltrans',
+    'o_sarr','o_srot','o_sshuf','o_calltrans','o_wchain',
     'o_senc','o_charcode','o_atob','o_tmpl','o_ssplit','o_clfold','o_ptrenc',
     'o_ren','o_renglobal','o_renprop','o_prop','o_unimangle','o_fakeproto',
     'o_hexn','o_nsplit','o_math','o_evaldisguise',
     'o_cff','o_dead','o_iife','o_comma','o_objkeys',
-    'o_bc','o_bc_dynop','o_bc_stateful','o_bc_jmpenc','o_bc_wrapinit',
+    'o_bc','o_vm_enable','o_bc_dynop','o_bc_stateful','o_bc_jmpenc','o_bc_wrapinit',
     'o_bc_decoy','o_bc_dead','o_bc_antidebug','o_bc_sarrbconly','o_chunk',
     ...TRAP_IDS,...ADV_IDS];
   ALL.forEach(id=>{const e=G(id);if(e){e.disabled=false;e.checked=false;}});
@@ -3137,19 +3139,27 @@ function applyPreset(){
     SETV('o_bc_opcount','220');SETD('v-bc-opcount','220');
   }
 
-  // 'custom' = user-defined checkboxes, but reset sliders + multiselects to neutral defaults
+  // 'custom' = clear everything then let user build from scratch
   if(p==='custom'){
-    SETV('o_thresh','1');    SETD('v-thresh','1.00');
-    SETV('o_idxshift','0'); SETD('v-idxsh','0');
-    SETV('o_cff_t','.75');  SETD('v-cff','0.75');
-    SETV('o_dead_t','.4');  SETD('v-dead','0.40');
-    SETV('o_dbgint','2000');SETD('v-dbg','2000');
-    SETV('o_wcount','1');   SETD('v-wc','1');
-    SETV('o_wparams','2');  SETD('v-wp','2');
-    SETV('o_sschunk','10'); SETD('v-ssc','10');
-    SETV('o_bcchunk','300');SETD('v-bcc','300');
-    SETV('o_bc_opcount','34');SETD('v-bc-opcount','34');
+    // ALL.forEach already cleared checkboxes above; also reset enc/idx multiselects and VM
+    SETV('o_vm_mode','none');applyVmMode('none');
     setEnc(false,false,false);setIdx(true,false);
+    // Reset every slider to its min value
+    const DISP_MAP={'o_thresh':'v-thresh','o_idxshift':'v-idxsh','o_cff_t':'v-cff',
+      'o_dead_t':'v-dead','o_dbgint':'v-dbg','o_wcount':'v-wc','o_wparams':'v-wp',
+      'o_sschunk':'v-ssc','o_bcchunk':'v-bcc','o_bc_opcount':'v-bc-opcount'};
+    document.querySelectorAll('input[type=range][id]').forEach(el=>{
+      const minVal=el.min||'0';
+      el.value=minVal;
+      const dispId=DISP_MAP[el.id];
+      if(dispId){const dv=G(dispId);if(dv)dv.textContent=(el.step&&parseFloat(el.step)<1)?parseFloat(minVal).toFixed(2):minVal;}
+    });
+    // Reset sub-panel visibility (everything off)
+    showSub('sarr-sub',false);showSub('bc-sub',false);showSub('ct-sub',false);
+    showSub('ssplit-chunk-sub',false);showSub('cff-sub',false);showSub('dead-sub',false);
+    showSub('dbg-sub',false);showSub('ren-sub',false);showSub('dom-sub',false);
+    showSub('smap-sub',false);showSub('dict-sub',false);
+    G('renprop-w').style.display='none';
     applyTargetConstraints();
     refreshAllSliders();
     updateOpcodeDisplay();
@@ -3171,7 +3181,10 @@ function applyPreset(){
   showSub('dead-sub',CHK('o_dead'));
   showSub('dbg-sub',CHK('o_dbg'));
   showSub('ren-sub',CHK('o_ren'));
-  G('renprop-w').style.display='none';
+  showSub('dom-sub',CHK('o_dom'));
+  showSub('smap-sub',CHK('o_srcmap'));
+  G('btn-map').disabled=!CHK('o_srcmap');
+  G('renprop-w').style.display=CHK('o_renprop')?'block':'none';
   liveCheck();
   const pd=document.getElementById('sb-preset-display');
   if(pd){const p=document.getElementById('preset');if(p)pd.textContent='Preset: '+p.options[p.selectedIndex].text;}
@@ -3429,16 +3442,19 @@ function applyAutoConfig(){
   if(!_acScan&&!_acRecs.length){closeAutoConfig();return;}
   const ALL=['o_html','o_mini','o_semi','o_simplify','o_ignimport','o_con',
     'o_self','o_antib','o_native','o_tamp','o_dbg','o_dom','o_srcmap',
-    'o_sarr','o_srot','o_sshuf','o_calltrans',
+    'o_sarr','o_srot','o_sshuf','o_calltrans','o_wchain',
     'o_senc','o_charcode','o_atob','o_tmpl','o_ssplit','o_clfold','o_ptrenc',
     'o_ren','o_renglobal','o_renprop','o_prop','o_unimangle','o_fakeproto',
     'o_hexn','o_nsplit','o_math','o_evaldisguise',
     'o_cff','o_dead','o_iife','o_comma','o_objkeys',
-    'o_bc','o_bc_dynop','o_bc_stateful','o_bc_jmpenc','o_bc_wrapinit',
+    'o_bc','o_vm_enable','o_bc_dynop','o_bc_stateful','o_bc_jmpenc','o_bc_wrapinit',
     'o_bc_decoy','o_bc_dead','o_bc_antidebug','o_bc_sarrbconly','o_chunk',
     'o_opaque','o_canary','o_envfp','o_deobtrap','o_proxywrap','o_junkpoly','o_hashlocked','o_interntrap',
     'o_callmutate','o_scopefog','o_tdztrap','o_protguard','o_timingcanary','o_homoglyph','o_cfhash'];
   ALL.forEach(id=>{const e=G(id);if(e){e.disabled=false;e.checked=false;}});
+  // Reset VM and multiselects to clean state before applying recs
+  SETV('o_vm_mode','none');applyVmMode('none');
+  setEnc(false,false,false);setIdx(true,false);
   _acRecs.forEach(r=>{if(r.fn)r.fn();});
   if(_acScan)setTarget(_acScan.detectedTarget||'browser');
   SETV('preset','custom');
@@ -3450,8 +3466,13 @@ function applyAutoConfig(){
   showSub('dead-sub',CHK('o_dead'));
   showSub('dbg-sub',CHK('o_dbg'));
   showSub('ren-sub',CHK('o_ren'));
-  G('renprop-w').style.display='none';
+  showSub('dom-sub',CHK('o_dom'));
+  showSub('smap-sub',CHK('o_srcmap'));
+  G('btn-map').disabled=!CHK('o_srcmap');
+  G('renprop-w').style.display=CHK('o_renprop')?'block':'none';
   applyTargetConstraints();
+  refreshAllSliders();
+  updateOpcodeDisplay();
   liveCheck();
   closeAutoConfig();
   saveSettings();
@@ -3559,6 +3580,7 @@ function loadSettings(){
     showSub('dbg-sub',CHK('o_dbg'));
     showSub('ren-sub',CHK('o_ren'));
     showSub('dom-sub',CHK('o_dom'));
+    showSub('smap-sub',CHK('o_srcmap'));
     if(VAL('o_namegen')==='dictionary')showSub('dict-sub',true);
     G('renprop-w').style.display=CHK('o_renprop')?'block':'none';
 
@@ -3605,7 +3627,7 @@ window.addEventListener('load',()=>{
   (function fixSubPanels(){
     // These sub-panels are shown/hidden by their checkbox
     const pairs=[
-      ['ct-sub','o_calltrans'],['cff-sub','o_cff'],['dead-sub','o_dead'],
+      ['sarr-sub','o_sarr'],['ct-sub','o_calltrans'],['cff-sub','o_cff'],['dead-sub','o_dead'],
       ['dbg-sub','o_dbg'],['ren-sub','o_ren'],
       ['dom-sub','o_dom'],['smap-sub','o_srcmap'],['ssplit-chunk-sub','o_ssplit'],
     ];
@@ -3615,8 +3637,6 @@ window.addEventListener('load',()=>{
       const cb=document.getElementById(chk);
       el.style.display=(cb&&cb.checked)?'block':'none';
     });
-    // sarr-sub shows all String Array options — always block, toggled by o_sarr
-    showSub('sarr-sub',CHK('o_sarr'));
     // dict-sub: only when namegen=dictionary
     showSub('dict-sub',VAL('o_namegen')==='dictionary');
     // Sync VM enable toggle + bc-sub from restored o_vm_mode
