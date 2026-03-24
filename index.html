@@ -272,6 +272,37 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 /* ─── EDITOR ACTIONS ─── */
 #input-preset option{background:var(--s3);color:var(--body);}
 
+/* ─── EDITOR SEARCH ─── */
+.ed-search{
+  flex-shrink:0;display:flex;flex-direction:column;
+  background:var(--s2);border-bottom:1px solid var(--ln);
+}
+.ed-search-row{
+  display:flex;align-items:center;gap:4px;padding:4px 10px;
+}
+.ed-replace-row{border-top:1px solid rgba(255,255,255,.04);padding-top:3px;padding-bottom:3px;}
+.ed-search-inp{
+  flex:1;background:var(--s3);border:1px solid var(--ln);
+  color:var(--body);font-family:var(--mono);font-size:11px;
+  padding:3px 7px;border-radius:var(--r);outline:none;transition:border-color .12s;
+}
+.ed-search-inp:focus{border-color:var(--acc2);}
+.ed-search-count{font-size:10px;color:var(--mute);white-space:nowrap;min-width:52px;text-align:right;}
+.ed-search-nav{
+  background:none;border:1px solid var(--ln);color:var(--soft);
+  font-size:10px;padding:2px 6px;border-radius:var(--r);cursor:pointer;transition:all .1s;white-space:nowrap;
+}
+.ed-search-nav:hover{color:var(--hi);border-color:var(--ln2);background:var(--s3);}
+.ed-replace-btn{font-size:10px;padding:2px 8px;}
+.ed-search-close{
+  background:none;border:none;color:var(--dim);font-size:13px;cursor:pointer;
+  padding:0 2px;transition:color .1s;line-height:1;flex-shrink:0;
+}
+.ed-search-close:hover{color:var(--red);}
+.ed-search-highlight{background:rgba(255,210,60,.22)!important;border-radius:2px;}
+.ed-search-current{background:rgba(255,140,0,.48)!important;border-radius:2px;outline:1px solid rgba(255,140,0,.7);}
+
+
 .fld{margin-top:7px;}
 .fld-lbl{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin-bottom:3px;}
 .fi,.fsel{
@@ -564,7 +595,23 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           <option value="license">License Check</option>
           <option value="antidbg">Anti-Debug Target</option>
         </select>
+        <button class="ed-act" onclick="beautifyInput()" title="Beautify / format code">Beautify</button>
         <button class="ed-act" onclick="clearInput()">Clear</button>
+      </div>
+      <!-- Search + Replace bar (input only) -->
+      <div class="ed-search" id="search-in" style="display:none">
+        <div class="ed-search-row">
+          <input class="ed-search-inp" id="search-in-inp" type="text" placeholder="Find…" oninput="doSearch('in')" onkeydown="searchKey(event,'in')">
+          <span class="ed-search-count" id="search-in-count"></span>
+          <button class="ed-search-nav" onclick="searchNav('in',-1)" title="Previous (Shift+Enter)">▲</button>
+          <button class="ed-search-nav" onclick="searchNav('in',1)" title="Next (Enter)">▼</button>
+          <button class="ed-search-close" onclick="toggleSearch('in')" title="Close (Esc)">✕</button>
+        </div>
+        <div class="ed-search-row ed-replace-row">
+          <input class="ed-search-inp" id="replace-in-inp" type="text" placeholder="Replace with…" onkeydown="replaceKey(event)">
+          <button class="ed-search-nav ed-replace-btn" onclick="replaceOne()" title="Replace current match">Replace</button>
+          <button class="ed-search-nav ed-replace-btn" onclick="replaceAll()" title="Replace all matches">All</button>
+        </div>
       </div>
       <div class="ed-body" id="in-editor"></div>
     </div>
@@ -582,6 +629,16 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           <span class="st"><b id="s-time">—</b></span>
         </div>
         <span id="out-hint">Run to see output</span>
+      </div>
+      <!-- Search-only bar (output) -->
+      <div class="ed-search" id="search-out" style="display:none">
+        <div class="ed-search-row">
+          <input class="ed-search-inp" id="search-out-inp" type="text" placeholder="Find…" oninput="doSearch('out')" onkeydown="searchKey(event,'out')">
+          <span class="ed-search-count" id="search-out-count"></span>
+          <button class="ed-search-nav" onclick="searchNav('out',-1)" title="Previous (Shift+Enter)">▲</button>
+          <button class="ed-search-nav" onclick="searchNav('out',1)" title="Next (Enter)">▼</button>
+          <button class="ed-search-close" onclick="toggleSearch('out')" title="Close (Esc)">✕</button>
+        </div>
       </div>
       <div class="ed-body" id="out-editor"></div>
     </div>
@@ -649,7 +706,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           <div id="ssplit-sub">
             <div class="row"><label class="rl">Escape Encoding<small>\x61\u0062 hex/unicode escapes · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_senc" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Charcode Arrays<small>"hi" → fromCharCode(104,105) · <b class="perf">perf ×1.1</b></small></label><label class="tog"><input type="checkbox" id="o_charcode"><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Inline atob<small>str → atob(b64) + TextDecoder · <b class="perf">perf ×1.2</b></small></label><label class="tog"><input type="checkbox" id="o_atob" checked><span class="tk"></span></label></div>
+            <div class="row"><label class="rl">Inline atob<small>str → atob(b64) + fromCharCode decode · <b class="perf">perf ×1.2</b></small></label><label class="tog"><input type="checkbox" id="o_atob" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Template Obfuscation<small>str → fromCharCode concat · <b class="perf">perf ×1.1</b></small></label><label class="tog"><input type="checkbox" id="o_tmpl" checked><span class="tk"></span></label></div>
             <div class="row"><label class="rl">Split Strings<small>"hello" → "hel"+"lo" · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_ssplit" checked onchange="showSub('ssplit-chunk-sub',this.checked)"><span class="tk"></span></label></div>
             <div id="ssplit-chunk-sub"><div class="sl"><div class="sl-head"><span class="sl-name">Chunk Length</span><span class="sv" id="v-ssc">10</span></div><div class="srow"><input type="range" id="o_sschunk" min="3" max="60" step="1" value="10" oninput="SETD('v-ssc',this.value)"></div></div></div>
@@ -3928,6 +3985,58 @@ function postConvertBracketsToDot(code){
   return result;
 }
 
+// Token-aware final compaction: collapses multi-space/newline whitespace while
+// preserving string and regex literal contents, and keeping the minimum space
+// required between adjacent identifiers/keywords.
+function _compactCode(code){
+  let out='',i=0,n=code.length;
+  let prevNonSpace=''; // last non-whitespace char written
+  while(i<n){
+    const ch=code[i];
+    // --- String literals: copy verbatim ---
+    if(ch==='"'||ch==="'"){
+      const q=ch;out+=ch;prevNonSpace=ch;i++;
+      while(i<n){const c=code[i];out+=c;i++;
+        if(c==='\\'){out+=code[i]||'';i++;}
+        else if(c===q){prevNonSpace=c;break;}
+      }continue;
+    }
+    if(ch==='`'){
+      out+=ch;prevNonSpace=ch;i++;let d=0;
+      while(i<n){const c=code[i];
+        if(c==='\\'){out+=c+(code[i+1]||'');i+=2;continue;}
+        if(c==='$'&&code[i+1]==='{'){out+='${';i+=2;d++;continue;}
+        if(c==='}'&&d>0){out+=c;i++;d--;continue;}
+        out+=c;i++;prevNonSpace=c;
+        if(c==='`'&&d===0)break;
+      }continue;
+    }
+    // --- Regex literals: copy verbatim (include flags) ---
+    if(ch==='/'){
+      const end=_trySkipRegex(code,i,prevNonSpace);
+      if(end>i){
+        const rx=code.slice(i,end);out+=rx;
+        prevNonSpace=rx[rx.length-1];i=end;
+        // After regex flags, if next char is word char we need a space
+        if(i<n&&/[a-zA-Z_$0-9]/.test(code[i])){out+=' ';}
+        continue;
+      }
+    }
+    // --- Whitespace: collapse to single space, then decide to keep or drop ---
+    if(ch===' '||ch==='\t'||ch==='\r'||ch==='\n'){
+      // Peek at next non-whitespace
+      let j=i;while(j<n&&(code[j]===' '||code[j]==='\t'||code[j]==='\r'||code[j]==='\n'))j++;
+      const nextCh=code[j]||'';
+      // A space is required between two word characters to avoid merging identifiers/keywords
+      const needSpace=/[a-zA-Z0-9_$]/.test(prevNonSpace)&&/[a-zA-Z0-9_$]/.test(nextCh);
+      if(needSpace)out+=' ';
+      i=j;continue;
+    }
+    out+=ch;prevNonSpace=ch;i++;
+  }
+  return out;
+}
+
 // Master pipeline
 function obfuscate(src,opts){
   resetIds();RNG.seed(getSeed());
@@ -3938,6 +4047,24 @@ function obfuscate(src,opts){
   if(_tmHdr)src=_tmExtract.rest;
   let importLines=[],workSrc=src;
   if(opts.ignimport){const r=passIgnoreImports(src);importLines=r.importLines;workSrc=r.rest;}
+
+  // Performance guard: for very large inputs, disable the most expensive O(n²) passes
+  // to avoid freezing the browser. Threshold: ~100 KB of source.
+  const _large=workSrc.length>100000;
+  if(_large){
+    opts={...opts,
+      opaque:false,      // O(n) but many small allocations
+      junkpoly:false,    // O(n) string concat
+      scopefog:false,
+      callmutate:false,
+      hashlocked:false,
+      cfhash:false,
+      deobtrap:false,
+      clfold:false,
+      fakeproto:false,
+      timingcanary:false,
+    };
+  }
   let toks=tokenize(workSrc),preamble='';
   const _vmActive=opts.vm_mode&&opts.vm_mode!=='none';
   const doSarr=opts.sarr&&(!opts.bc_sarrbconly||_vmActive);
@@ -4016,23 +4143,15 @@ function obfuscate(src,opts){
   // When Bracket Access is OFF, convert generated ['prop'] back to .prop
   if(!opts.prop)      code=postConvertBracketsToDot(code);
   // strict mode handling — must happen BEFORE final compaction so the newline gets stripped
-  const _sm=opts.strict_mode||'always';
+  const _sm=opts.strict_mode||'auto';
   if(_sm==='always'){code="'use strict';"+code;}
   else if(_sm==='auto'){if(/['"]use strict['"]/.test(src))code="'use strict';"+code;}
   // 'never' = strip any existing 'use strict'
   else if(_sm==='never'){code=code.replace(/^['"]use strict['"];?\n?/,'');}
   // Final compaction — collapse any newlines/spaces left by post-minify passes
-  // Must be regex-aware: a space between /regex/flags and a word is required
+  // Token-aware: skips string literals and regex literals so their content is never touched
   if(opts.mini){
-    // Step 1: collapse all whitespace sequences to a single space
-    code=code.replace(/[ \t\r\n]+/g,' ').trim();
-    // Step 2: remove spaces that are safe to remove (around punctuation)
-    // Do NOT remove a space between a regex-like slash sequence and an alphanumeric char
-    // Pattern: remove spaces around operators/punctuation, but preserve word boundaries
-    code=code.replace(/ ?([\{\}\[\]\(\);,]) ?/g,'$1');
-    // Step 3: ensure a space remains after regex literals followed by word chars
-    // Detect /.../ followed by optional flags then a letter/_ — insert space if missing
-    code=code.replace(/(\/[gimsuy]*)([a-zA-Z_$`"'])/g,'$1 $2');
+    code=_compactCode(code);
   }
   if(importLines.length)code=importLines.join('\n')+'\n'+code;
   if(_tmHdr)code=_tmHdr+code;
@@ -4148,7 +4267,7 @@ function liveCheck(){
 function getOpts(){
   return{
     html:     CHK('o_html'),
-    strict_mode: VAL('o_strict_mode')||'always',
+    strict_mode: VAL('o_strict_mode')||'auto',
     mini:     CHK('o_mini'),
     semi:     CHK('o_semi'),
     simplify: false,          // removed — undoes number obfuscation
@@ -4479,6 +4598,692 @@ function runObfuscate(){
   }
 }
 function clearInput(){inputEditor.setValue('');}
+
+// ─── BEAUTIFY ─────────────────────────────────────────────────────────────────
+function beautifyInput(){
+  const src=inputEditor.getValue();
+  if(!src.trim())return;
+  try{
+    const beautified=_jsBeautify(src);
+    inputEditor.setValue(beautified);
+  }catch(e){
+    // fallback: at least normalize line endings and re-indent via simple heuristic
+    alert('Beautify error: '+e.message);
+  }
+}
+
+function _jsBeautify(src){
+  // ── Step 1: Tokenise into typed tokens ─────────────────────────────────────
+  // Types: 'string' | 'template' | 'regex' | 'line_comment' | 'block_comment'
+  //        | 'word' | 'punct' | 'ws'
+  const tokens = [];
+  let i = 0, n = src.length;
+
+  // keywords after which a / is a regex, not division
+  const REGEX_KW = new Set(['return','typeof','void','delete','new','throw','case',
+    'else','in','of','instanceof','do','await','yield','import','export','from']);
+  // non-ws/comment tokens that mean the previous expression ended (/ = division)
+  function lastMeaningfulType(){
+    for(let k=tokens.length-1;k>=0;k--){
+      const t=tokens[k];
+      if(t.type==='ws'||t.type==='line_comment'||t.type==='block_comment')continue;
+      return t;
+    }
+    return null;
+  }
+  function canBeRegex(){
+    const lm=lastMeaningfulType();
+    if(!lm)return true;
+    if(lm.type==='punct'){
+      // after ) or ] or ++ -- → division; after everything else → regex
+      return lm.val!==')'&&lm.val!==']'&&lm.val!=='++'&&lm.val!=='--';
+    }
+    if(lm.type==='word') return REGEX_KW.has(lm.val);
+    return false; // after string/number/regex → division
+  }
+
+  while(i<n){
+    const ch=src[i];
+
+    // whitespace
+    if(ch===' '||ch==='\t'||ch==='\r'||ch==='\n'){
+      let s='';while(i<n&&(src[i]===' '||src[i]==='\t'||src[i]==='\r'||src[i]==='\n'))s+=src[i++];
+      tokens.push({type:'ws',val:s});continue;
+    }
+    // line comment  // ...
+    if(ch==='/'&&src[i+1]==='/'){
+      let s='';while(i<n&&src[i]!=='\n')s+=src[i++];
+      tokens.push({type:'line_comment',val:s});continue;
+    }
+    // block comment  /* ... */
+    if(ch==='/'&&src[i+1]==='*'){
+      let s='/*';i+=2;
+      while(i<n&&!(src[i]==='*'&&src[i+1]==='/')){s+=src[i++];}
+      s+='*/';i+=2;
+      tokens.push({type:'block_comment',val:s});continue;
+    }
+    // string "..." or '...'
+    if(ch==='"'||ch==="'"){
+      const q=ch;let s=ch;i++;
+      while(i<n){const c=src[i];s+=c;i++;if(c==='\\'){s+=src[i]||'';i++;}else if(c===q)break;}
+      tokens.push({type:'string',val:s});continue;
+    }
+    // template literal `...`
+    if(ch==='`'){
+      let s='`';i++;let d=0;
+      while(i<n){
+        const c=src[i];
+        if(c==='\\'){s+=c+(src[i+1]||'');i+=2;continue;}
+        if(c==='$'&&src[i+1]==='{'){s+='${';i+=2;d++;continue;}
+        if(c==='}'&&d>0){s+=c;i++;d--;continue;}
+        s+=c;i++;if(c==='`'&&d===0)break;
+      }
+      tokens.push({type:'template',val:s});continue;
+    }
+    // regex literal /pattern/flags  (only when in a regex-starting position)
+    if(ch==='/'&&canBeRegex()){
+      let s='/';i++;let inCls=false;
+      let valid=false;
+      while(i<n){
+        const c=src[i];
+        if(c==='\n'||c==='\r')break;
+        if(c==='\\'&&i+1<n){s+=c+src[i+1];i+=2;continue;}
+        if(c==='['&&!inCls){inCls=true;s+=c;i++;continue;}
+        if(c===']'&&inCls){inCls=false;s+=c;i++;continue;}
+        if(c==='/'&&!inCls){
+          s+=c;i++;
+          while(i<n&&/[gimsuyv]/.test(src[i]))s+=src[i++];
+          valid=true;break;
+        }
+        s+=c;i++;
+      }
+      if(valid){tokens.push({type:'regex',val:s});continue;}
+      // not a regex — emit as punct and rewind
+      tokens.push({type:'punct',val:'/'});i=i-(s.length-1);continue;
+    }
+    // multi-char punctuation
+    const two=src.slice(i,i+3);
+    const m3=['===','!==','>>>','**=','||=','&&=','??=','...'];
+    const m2=['=>','**','++','--','+=','-=','*=','/=','%=','&=','|=','^=',
+               '<=','>=','==','!=','&&','||','??','<<','>>','?.'];
+    if(m3.some(p=>two.startsWith(p))){const p=m3.find(p=>two.startsWith(p));tokens.push({type:'punct',val:p});i+=p.length;continue;}
+    if(m2.some(p=>two.startsWith(p))){const p=m2.find(p=>two.startsWith(p));tokens.push({type:'punct',val:p});i+=p.length;continue;}
+    // word / identifier / number
+    if(/[a-zA-Z_$0-9]/.test(ch)){
+      let s='';while(i<n&&/[a-zA-Z_$0-9]/.test(src[i]))s+=src[i++];
+      tokens.push({type:/^[0-9]/.test(s)?'number':'word',val:s});continue;
+    }
+    // single-char punct
+    tokens.push({type:'punct',val:ch});i++;
+  }
+
+  // ── Step 2: Filter / prepare tokens ────────────────────────────────────────
+  // We'll work with the full token list but skip ws tokens during emit,
+  // inserting our own whitespace based on context.
+
+  // ── Step 3: Emit with indentation ──────────────────────────────────────────
+  const INDENT = '  ';
+  let out = '';
+  let depth = 0;
+  let col = 0; // current column (for blank-line tracking)
+
+  // Helpers
+  function ind(){ return INDENT.repeat(Math.max(0,depth)); }
+  function lastChar(){ return out[out.length-1]||''; }
+  function trimTrailingSpace(){
+    // remove trailing spaces/tabs on the current line (not newlines)
+    out=out.replace(/[ \t]+$/,'');
+  }
+  function newline(extra){
+    trimTrailingSpace();
+    out+='\n'+(extra||'');
+    col=0;
+  }
+  function nlIndent(d){
+    newline();out+=INDENT.repeat(Math.max(0,d!==undefined?d:depth));
+  }
+  function ensureNewline(){
+    // Make sure we're at the start of a fresh indented line
+    if(lastChar()!=='\n')nlIndent();
+  }
+  function ensureBlankLine(){
+    // Ensure one blank line before a declaration
+    const end=out.trimEnd();
+    if(end.length===0)return;
+    const lastNl=end.lastIndexOf('\n');
+    const prevNl=lastNl>0?end.lastIndexOf('\n',lastNl-1):-1;
+    const prev=end.slice(prevNl+1,lastNl);
+    const isBlank=prev.trim()==='';
+    if(!isBlank){
+      newline();newline();
+      out+=ind();
+    }else{
+      ensureNewline();
+    }
+  }
+
+  // Collect non-ws non-comment meaningful tokens for lookahead
+  const meaningful=tokens.filter(t=>t.type!=='ws');
+
+  // Emit loop — iterate meaningful tokens, insert ws ourselves
+  let mi=0;
+  const M=meaningful.length;
+
+  function peek(offset=1){ return meaningful[mi+offset]||null; }
+  function cur(){ return meaningful[mi]||null; }
+
+  // Track prev emitted meaningful token
+  let prev=null;
+
+  // Bracket stack: '{' '(' '['
+  const stack=[];
+  // Whether we just emitted a newline + indent
+  let freshLine=true;
+
+  function emitToken(val){
+    out+=val;
+    col+=val.length;
+    freshLine=false;
+  }
+  function space(){
+    if(lastChar()!==' '&&lastChar()!=='\n')out+=' ';
+  }
+
+  // block comment: preserve internal newlines, re-indent continuation lines
+  function emitBlockComment(val){
+    const lines=val.split('\n');
+    for(let li=0;li<lines.length;li++){
+      if(li===0){
+        emitToken(lines[li]);
+      }else{
+        newline();
+        // Re-indent: strip leading spaces/*, then add our indent + ' * '
+        const stripped=lines[li].replace(/^[\s*]*/,'');
+        out+=ind()+' '+(stripped?'* '+stripped:'*');
+        col=(ind()+' *').length;
+      }
+    }
+  }
+
+  // Emit a line comment: always on its own line, preserve content
+  function emitLineComment(val){
+    if(!freshLine){
+      // inline comment — put on same line with a space
+      space();
+      emitToken(val);
+    } else {
+      emitToken(val);
+    }
+    // after a line comment, always newline + indent
+    nlIndent();
+    freshLine=true;
+  }
+
+  // keywords that can follow } without a blank line
+  const CONTINUATION_KW=new Set(['else','catch','finally','while']);
+
+  while(mi<M){
+    const tok=meaningful[mi];
+    const {type,val}=tok;
+    const nxt=peek(1);
+    const nxt2=peek(2);
+
+    // ── block comment ─────────────────────────────────────────────────────────
+    if(type==='block_comment'){
+      if(!freshLine){
+        // If the comment is multiline or starts a doc-style comment, put on new line
+        if(val.includes('\n')||val.startsWith('/**')){
+          nlIndent();freshLine=true;
+        }else{
+          space();
+        }
+      }
+      emitBlockComment(val);
+      // after block comment: if multiline, newline; otherwise space
+      if(val.includes('\n')){nlIndent();freshLine=true;}
+      else{space();}
+      mi++;prev=tok;continue;
+    }
+
+    // ── line comment ──────────────────────────────────────────────────────────
+    if(type==='line_comment'){
+      if(!freshLine)space();
+      emitLineComment(val);
+      freshLine=true;
+      mi++;prev=tok;continue;
+    }
+
+    // ── string / template / regex / number ───────────────────────────────────
+    if(type==='string'||type==='template'||type==='regex'||type==='number'){
+      if(!freshLine&&prev&&needSpaceBetween(prev,tok))space();
+      emitToken(val);
+      mi++;prev=tok;continue;
+    }
+
+    // ── word tokens ───────────────────────────────────────────────────────────
+    if(type==='word'){
+      // Top-level function / class declarations → blank line before
+      const isTopLevel=depth===0||(depth===1&&stack[stack.length-1]==='{');
+      if((val==='function'||val==='class'||val==='async')&&isTopLevel&&out.trim().length>0){
+        ensureBlankLine();freshLine=false;
+      }
+
+      // } else / } catch / } finally — keep on same line as }
+      if(CONTINUATION_KW.has(val)&&prev&&prev.type==='punct'&&prev.val==='}'){
+        space();
+      } else {
+        if(!freshLine&&prev&&needSpaceBetween(prev,tok))space();
+      }
+      emitToken(val);
+
+      // 'case X:' and 'default:' — dedent to switch level
+      if(val==='case'){
+        // Case is already at the right indent; we just need a space after
+        space();
+      }
+      if(val==='default'){
+        // will be followed by :
+      }
+
+      mi++;prev=tok;continue;
+    }
+
+    // ── punctuation ───────────────────────────────────────────────────────────
+    if(type==='punct'){
+      if(val==='{'){
+        // Object literal vs block: heuristic — if prev was ) word ] => it's a block
+        const isBlock=prev&&(
+          (prev.type==='punct'&&(prev.val===')'||prev.val===']'))||
+          (prev.type==='word'&&(prev.val==='else'||prev.val==='try'||prev.val==='finally'||prev.val==='do'))||
+          (prev.type==='word'&&prev.val==='=>')
+        )||nxt?.val==='}';// empty block
+        stack.push('{');
+        if(!freshLine)space();
+        emitToken('{');
+        depth++;
+        // Don't newline if block is empty {}
+        if(nxt&&nxt.val==='}'){
+          // emit } immediately
+        }else{
+          nlIndent();freshLine=true;
+        }
+        mi++;prev=tok;continue;
+      }
+
+      if(val==='}'){
+        stack.pop();
+        depth=Math.max(0,depth-1);
+        trimTrailingSpace();
+        // blank line not needed — just newline + indent at current depth
+        if(!freshLine)nlIndent();
+        else{
+          // already on a fresh line, just make sure indent is right
+          trimTrailingSpace();
+          out+=ind();
+        }
+        freshLine=false;
+        emitToken('}');
+        // What follows?
+        const after=nxt;
+        if(after&&after.type==='word'&&CONTINUATION_KW.has(after.val)){
+          // } else / } catch / } finally — space, no newline
+          space();
+        }else if(after&&after.type==='punct'&&(after.val===')'||after.val===','||after.val===';'||after.val===']')){
+          // closing paren/comma after } — no newline
+        }else if(after&&after.type==='punct'&&after.val==='.'){
+          // chained call after }
+        }else if(after){
+          nlIndent();freshLine=true;
+        }
+        mi++;prev=tok;continue;
+      }
+
+      if(val==='('){
+        stack.push('(');
+        if(!freshLine&&prev&&needSpaceBetween(prev,tok))space();
+        emitToken('(');
+        mi++;prev=tok;continue;
+      }
+      if(val===')'){
+        stack.pop();
+        emitToken(')');
+        mi++;prev=tok;continue;
+      }
+      if(val==='['){
+        stack.push('[');
+        if(!freshLine&&prev&&needSpaceBetween(prev,tok))space();
+        emitToken('[');
+        mi++;prev=tok;continue;
+      }
+      if(val===']'){
+        stack.pop();
+        emitToken(']');
+        mi++;prev=tok;continue;
+      }
+
+      if(val===';'){
+        emitToken(';');
+        // After ; inside for(;;) — no newline
+        const inParen=stack.length>0&&stack[stack.length-1]==='(';
+        if(!inParen){
+          if(nxt&&nxt.val!=='}'){
+            nlIndent();freshLine=true;
+          }
+        }
+        mi++;prev=tok;continue;
+      }
+
+      if(val===','){
+        emitToken(',');
+        // In param lists / arrays / objects: newline only if in {} at top level
+        // Otherwise just a space for compact style
+        const inBrace=stack.length>0&&stack[stack.length-1]==='{';
+        if(inBrace){
+          nlIndent();freshLine=true;
+        }else{
+          space();
+        }
+        mi++;prev=tok;continue;
+      }
+
+      if(val===':'){
+        // case X: / default: → newline + indent+1 after
+        const isCaseColon=prev&&prev.type==='word'&&(
+          // previous meaningful word was a case value or 'default'
+          nxt&&(nxt.val!==':')  // not ternary a?b:c which would have ? before
+        );
+        // Better heuristic: check if there's an unclosed switch context
+        // For simplicity: if depth > 0 and prev token on same line was not '?'
+        const prevMeaningful2=meaningful[mi-2];
+        const isTernary=prevMeaningful2&&prevMeaningful2.val==='?';
+        if(!isTernary){
+          emitToken(':');
+          // If this looks like a case/default colon (stack top is {)
+          const inBlock=stack.length>0&&stack[stack.length-1]==='{';
+          if(inBlock&&prev&&prev.type!=='string'&&prev.type!=='number'){
+            nlIndent();freshLine=true;
+          }else{
+            space();
+          }
+        }else{
+          space();emitToken(':');space();
+        }
+        mi++;prev=tok;continue;
+      }
+
+      if(val==='?'){
+        space();emitToken('?');space();
+        mi++;prev=tok;continue;
+      }
+
+      // Arrow =>
+      if(val==='=>'){
+        space();emitToken('=>');space();
+        mi++;prev=tok;continue;
+      }
+
+      // Operators that need spaces around them
+      const SPACED_OPS=new Set([
+        '=','+=','-=','*=','/=','%=','**=','&=','|=','^=','<<=','>>=','>>>=',
+        '||=','&&=','??=',
+        '==','!=','===','!==','<','<=','>','>=',
+        '&&','||','??',
+        '&','|','^',
+        '<<','>>','>>>',
+        '+','-','*','/','%','**',
+        'in','instanceof',
+      ]);
+      // Unary context check: - or + after operator/open bracket/keyword = unary
+      const unaryContext=prev&&(
+        prev.type==='punct'&&(prev.val==='('||prev.val==='['||prev.val===','||
+          prev.val==='='||prev.val==='+'||prev.val==='-'||prev.val==='*'||
+          prev.val==='/'||prev.val==='%'||prev.val==='!'||prev.val==='~'||
+          prev.val==='=>'||prev.val===':'||prev.val==='{'||prev.val===';'||
+          prev.val==='return'||prev.val==='&&'||prev.val==='||'||prev.val==='??'
+        )||
+        prev.type==='word'&&(prev.val==='return'||prev.val==='typeof'||
+          prev.val==='void'||prev.val==='delete'||prev.val==='new'||
+          prev.val==='throw'||prev.val==='case'||prev.val==='in'||prev.val==='of')
+      );
+
+      if(SPACED_OPS.has(val)&&!(unaryContext&&(val==='-'||val==='+'))){
+        if(!freshLine)space();
+        emitToken(val);
+        space();
+        mi++;prev=tok;continue;
+      }
+
+      // Everything else: ++ -- ! ~ . ?.
+      if(val==='.'||val==='?.'){
+        emitToken(val);mi++;prev=tok;continue;
+      }
+      if(val==='...'||val==='!'||val==='~'){
+        if(!freshLine&&prev&&needSpaceBetween(prev,tok))space();
+        emitToken(val);mi++;prev=tok;continue;
+      }
+
+      // default
+      if(!freshLine&&prev&&needSpaceBetween(prev,tok))space();
+      emitToken(val);
+      mi++;prev=tok;continue;
+    }
+
+    // fallthrough
+    emitToken(val);
+    mi++;prev=tok;
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+  function needSpaceBetween(a,b){
+    if(!a||!b)return false;
+    // word/number adjacent to word/number always needs a space
+    const aWord=a.type==='word'||a.type==='number';
+    const bWord=b.type==='word'||b.type==='number';
+    if(aWord&&bWord)return true;
+    // word/number before ( — function call: no space (foo() not foo ())
+    // but keyword before ( needs space: if ( for ( while (
+    const KW_SPACE=new Set(['if','for','while','switch','catch','with','return',
+      'typeof','void','delete','throw','new','case','in','of','await','yield']);
+    if(aWord&&b.val==='(')return KW_SPACE.has(a.val);
+    // ) before { — space
+    if(a.val===')'&&b.val==='{')return true;
+    // word before { — space
+    if(aWord&&b.val==='{')return true;
+    return false;
+  }
+
+  return out.trim();
+}
+
+// ─── SEARCH ────────────────────────────────────────────────────────────────────
+const _searchState={in:{matches:[],cur:-1,marks:[]},out:{matches:[],cur:-1,marks:[]}};
+let _lastFocusedSide='in'; // track which editor was last focused
+
+function _getEditor(side){return side==='in'?inputEditor:outputEditor;}
+
+// Track which editor was last focused
+function _trackFocus(){
+  if(inputEditor)inputEditor.on('focus',()=>{_lastFocusedSide='in';});
+  if(outputEditor)outputEditor.on('focus',()=>{_lastFocusedSide='out';});
+}
+
+function toggleSearch(side){
+  const bar=G('search-'+side);
+  const visible=bar.style.display!=='none';
+  if(visible){
+    // Close
+    bar.style.display='none';
+    _clearSearchMarks(side);
+    _searchState[side].matches=[];
+    _searchState[side].cur=-1;
+    G('search-'+side+'-count').textContent='';
+    // Return focus to editor
+    _getEditor(side).focus();
+  }else{
+    // Open
+    bar.style.display='flex';
+    const inp=G('search-'+side+'-inp');
+    // Pre-fill with selected text if any
+    const ed=_getEditor(side);
+    const sel=ed.getSelection();
+    if(sel&&sel.length<200){inp.value=sel;}
+    inp.focus();inp.select();
+    doSearch(side);
+  }
+  setTimeout(fitEditors,30);
+}
+
+function _clearSearchMarks(side){
+  _searchState[side].marks.forEach(m=>{try{m.clear();}catch(_){}});
+  _searchState[side].marks=[];
+}
+
+function doSearch(side){
+  const query=G('search-'+side+'-inp').value;
+  _clearSearchMarks(side);
+  const st=_searchState[side];
+  st.matches=[];st.cur=-1;
+  const countEl=G('search-'+side+'-count');
+  if(!query){countEl.textContent='';return;}
+  const ed=_getEditor(side);
+  const doc=ed.getDoc();
+  const content=doc.getValue();
+  const lower=content.toLowerCase();
+  const ql=query.toLowerCase();
+  let pos=0;
+  while(pos<content.length){
+    const idx=lower.indexOf(ql,pos);
+    if(idx<0)break;
+    st.matches.push(idx);
+    pos=idx+1;
+  }
+  if(!st.matches.length){countEl.textContent='No results';return;}
+  // Highlight all matches
+  st.marks=st.matches.map(idx=>{
+    const from=doc.posFromIndex(idx);
+    const to=doc.posFromIndex(idx+query.length);
+    return doc.markText(from,to,{className:'ed-search-highlight'});
+  });
+  countEl.textContent=`1 / ${st.matches.length}`;
+  st.cur=0;
+  _jumpToMatch(side,0,true);
+}
+
+function _jumpToMatch(side,idx,initial){
+  const ed=_getEditor(side);
+  const st=_searchState[side];
+  if(!st.matches.length)return;
+  idx=((idx%st.matches.length)+st.matches.length)%st.matches.length;
+  st.cur=idx;
+  // Re-mark all: highlight + current
+  _clearSearchMarks(side);
+  const doc=ed.getDoc();
+  const query=G('search-'+side+'-inp').value;
+  st.marks=st.matches.map((mIdx,mi)=>{
+    const from=doc.posFromIndex(mIdx);
+    const to=doc.posFromIndex(mIdx+query.length);
+    return doc.markText(from,to,{className:mi===idx?'ed-search-current':'ed-search-highlight'});
+  });
+  G('search-'+side+'-count').textContent=`${idx+1} / ${st.matches.length}`;
+  const curIdx=st.matches[idx];
+  const from=doc.posFromIndex(curIdx);
+  ed.scrollIntoView({line:from.line,ch:from.ch},100);
+  if(!initial)ed.setCursor(from);
+}
+
+function searchNav(side,dir){
+  const st=_searchState[side];
+  if(!st.matches.length)return;
+  _jumpToMatch(side,st.cur+dir);
+}
+
+function searchKey(e,side){
+  if(e.key==='Enter'){e.preventDefault();searchNav(side,e.shiftKey?-1:1);}
+  if(e.key==='Escape'){e.preventDefault();toggleSearch(side);}
+}
+
+// ── Replace (input only) ──────────────────────────────────────────────────────
+function replaceKey(e){
+  if(e.key==='Enter'){e.preventDefault();e.shiftKey?replaceAll():replaceOne();}
+  if(e.key==='Escape'){e.preventDefault();toggleSearch('in');}
+}
+
+function replaceOne(){
+  const st=_searchState['in'];
+  if(!st.matches.length)return;
+  const cur=st.cur<0?0:st.cur;
+  const query=G('search-in-inp').value;
+  const replacement=G('replace-in-inp').value;
+  if(!query)return;
+  const ed=inputEditor;
+  const doc=ed.getDoc();
+  const mIdx=st.matches[cur];
+  const from=doc.posFromIndex(mIdx);
+  const to=doc.posFromIndex(mIdx+query.length);
+  doc.replaceRange(replacement,from,to);
+  // Re-run search so indices update
+  doSearch('in');
+  // Stay at same position (now pointing to the next match after replaced one)
+  if(st.matches.length>0){
+    const next=Math.min(cur,st.matches.length-1);
+    _jumpToMatch('in',next);
+  }
+}
+
+function replaceAll(){
+  const query=G('search-in-inp').value;
+  const replacement=G('replace-in-inp').value;
+  if(!query)return;
+  const ed=inputEditor;
+  const content=ed.getValue();
+  // Case-insensitive replaceAll preserving case of replacement exactly
+  const lower=content.toLowerCase();
+  const ql=query.toLowerCase();
+  let result='',pos=0,count=0;
+  while(pos<content.length){
+    const idx=lower.indexOf(ql,pos);
+    if(idx<0){result+=content.slice(pos);break;}
+    result+=content.slice(pos,idx)+replacement;
+    pos=idx+query.length;
+    count++;
+  }
+  if(count===0)return;
+  ed.setValue(result);
+  _clearSearchMarks('in');
+  _searchState['in'].matches=[];
+  _searchState['in'].cur=-1;
+  G('search-in-count').textContent=`Replaced ${count}`;
+  setTimeout(()=>{
+    const c=G('search-in-count');
+    if(c&&c.textContent.startsWith('Replaced'))c.textContent='';
+    doSearch('in');
+  },1800);
+}
+
+// Global Ctrl+F handler — opens search for the last-focused editor
+document.addEventListener('keydown',function(e){
+  if((e.ctrlKey||e.metaKey)&&e.key==='f'){
+    e.preventDefault();
+    // Determine which side: use last focused, but if cursor is inside output wrap use 'out'
+    let side=_lastFocusedSide||'in';
+    const bar=G('search-'+side);
+    if(bar.style.display==='none'){
+      toggleSearch(side);
+    }else{
+      // Already open — focus find input
+      G('search-'+side+'-inp').focus();
+      G('search-'+side+'-inp').select();
+    }
+  }
+  // Ctrl+H — open input search+replace
+  if((e.ctrlKey||e.metaKey)&&e.key==='h'){
+    e.preventDefault();
+    const bar=G('search-in');
+    if(bar.style.display==='none')toggleSearch('in');
+    // Focus replace input
+    setTimeout(()=>{const r=G('replace-in-inp');if(r)r.focus();},60);
+  }
+});
 function copyOut(){
   const v=outputEditor.getValue();if(!v)return;
   function _setCopied(){const btn=G('btn-copy');btn.textContent='Copied!';setTimeout(()=>{btn.textContent='Copy';},1400);}
@@ -4513,6 +5318,7 @@ const outputEditor=CodeMirror(G('out-editor'),{
   gutters:['CodeMirror-linenumbers','CodeMirror-foldgutter'],
   readOnly:true,lineWrapping:false,tabSize:2,value:'',
 });
+_trackFocus();
 
 // ================================================================
 //  AUTO-CONFIG
