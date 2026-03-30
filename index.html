@@ -540,6 +540,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 .op-stat-lbl{display:block;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mute);margin-top:3px;}
 
 </style>
+</style>
 </head>
 <body>
 <div id="app">
@@ -547,25 +548,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 <!-- ══════════ TOPBAR ══════════ -->
 <div id="topbar">
   <div class="logo">Obs<em>cu</em>ra</div>
-  <div class="tsep"></div>
-  <div class="tpg">
-    <button class="tp active" data-t="browser"         onclick="setTarget('browser')">Browser</button>
-    <button class="tp"        data-t="browser-no-eval"  onclick="setTarget('browser-no-eval')">No Eval</button>
-    <button class="tp"        data-t="node"             onclick="setTarget('node')">Node</button>
-  </div>
-  <div class="tsep"></div>
-  <select id="preset" onchange="applyPreset()">
-    <option value="light">Light</option>
-    <option value="medium">Medium</option>
-    <option value="high">High</option>
-    <option value="max" selected>Max</option>
-    <option value="custom">Custom</option>
-  </select>
   <div class="tgap"></div>
   <button class="txt-btn" id="btn-copy" onclick="copyOut()">Copy</button>
   <button class="txt-btn" id="btn-map" onclick="dlMap()" disabled>Map</button>
   <div class="tsep"></div>
-
   <button id="btn-run" onclick="runObfuscate()">
     <span class="run-icon">▶</span> Run
   </button>
@@ -647,167 +633,22 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
   <!-- ══════════ SLIDE PANEL ══════════ -->
   <div id="panel">
     <div id="panel-top-wrap">
-    <div id="panel-top">
-      <button class="stab active" data-tab="vm"     onclick="switchTab('vm')">VM</button>
-      <button class="stab"        data-tab="output"  onclick="switchTab('output')">Output</button>
-    </div><!-- end panel-top -->
-    <div id="tab-scroll-hint">
-      <span id="tab-scroll-arrow">›</span>
-    </div>
-  </div><!-- end panel-top-wrap -->
+      <div id="panel-top">
+        <button class="stab active" data-tab="vm" onclick="switchTab('vm')">VM</button>
+        <button class="stab" data-tab="output" onclick="switchTab('output')">Output</button>
+      </div>
+      <div id="tab-scroll-hint">
+        <span id="tab-scroll-arrow">›</span>
+      </div>
+    </div><!-- end panel-top-wrap -->
+
     <div id="panel-scroll">
 
-      <!-- STRINGS (hidden — controlled by presets/engine only) -->
-      <div class="tpanel" id="tpanel-strings">
-        <div class="grp">
-          <div class="grp-lbl">String Array</div>
-          <div class="row"><label class="rl">Enable<small>Extract all strings into a shared encrypted pool — decoder called at runtime · <b class="perf">+15% output size</b></small></label><label class="tog"><input type="checkbox" id="o_sarr" checked onchange="showSub('sarr-sub',this.checked);liveCheck()"><span class="tk"></span></label></div>
-          <div id="sarr-sub">
-            <div class="fld"><div class="fld-lbl">Encoding</div>
-              <div class="msw" id="msw-enc">
-                <button class="ms-btn" type="button" onclick="msToggle('enc')"><span class="ms-text" id="ms-enc-text">RC4 + XOR</span><span class="ms-arrow">▾</span></button>
-                <div class="ms-panel" id="ms-panel-enc">
-                  <label class="ms-item"><input type="checkbox" id="enc-rc4" checked onchange="msSync('enc');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">RC4<span class="ms-desc">Stream cipher · perf ×1.4</span></span></label>
-                  <label class="ms-item"><input type="checkbox" id="enc-xor" checked onchange="msSync('enc');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">XOR<span class="ms-desc">Byte-mask layer · perf ×1.1</span></span></label>
-                  <label class="ms-item"><input type="checkbox" id="enc-none" onchange="msSync('enc');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">None<span class="ms-desc">Plain strings · perf ×1.0</span></span></label>
-                </div>
-              </div>
-            </div>
-            <div class="fld"><div class="fld-lbl">Index Type</div>
-              <div class="msw" id="msw-idx">
-                <button class="ms-btn" type="button" onclick="msToggle('idx')"><span class="ms-text" id="ms-idx-text">Hex Integer</span><span class="ms-arrow">▾</span></button>
-                <div class="ms-panel" id="ms-panel-idx">
-                  <label class="ms-item"><input type="checkbox" id="idx-hex" checked onchange="msSync('idx');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">Hex integer<span class="ms-desc">0x1a2b · perf ×1.0</span></span></label>
-                  <label class="ms-item"><input type="checkbox" id="idx-computed" onchange="msSync('idx');liveCheck()"><span class="ms-ck"></span><span class="ms-lbl">XOR computed<span class="ms-desc">(0xab ^ 0x11) · perf ×1.05</span></span></label>
-                </div>
-              </div>
-            </div>
-            <div class="sl"><div class="sl-head"><span class="sl-name">Threshold <span class="perf-tag">perf ×1.0</span></span><span class="sv" id="v-thresh">1.00</span></div><div class="srow"><input type="range" id="o_thresh" min="0" max="1" step=".05" value="1" oninput="SETD('v-thresh',parseFloat(this.value).toFixed(2))"></div></div>
-            <div class="sl"><div class="sl-head"><span class="sl-name">Index Shift <span class="perf-tag">perf ×1.0</span></span><span class="sv" id="v-idxsh">0</span></div><div class="srow"><input type="range" id="o_idxshift" min="0" max="200" step="1" value="0" oninput="SETD('v-idxsh',this.value)"></div></div>
-            <div class="row"><label class="rl">Rotate Array<small>Shift + self-correcting decoder · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_srot" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Shuffle Array<small>Fisher-Yates randomize order · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_sshuf" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Calls Transform<small>Wrap decoder calls in proxy functions · <b class="perf">perf ×1.2</b></small></label><label class="tog"><input type="checkbox" id="o_calltrans" checked onchange="showSub('ct-sub',this.checked)"><span class="tk"></span></label></div>
-            <div id="ct-sub">
-              <div class="sl"><div class="sl-head"><span class="sl-name">Wrappers <span class="perf-tag">perf ×1.0–1.3</span></span><span class="sv" id="v-wc">2</span></div><div class="srow"><input type="range" id="o_wcount" min="1" max="5" step="1" value="2" oninput="SETD('v-wc',this.value)"></div></div>
-              <div class="sl"><div class="sl-head"><span class="sl-name">Params <span class="perf-tag">perf ×1.0</span></span><span class="sv" id="v-wp">2</span></div><div class="srow"><input type="range" id="o_wparams" min="1" max="5" step="1" value="2" oninput="SETD('v-wp',this.value)"></div></div>
-            </div>
-            <div class="fld"><div class="fld-lbl">Force Extract (regex)</div><div class="tagw" id="ta-force" onclick="G('ti-force').focus()"><input class="ti" id="ti-force" placeholder="pattern, Enter…" onkeydown="tagKey(event,'ta-force','ti-force')"></div></div>
-            <div class="fld"><div class="fld-lbl">Never Extract (regex)</div><div class="tagw" id="ta-resstr" onclick="G('ti-resstr').focus()"><input class="ti" id="ti-resstr" placeholder="pattern, Enter…" onkeydown="tagKey(event,'ta-resstr','ti-resstr')"></div></div>
-          </div>
-        </div>
-        <div class="grp">
-          <div class="grp-lbl">String Encoding <span class="grp-note">Applied to strings NOT in the array</span></div>
-          <div id="ssplit-sub">
-            <div class="row"><label class="rl">Escape Encoding<small>\x61\u0062 hex/unicode escapes · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_senc" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Charcode Arrays<small>"hi" → fromCharCode(104,105) · <b class="perf">perf ×1.1</b></small></label><label class="tog"><input type="checkbox" id="o_charcode"><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Inline atob<small>str → atob(b64) + fromCharCode decode · <b class="perf">perf ×1.2</b></small></label><label class="tog"><input type="checkbox" id="o_atob" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Template Obfuscation<small>str → fromCharCode concat · <b class="perf">perf ×1.1</b></small></label><label class="tog"><input type="checkbox" id="o_tmpl" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Split Strings<small>"hello" → "hel"+"lo" · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_ssplit" checked onchange="showSub('ssplit-chunk-sub',this.checked)"><span class="tk"></span></label></div>
-            <div id="ssplit-chunk-sub"><div class="sl"><div class="sl-head"><span class="sl-name">Chunk Length</span><span class="sv" id="v-ssc">10</span></div><div class="srow"><input type="range" id="o_sschunk" min="3" max="60" step="1" value="10" oninput="SETD('v-ssc',this.value)"></div></div></div>
-            <div class="row"><label class="rl">Closure Trap Fold<small>IIFE reduce-based encoding — defeats constant-folding analysis · <b class="perf">perf ×1.1</b></small></label><label class="tog"><input type="checkbox" id="o_clfold" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Pointer Encoding<small>Indirection chain on decoder refs — static tracers lose the call target · <b class="perf">perf ×1.05</b></small></label><label class="tog"><input type="checkbox" id="o_ptrenc" checked><span class="tk"></span></label></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- IDENTIFIERS -->
-      <div class="tpanel" id="tpanel-identifiers">
-        <div class="grp">
-          <div class="grp-lbl">Renaming</div>
-          <div class="row"><label class="rl">Rename Variables<small>Replace all local identifier names · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_ren" checked onchange="showSub('ren-sub',this.checked)"><span class="tk"></span></label></div>
-          <div id="ren-sub">
-            <div class="fld"><div class="fld-lbl">Generator</div><select class="fsel" id="o_namegen" onchange="showSub('dict-sub',this.value==='dictionary')"><option value="hexadecimal">Hexadecimal (_0x…)</option><option value="mangled">Mangled (a,b,c…)</option><option value="dictionary">Dictionary</option></select></div>
-            <div class="fld"><div class="fld-lbl">Prefix</div><input class="fi" id="o_idpfx" type="text" placeholder="e.g. _x (optional)"></div>
-            <div id="dict-sub"><div class="fld"><div class="fld-lbl">Dictionary Words</div><div class="tagw" id="ta-dict" onclick="G('ti-dict').focus()"><input class="ti" id="ti-dict" placeholder="word, Enter…" onkeydown="tagKey(event,'ta-dict','ti-dict')"></div></div></div>
-          </div>
-          <div class="row"><label class="rl">Bracket Access<small>obj.foo → obj['foo'] — prevents prop-name grep · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_prop" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Rename Properties<small>All object property keys — ⚠ may break dynamic access · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_renprop" onchange="G('renprop-w').style.display=this.checked?'block':'none';liveCheck()"><span class="tk"></span></label></div>
-          <div class="warn-box" id="renprop-w" style="display:none;">⚠ May break dynamic property access (obj[varKey]) or external APIs.</div>
-          <div class="fld"><div class="fld-lbl">Reserved Names</div><div class="tagw" id="ta-resname" onclick="G('ti-resname').focus()"><input class="ti" id="ti-resname" placeholder="identifier, Enter…" onkeydown="tagKey(event,'ta-resname','ti-resname')"></div></div>
-        </div>
-        <div class="grp">
-          <div class="grp-lbl">Numbers</div>
-          <div class="row"><label class="rl">Hex Literals<small>97 → 0x61 · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_hexn" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Number Splitting<small>0x61 → (0x21+0x40) · <b class="perf">perf ×1.05</b></small></label><label class="tog"><input type="checkbox" id="o_nsplit" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Math Expressions<small>n → Math['floor'](n+0x0) · <b class="perf">perf ×1.05</b></small></label><label class="tog"><input type="checkbox" id="o_math" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Eval Disguise<small>0–9 → -~[] arithmetic chain · <b class="perf">perf ×1.05</b></small></label><label class="tog"><input type="checkbox" id="o_evaldisguise" checked><span class="tk"></span></label></div>
-        </div>
-        <div class="grp">
-          <div class="grp-lbl">Identifier Hardening</div>
-          <div class="row"><label class="rl">Unicode Mangle<small>\u005F0x identifiers — breaks regex-based name detection · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_unimangle" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Fake Proto Chain<small>Phantom prototype assignments confuse class-hierarchy tracers · <b class="perf">perf ×1.05</b></small></label><label class="tog"><input type="checkbox" id="o_fakeproto" checked><span class="tk"></span></label></div>
-        </div>
-      </div>
-
-      <!-- CONTROL FLOW -->
-      <div class="tpanel" id="tpanel-flow">
-        <div class="grp">
-          <div class="grp-lbl">Flow Obfuscation</div>
-          <div class="row"><label class="rl">Control Flow Flattening<small>Shuffle into while/switch dispatch — destroys structural analysis · <b class="perf">perf ×1.5–3×</b></small></label><label class="tog"><input type="checkbox" id="o_cff" checked onchange="showSub('cff-sub',this.checked)"><span class="tk"></span></label></div>
-          <div id="cff-sub">
-            <div class="sl"><div class="sl-head"><span class="sl-name">CFF Threshold <span class="perf-tag">higher = more output bloat</span></span><span class="sv" id="v-cff">0.75</span></div><div class="srow"><input type="range" id="o_cff_t" min="0" max="1" step=".05" value=".75" oninput="SETD('v-cff',parseFloat(this.value).toFixed(2))"></div></div>
-          </div>
-          <div class="row"><label class="rl">Dead Code Injection<small>Always-false opaque branches — pollutes data-flow analysis · <b class="perf">perf ×1.2</b></small></label><label class="tog"><input type="checkbox" id="o_dead" checked onchange="showSub('dead-sub',this.checked)"><span class="tk"></span></label></div>
-          <div id="dead-sub">
-            <div class="sl"><div class="sl-head"><span class="sl-name">Dead Code Threshold <span class="perf-tag">higher = more dead branches</span></span><span class="sv" id="v-dead">0.40</span></div><div class="srow"><input type="range" id="o_dead_t" min="0" max="1" step=".05" value=".4" oninput="SETD('v-dead',parseFloat(this.value).toFixed(2))"></div></div>
-          </div>
-          <div class="row"><label class="rl">IIFE Wrap<small>Wrap all code in (function(){…})() — isolates scope · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_iife" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Object Key Transform<small>Keys → fromCharCode exprs — breaks key-name grep · <b class="perf">perf ×1.1</b></small></label><label class="tog"><input type="checkbox" id="o_objkeys"><span class="tk"></span></label></div>
-        </div>
-      </div>
-
-      <!-- VM -->
+      <!-- VM TAB -->
       <div class="tpanel active" id="tpanel-vm">
-        <div class="grp">
-          <div class="grp-lbl">Bytecode VM</div>
-          <div class="row">
-            <label class="rl">Enable<small>Compiles JS to a custom stack-based bytecode — no source string ever exists at runtime</small></label>
-            <label class="tog"><input type="checkbox" id="o_vm_enable" onchange="applyVmEnable()"><span class="tk"></span></label>
-          </div>
-          <div id="vm-info-none" class="info-box">VM off — source runs after standard obfuscation passes only.</div>
-          <div id="vm-info-bc" class="info-box" style="display:none">Source compiled to integer bytecode + encrypted constant pool. Dispatcher loop executes opcodes directly — no source string is ever reconstructed at runtime. Unsupported constructs fall to per-statement EXEC_RAW.</div>
-        </div>
-      </div><!-- end tpanel-vm -->
-
-      <!-- Hidden engine inputs — not shown in any tab; read by getOpts() and presets -->
-      <div id="engine-store" style="display:none">
-        <input type="hidden" id="o_vm_mode" value="none">
-        <input type="checkbox" id="o_bc">
-        <input type="checkbox" id="o_bc_jmpenc" checked>
-        <input type="checkbox" id="o_bc_wrapinit">
-        <input type="checkbox" id="o_bc_decoy" checked>
-        <input type="checkbox" id="o_bc_dead" checked>
-        <input type="checkbox" id="o_bc_antidebug" checked>
-        <input type="checkbox" id="o_bc_sarrbconly">
-        <input type="range"    id="o_bc_opcount" min="20" max="256" step="1" value="128">
-        <select id="o_bc_poolenc"><option value="xor" selected>xor</option><option value="xorshift">xorshift</option><option value="sbox">sbox</option><option value="chacha">chacha</option></select>
-        <select id="o_bc_idxenc"><option value="raw">raw</option><option value="xor" selected>xor</option><option value="delta">delta</option><option value="fibonacci">fibonacci</option></select>
-        <input type="checkbox" id="o_bc_poolshuf" checked>
-        <input type="checkbox" id="o_bc_poolpad" checked>
-        <select id="o_bc_dispatch"><option value="while" selected>while</option><option value="trampoline">trampoline</option><option value="table">table</option></select>
-        <input type="checkbox" id="o_bc_compact">
-        <input type="checkbox" id="o_bc_iparr" checked>
-        <input type="checkbox" id="o_bc_stackob" checked>
-        <input type="checkbox" id="o_bc_tablescatter">
-        <input type="checkbox" id="o_bc_macro" checked>
-        <input type="checkbox" id="o_bc_alias">
-        <input type="checkbox" id="o_bc_enc">
-        <input type="checkbox" id="o_bc_regsmear">
-        <input type="checkbox" id="o_bc_poolindir">
-        <input type="checkbox" id="o_bc_integrity">
-        <input type="checkbox" id="o_bc_envcheck" checked>
-        <input type="checkbox" id="o_bc_tdguard" checked>
-        <select id="o_bc_baseenc"><option value="hex" selected>hex</option><option value="decimal">decimal</option><option value="octal">octal</option><option value="mixed">mixed</option></select>
-        <input type="checkbox" id="o_bc_kchunk" checked>
-        <input type="range"    id="o_bcchunk" min="8" max="256" step="8" value="64">
-        <input type="checkbox" id="o_bc_watermark">
-        <span id="v-op-decoy">108</span>
-        <span id="v-op-total">128</span>
-        <span id="v-bc-opcount">128</span>
-        <span id="v-bcc">64</span>
       </div>
 
-      <!-- OUTPUT -->
+      <!-- MINIFICATION TAB -->
       <div class="tpanel" id="tpanel-output">
         <div class="grp">
           <div class="grp-lbl">Minification</div>
@@ -840,71 +681,117 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
             <button class="btn-rng" onclick="doRandomSeed()">↺</button>
           </div>
         </div>
-        <div class="grp">
-          <div class="grp-lbl">Conflicts</div>
-          <div id="conflicts-inner"></div>
-        </div>
       </div>
 
-      <!-- PROTECTION (hidden — controlled by presets/engine only) -->
-      <div class="tpanel" id="tpanel-protection">
-        <div class="grp">
-          <div class="grp-lbl">Runtime Defenses</div>
-          <div class="row"><label class="rl">Self-Defending<small>Infinite loop if code is reformatted or beautified · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_self" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Native Fn Check<small>Detects hooked/wrapped native functions · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_native" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Tamper Detection<small>Runtime sentinel variable guard — detects patching · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_tamp" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Disable Console<small>Nulls console.log/warn/error/debug — blocks runtime inspection · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_con"><span class="tk"></span></label></div>
-        </div>
-        <div class="grp">
-          <div class="grp-lbl">Debug Protection</div>
-          <div class="row"><label class="rl">DevTools Freeze<small>setInterval debugger trap — freezes tab when DevTools open · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_dbg" checked onchange="showSub('dbg-sub',this.checked)"><span class="tk"></span></label></div>
-          <div id="dbg-sub">
-            <div class="sl"><div class="sl-head"><span class="sl-name">Check Interval (ms)</span><span class="sv" id="v-dbg">2000</span></div><div class="srow"><input type="range" id="o_dbgint" min="200" max="5000" step="100" value="2000" oninput="SETD('v-dbg',this.value)"></div></div>
-          </div>
-        </div>
-        <div class="grp">
-          <div class="grp-lbl">Domain Lock</div>
-          <div class="row"><label class="rl">Enable<small>Restrict execution to listed hostnames · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_dom" onchange="showSub('dom-sub',this.checked);liveCheck()"><span class="tk"></span></label></div>
-          <div id="dom-sub" style="display:none">
-            <div class="drow"><input class="fi" id="dom-inp" type="text" placeholder="example.com" onkeydown="if(event.key==='Enter')addDomain()"><button class="btn-add" onclick="addDomain()">+ Add</button></div>
-            <div class="dlist" id="dom-list"></div>
-            <div class="fld"><div class="fld-lbl">Redirect URL</div><input class="fi" id="o_domredir" type="text" placeholder="https://example.com/blocked"></div>
-          </div>
-        </div>
-        <div class="grp">
-          <div class="grp-lbl">Anti-Analysis</div>
-          <div class="row"><label class="rl">Opaque Predicates<small>Tautology guards confuse symbolic execution engines · <b class="perf">perf ×1.1</b></small></label><label class="tog"><input type="checkbox" id="o_opaque" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Stack Canary<small>Crashes shallow-stack inliners that call decoders out-of-context · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_canary" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Environment Fingerprint<small>Fails static emulators and headless sandbox engines · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_envfp" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Deobfuscator Trap<small>Infinite-regress bait — automated unpackers loop forever · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_deobtrap" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Proxy Function Wrap<small>Wraps renamed fns in Proxy — breaks static call-graph analysis · <b class="perf">perf ×1.1</b></small></label><label class="tog"><input type="checkbox" id="o_proxywrap" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Hash-Locked Decoder<small>Integrity self-check — patch the string array and decoding silently breaks · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_hashlocked" checked><span class="tk"></span></label></div>
-        </div>
-        <div class="grp">
-          <div class="grp-lbl">Advanced Traps</div>
-          <div class="row"><label class="rl">Scope Fog<small>Nested IIFE shadow chains confuse variable liveness tracers · <b class="perf">perf ×1.1</b></small></label><label class="tog"><input type="checkbox" id="o_scopefog" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Junk Polyglot Blocks<small>Dead CFF-lookalike blocks waste deobfuscator time · <b class="perf">perf ×1.1</b></small></label><label class="tog"><input type="checkbox" id="o_junkpoly" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">TDZ Trap<small>TDZ bindings crash eval-based extractors without block scope · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_tdztrap" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Prototype Pollution Guard<small>Kills tools that hook property access via prototype pollution · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_protguard" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Timing Canary<small>XOR loop — wrong result under step-through debuggers → infinite loop · <b class="perf">perf ×1.05</b></small></label><label class="tog"><input type="checkbox" id="o_timingcanary" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Call Site Mutation<small>Replaces calls with pointer-table lookups — call-graph analysis sees only indices · <b class="perf">perf ×1.1</b></small></label><label class="tog"><input type="checkbox" id="o_callmutate" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Homoglyph Encoding<small>Unicode look-alikes in identifiers — breaks regex-based deobfuscators · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_homoglyph"><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Control Flow Hash<small>XOR accumulator — patching any block breaks integrity check · <b class="perf">perf ×1.05</b></small></label><label class="tog"><input type="checkbox" id="o_cfhash"><span class="tk"></span></label></div>
-        </div>
+      <!-- Hidden engine inputs — needed by getOpts() -->
+      <div id="engine-store" style="display:none">
+        <input type="hidden" id="o_vm_mode" value="none">
+        <input type="checkbox" id="o_bc">
+        <input type="checkbox" id="o_bc_jmpenc" checked>
+        <input type="checkbox" id="o_bc_wrapinit">
+        <input type="checkbox" id="o_bc_decoy" checked>
+        <input type="checkbox" id="o_bc_dead" checked>
+        <input type="checkbox" id="o_bc_antidebug" checked>
+        <input type="checkbox" id="o_bc_sarrbconly">
+        <input type="range"    id="o_bc_opcount" min="20" max="256" step="1" value="128">
+        <select id="o_bc_poolenc"><option value="xor" selected>xor</option></select>
+        <select id="o_bc_idxenc"><option value="xor" selected>xor</option></select>
+        <input type="checkbox" id="o_bc_poolshuf" checked>
+        <input type="checkbox" id="o_bc_poolpad" checked>
+        <select id="o_bc_dispatch"><option value="while" selected>while</option></select>
+        <input type="checkbox" id="o_bc_compact">
+        <input type="checkbox" id="o_bc_iparr" checked>
+        <input type="checkbox" id="o_bc_stackob" checked>
+        <input type="checkbox" id="o_bc_tablescatter">
+        <input type="checkbox" id="o_bc_macro" checked>
+        <input type="checkbox" id="o_bc_alias">
+        <input type="checkbox" id="o_bc_enc">
+        <input type="checkbox" id="o_bc_regsmear">
+        <input type="checkbox" id="o_bc_poolindir">
+        <input type="checkbox" id="o_bc_integrity">
+        <input type="checkbox" id="o_bc_envcheck" checked>
+        <input type="checkbox" id="o_bc_tdguard" checked>
+        <select id="o_bc_baseenc"><option value="hex" selected>hex</option></select>
+        <input type="checkbox" id="o_bc_kchunk" checked>
+        <input type="range"    id="o_bcchunk" min="8" max="256" step="8" value="64">
+        <input type="checkbox" id="o_bc_watermark">
+        <span id="v-op-decoy">108</span>
+        <span id="v-op-total">128</span>
+        <span id="v-bc-opcount">128</span>
+        <span id="v-bcc">64</span>
+        <!-- Hidden obfuscation checkboxes required by getOpts/engine but not shown -->
+        <input type="checkbox" id="o_sarr">
+        <input type="checkbox" id="enc-rc4">
+        <input type="checkbox" id="enc-xor">
+        <input type="checkbox" id="enc-none">
+        <input type="checkbox" id="idx-hex">
+        <input type="checkbox" id="idx-computed">
+        <input type="range" id="o_thresh" value="1" min="0" max="1" step=".05">
+        <input type="range" id="o_idxshift" value="0" min="0" max="200" step="1">
+        <input type="checkbox" id="o_srot">
+        <input type="checkbox" id="o_sshuf">
+        <input type="checkbox" id="o_calltrans">
+        <input type="range" id="o_wcount" value="1" min="1" max="5">
+        <input type="range" id="o_wparams" value="2" min="1" max="5">
+        <input type="checkbox" id="o_senc">
+        <input type="checkbox" id="o_charcode">
+        <input type="checkbox" id="o_atob">
+        <input type="checkbox" id="o_tmpl">
+        <input type="checkbox" id="o_ssplit">
+        <input type="checkbox" id="o_clfold">
+        <input type="checkbox" id="o_ptrenc">
+        <input type="checkbox" id="o_ren">
+        <select id="o_namegen"><option value="hexadecimal">hexadecimal</option></select>
+        <input type="text" id="o_idpfx" value="">
+        <input type="checkbox" id="o_renprop">
+        <input type="checkbox" id="o_prop">
+        <input type="checkbox" id="o_unimangle">
+        <input type="checkbox" id="o_fakeproto">
+        <input type="checkbox" id="o_hexn">
+        <input type="checkbox" id="o_nsplit">
+        <input type="checkbox" id="o_math">
+        <input type="checkbox" id="o_evaldisguise">
+        <input type="checkbox" id="o_cff">
+        <input type="range" id="o_cff_t" value=".75" min="0" max="1" step=".05">
+        <input type="checkbox" id="o_dead">
+        <input type="range" id="o_dead_t" value=".4" min="0" max="1" step=".05">
+        <input type="checkbox" id="o_iife">
+        <input type="checkbox" id="o_objkeys">
+        <input type="checkbox" id="o_self">
+        <input type="checkbox" id="o_native">
+        <input type="checkbox" id="o_tamp">
+        <input type="checkbox" id="o_con">
+        <input type="checkbox" id="o_dbg">
+        <input type="range" id="o_dbgint" value="2000" min="200" max="5000" step="100">
+        <input type="checkbox" id="o_dom">
+        <input type="checkbox" id="o_opaque">
+        <input type="checkbox" id="o_canary">
+        <input type="checkbox" id="o_envfp">
+        <input type="checkbox" id="o_deobtrap">
+        <input type="checkbox" id="o_proxywrap">
+        <input type="checkbox" id="o_junkpoly">
+        <input type="checkbox" id="o_hashlocked">
+        <input type="checkbox" id="o_callmutate">
+        <input type="checkbox" id="o_scopefog">
+        <input type="checkbox" id="o_tdztrap">
+        <input type="checkbox" id="o_protguard">
+        <input type="checkbox" id="o_timingcanary">
+        <input type="checkbox" id="o_homoglyph">
+        <input type="checkbox" id="o_cfhash">
+        <div class="tagw" id="ta-force" style="display:none"><input class="ti" id="ti-force"></div>
+        <div class="tagw" id="ta-resstr" style="display:none"><input class="ti" id="ti-resstr"></div>
+        <div class="tagw" id="ta-resname" style="display:none"><input class="ti" id="ti-resname"></div>
+        <div class="tagw" id="ta-dict" style="display:none"><input class="ti" id="ti-dict"></div>
+        <div id="dom-list"></div>
+        <input class="fi" id="o_domredir" type="text" value="">
+        <div id="conflicts-inner"></div>
       </div>
 
-      <!-- OUTPUT -->
-      <!-- MORE tab hidden —  engine inputs live in #engine-store -->
-      <div class="tpanel" id="tpanel-general">
-
-      <!-- conflicts tab (hidden, engine still needs it) -->
-      <div id="tpanel-conflicts"></div>
-
+      <div id="scroll-hint">
+        <span class="scroll-hint-text">scroll for more</span>
+        <span class="scroll-hint-arrow">↓</span>
+      </div>
     </div><!-- end panel-scroll -->
-  <div id="scroll-hint">
-    <span class="scroll-hint-text">scroll for more</span>
-    <span class="scroll-hint-arrow">↓</span>
-  </div>
   </div><!-- end panel -->
 
 </div><!-- end workspace -->
@@ -917,32 +804,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
   <span class="sb-sep"></span>
   <span class="sb-item">100% client-side · no data leaves your browser</span>
   <div class="sb-gap"></div>
-  <span class="sb-item" id="sb-target-display">Target: Browser</span>
-  <span class="sb-sep"></span>
-  <span class="sb-item" id="sb-preset-display">Preset: Max</span>
 </div>
 
 </div><!-- end app -->
-
-<!-- AUTOCONFIG MODAL -->
-<div id="ac-overlay" onclick="if(event.target===this)closeAutoConfig()">
-  <div id="ac-modal">
-    <div id="ac-head"><h2>Auto-Configure</h2><button class="ac-close" onclick="closeAutoConfig()">×</button></div>
-    <div id="ac-body">
-      <div class="ac-section"><div class="ac-section-title">Detected</div><div class="ac-badges" id="ac-badges">—</div></div>
-      <div class="ac-section"><div class="ac-section-title">Protection Level</div>
-        <div class="ac-levels" id="ac-levels">
-          <div class="ac-lvl" data-l="light" onclick="acPickLevel('light')"><span class="ac-lvl-name">Light</span><span class="ac-lvl-desc">Fast · safe</span></div>
-          <div class="ac-lvl" data-l="medium" onclick="acPickLevel('medium')"><span class="ac-lvl-name">Medium</span><span class="ac-lvl-desc">Balanced</span></div>
-          <div class="ac-lvl" data-l="high" onclick="acPickLevel('high')"><span class="ac-lvl-name">High</span><span class="ac-lvl-desc">Strong</span></div>
-          <div class="ac-lvl" data-l="max" onclick="acPickLevel('max')"><span class="ac-lvl-name">Max</span><span class="ac-lvl-desc">Everything</span></div>
-        </div>
-      </div>
-      <div class="ac-section"><div class="ac-section-title">Recommendations</div><div class="ac-rec-list" id="ac-recs">Pick a level above.</div></div>
-    </div>
-    <div id="ac-foot"><button id="ac-cancel" onclick="closeAutoConfig()">Cancel</button><button id="ac-apply" onclick="applyAutoConfig()">Apply</button></div>
-  </div>
-</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
@@ -971,7 +835,6 @@ function togglePanel(){
   const tabs=()=>document.getElementById('panel-top');
   const tabHint=()=>document.getElementById('tab-scroll-hint');
 
-  // Re-evaluate the bottom hint for the current tab's content
   function updateBottomHint(){
     const s=sc(),h=hint();
     if(!s||!h)return;
@@ -980,7 +843,6 @@ function togglePanel(){
     h.style.opacity=(canScroll&&!atBottom)?'1':'0';
   }
 
-  // Tab bar horizontal scroll hint
   function updateTabHint(){
     const t=tabs(),th=tabHint();
     if(!t||!th)return;
@@ -988,26 +850,17 @@ function togglePanel(){
     th.classList.toggle('hidden',atEnd);
   }
 
-  // Called every time we switch tabs — resets scroll position + re-checks hint
   window._onTabSwitch=function(){
     const s=sc();
     if(s)s.scrollTop=0;
-    requestAnimationFrame(()=>{
-      updateBottomHint();
-    });
+    requestAnimationFrame(()=>{updateBottomHint();});
   };
 
   window.addEventListener('load',()=>{
     const s=sc();
-    if(s){
-      s.addEventListener('scroll',updateBottomHint);
-      updateBottomHint();
-    }
+    if(s){s.addEventListener('scroll',updateBottomHint);updateBottomHint();}
     const t=tabs();
-    if(t){
-      t.addEventListener('scroll',updateTabHint);
-      updateTabHint();
-    }
+    if(t){t.addEventListener('scroll',updateTabHint);updateTabHint();}
   });
 
   window._updateTabHint=updateTabHint;
@@ -1016,7 +869,7 @@ function togglePanel(){
 /* ─── TABS ─── */
 function switchTab(name){
   document.querySelectorAll('.stab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
-  document.querySelectorAll('.tpanel,#tpanel-conflicts').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tpanel').forEach(p=>p.classList.remove('active'));
   const p=document.getElementById('tpanel-'+name);
   if(p)p.classList.add('active');
   if(window._onTabSwitch)window._onTabSwitch();
@@ -1065,7 +918,6 @@ function showRunStats(){
   if(oh) oh.style.display='none';
 }
 
-// ================================================================
 //  OBSCURA — JS Obfuscator Engine + UI
 // ================================================================
 
@@ -4068,111 +3920,196 @@ function obfuscate(src,opts){
   return{code,st};
 }
 
-// Target system
+// ─── SEARCH STATE ──────────────────────────────────────────────────────────────
+const _searchState={in:{matches:[],cur:-1,marks:[]},out:{matches:[],cur:-1,marks:[]}};
+let _lastFocusedSide='in';
+
+function _getEditor(side){return side==='in'?inputEditor:outputEditor;}
+
+function _trackFocus(){
+  if(inputEditor)inputEditor.on('focus',()=>{_lastFocusedSide='in';});
+  if(outputEditor)outputEditor.on('focus',()=>{_lastFocusedSide='out';});
+}
+
+function toggleSearch(side){
+  const bar=G('search-'+side);
+  const visible=bar.style.display!=='none';
+  if(visible){
+    bar.style.display='none';
+    _clearSearchMarks(side);
+    _searchState[side].matches=[];
+    _searchState[side].cur=-1;
+    G('search-'+side+'-count').textContent='';
+    _getEditor(side).focus();
+  }else{
+    bar.style.display='flex';
+    const inp=G('search-'+side+'-inp');
+    const ed=_getEditor(side);
+    const sel=ed.getSelection();
+    if(sel&&sel.length<200){inp.value=sel;}
+    inp.focus();inp.select();
+    doSearch(side);
+  }
+  setTimeout(fitEditors,30);
+}
+
+function _clearSearchMarks(side){
+  _searchState[side].marks.forEach(m=>{try{m.clear();}catch(_){}});
+  _searchState[side].marks=[];
+}
+
+function doSearch(side){
+  const query=G('search-'+side+'-inp').value;
+  _clearSearchMarks(side);
+  const st=_searchState[side];
+  st.matches=[];st.cur=-1;
+  const countEl=G('search-'+side+'-count');
+  if(!query){countEl.textContent='';return;}
+  const ed=_getEditor(side);
+  const doc=ed.getDoc();
+  const content=doc.getValue();
+  const lower=content.toLowerCase();
+  const ql=query.toLowerCase();
+  let pos=0;
+  while(pos<content.length){
+    const idx=lower.indexOf(ql,pos);
+    if(idx<0)break;
+    st.matches.push(idx);
+    pos=idx+1;
+  }
+  if(!st.matches.length){countEl.textContent='No results';return;}
+  st.marks=st.matches.map(idx=>{
+    const from=doc.posFromIndex(idx);
+    const to=doc.posFromIndex(idx+query.length);
+    return doc.markText(from,to,{className:'ed-search-highlight'});
+  });
+  countEl.textContent=`1 / ${st.matches.length}`;
+  st.cur=0;
+  _jumpToMatch(side,0,true);
+}
+
+function _jumpToMatch(side,idx,initial){
+  const ed=_getEditor(side);
+  const st=_searchState[side];
+  if(!st.matches.length)return;
+  idx=((idx%st.matches.length)+st.matches.length)%st.matches.length;
+  st.cur=idx;
+  _clearSearchMarks(side);
+  const doc=ed.getDoc();
+  const query=G('search-'+side+'-inp').value;
+  st.marks=st.matches.map((mIdx,mi)=>{
+    const from=doc.posFromIndex(mIdx);
+    const to=doc.posFromIndex(mIdx+query.length);
+    return doc.markText(from,to,{className:mi===idx?'ed-search-current':'ed-search-highlight'});
+  });
+  G('search-'+side+'-count').textContent=`${idx+1} / ${st.matches.length}`;
+  const curIdx=st.matches[idx];
+  const from=doc.posFromIndex(curIdx);
+  ed.scrollIntoView({line:from.line,ch:from.ch},100);
+  if(!initial)ed.setCursor(from);
+}
+
+function searchNav(side,dir){
+  const st=_searchState[side];
+  if(!st.matches.length)return;
+  _jumpToMatch(side,st.cur+dir);
+}
+
+function searchKey(e,side){
+  if(e.key==='Enter'){e.preventDefault();searchNav(side,e.shiftKey?-1:1);}
+  if(e.key==='Escape'){e.preventDefault();toggleSearch(side);}
+}
+
+function replaceKey(e){
+  if(e.key==='Enter'){e.preventDefault();e.shiftKey?replaceAll():replaceOne();}
+  if(e.key==='Escape'){e.preventDefault();toggleSearch('in');}
+}
+
+function replaceOne(){
+  const st=_searchState['in'];
+  if(!st.matches.length)return;
+  const cur=st.cur<0?0:st.cur;
+  const query=G('search-in-inp').value;
+  const replacement=G('replace-in-inp').value;
+  if(!query)return;
+  const doc=inputEditor.getDoc();
+  const mIdx=st.matches[cur];
+  const from=doc.posFromIndex(mIdx);
+  const to=doc.posFromIndex(mIdx+query.length);
+  doc.replaceRange(replacement,from,to);
+  doSearch('in');
+  if(st.matches.length>0)_jumpToMatch('in',Math.min(cur,st.matches.length-1));
+}
+
+function replaceAll(){
+  const query=G('search-in-inp').value;
+  const replacement=G('replace-in-inp').value;
+  if(!query)return;
+  const content=inputEditor.getValue();
+  const lower=content.toLowerCase();
+  const ql=query.toLowerCase();
+  let result='',pos=0,count=0;
+  while(pos<content.length){
+    const idx=lower.indexOf(ql,pos);
+    if(idx<0){result+=content.slice(pos);break;}
+    result+=content.slice(pos,idx)+replacement;
+    pos=idx+query.length;count++;
+  }
+  if(count===0)return;
+  inputEditor.setValue(result);
+  _clearSearchMarks('in');
+  _searchState['in'].matches=[];_searchState['in'].cur=-1;
+  G('search-in-count').textContent=`Replaced ${count}`;
+  setTimeout(()=>{const c=G('search-in-count');if(c&&c.textContent.startsWith('Replaced'))c.textContent='';doSearch('in');},1800);
+}
+
+document.addEventListener('keydown',function(e){
+  if((e.ctrlKey||e.metaKey)&&e.key==='f'){
+    e.preventDefault();
+    let side=_lastFocusedSide||'in';
+    const bar=G('search-'+side);
+    if(bar.style.display==='none'){toggleSearch(side);}
+    else{G('search-'+side+'-inp').focus();G('search-'+side+'-inp').select();}
+  }
+  if((e.ctrlKey||e.metaKey)&&e.key==='h'){
+    e.preventDefault();
+    if(G('search-in').style.display==='none')toggleSearch('in');
+    setTimeout(()=>{const r=G('replace-in-inp');if(r)r.focus();},60);
+  }
+});
+
+// ─── CodeMirror Init ──────────────────────────────────────────────────────────
+const inputEditor=CodeMirror(G('in-editor'),{
+  mode:'javascript',lineNumbers:true,foldGutter:true,
+  gutters:['CodeMirror-linenumbers','CodeMirror-foldgutter'],
+  extraKeys:{'Ctrl-Q':cm=>cm.foldCode(cm.getCursor()),'Cmd-Q':cm=>cm.foldCode(cm.getCursor())},
+  matchBrackets:true,autoCloseBrackets:true,lineWrapping:false,tabSize:2,indentWithTabs:false,
+  value:'// Paste your JavaScript here\n\nfunction greet(name) {\n  console.log(\'Hello, \' + name + \'!\');\n  return name.length;\n}\n\ngreet(\'world\');',
+});
+const outputEditor=CodeMirror(G('out-editor'),{
+  mode:'javascript',lineNumbers:true,foldGutter:true,
+  gutters:['CodeMirror-linenumbers','CodeMirror-foldgutter'],
+  readOnly:true,lineWrapping:false,tabSize:2,value:'',
+});
+
+// track which editor was last focused
+(function(){
+  if(inputEditor)inputEditor.on('focus',()=>{_lastFocusedSide='in';});
+  if(outputEditor)outputEditor.on('focus',()=>{_lastFocusedSide='out';});
+})();
+
+// ================================================================
+//  STUB FUNCTIONS (removed tabs — keep engine happy)
+// ================================================================
 let currentTarget='browser';
-const TARGET_OFF={
-  'browser':[],
-  'browser-no-eval':['o_vm_enable','o_bc_wrapinit','o_bc_decoy','o_bc_dead','o_bc_antidebug','o_bc_sarrbconly'],
-  'node':['o_dom','o_dbg','o_native','o_atob','o_html','o_bc_antidebug'],
-};
-function setTarget(t){
-  currentTarget=t;
-  document.querySelectorAll('.tp').forEach(p=>p.classList.toggle('active',p.dataset.t===t));
-  applyTargetConstraints();liveCheck();saveSettings();
-  const d=document.getElementById('sb-target-display');
-  if(d)d.textContent='Target: '+({browser:'Browser','browser-no-eval':'No Eval',node:'Node.js'}[t]||t);
-}
-function applyTargetConstraints(){
-  document.querySelectorAll('#panel-scroll .row').forEach(row=>{
-    row.classList.remove('dim');
-    const chk=row.querySelector('input[type=checkbox]');
-    if(chk)chk.disabled=false;
-  });
-  (TARGET_OFF[currentTarget]||[]).forEach(id=>{
-    const el=G(id);if(!el)return;
-    const row=el.closest('.row');if(row)row.classList.add('dim');
-  });
-}
+function setTarget(t){currentTarget=t;}
+function applyTargetConstraints(){}
+function updateOpcodeDisplay(){}
+function liveCheck(){}
 
-function liveCheck(){
-  const body=G('conflicts-inner');if(!body)return;
-  const w=[];
-  const _vm=VAL('o_vm_mode')||'none';
-  const _vmOn=_vm==='bytecode';
-
-  // Target conflicts
-  if(currentTarget==='browser-no-eval'&&_vmOn)
-    w.push('⚠ Bytecode VM uses Function constructor — disabled in no-eval environments');
-  if(currentTarget==='node'&&CHK('o_dom'))
-    w.push('ℹ Domain Lock checks window.location — no-op in Node.js');
-  if(currentTarget==='node'&&CHK('o_dbg'))
-    w.push('ℹ Debug Protection uses DevTools tricks — no-op in Node.js');
-  // String passes interactions
-  if(CHK('o_charcode')&&CHK('o_sarr'))
-    w.push('ℹ Charcode Arrays applies to strings not extracted by String Array');
-  if(CHK('o_ssplit')&&CHK('o_sarr'))
-    w.push('ℹ Split Strings has no effect when String Array is on (strings already extracted)');
-  if(CHK('o_atob')&&CHK('o_sarr'))
-    w.push('ℹ Inline atob applies to strings not extracted by String Array');
-  if(CHK('o_tmpl')&&CHK('o_sarr'))
-    w.push('ℹ Template Obfuscation applies to strings not extracted by String Array');
-  if(CHK('o_calltrans')&&!CHK('o_sarr'))
-    w.push('⚠ Calls Transform has no effect without String Array enabled');
-
-  // Control flow interactions
-  if(CHK('o_cfhash')&&CHK('o_cff'))
-    w.push('ℹ Control Flow Hash + CFF: hash accumulates across flattened blocks — expect slight overhead');
-  if(CHK('o_cfhash')&&_vmOn)
-    w.push('ℹ Control Flow Hash wraps the whole program — VM already wraps it; double-wrap is fine but adds size');
-
-  // Identifier interactions
-  if(CHK('o_renprop'))
-    w.push('⚠ Rename Properties may break dynamic property access (obj[varKey]) or external APIs');
-  if(CHK('o_unimangle')&&!CHK('o_ren'))
-    w.push('⚠ Unicode Mangle needs Rename Variables on to have identifiers to mangle');
-  if(CHK('o_unimangle')&&_vmOn)
-    w.push('⚠ Unicode Mangle + Bytecode VM: \\uNNNN sequences inside new Function() cause SyntaxError — disable Unicode Mangle or VM');
-  if(CHK('o_ptrenc')&&!CHK('o_ren'))
-    w.push('ℹ Pointer Encoding works best when Rename Variables is also on');
-  if(CHK('o_objkeys')&&!CHK('o_sarr'))
-    w.push('ℹ Object Key Transform without String Array — key strings remain in output');
-
-  // VM interactions
-  if(CHK('o_bc_sarrbconly')&&!_vmOn)
-    w.push('ℹ String Array Inside VM Only is set but VM is not active');
-  if(CHK('o_bc_antidebug')&&!_vmOn)
-    w.push('ℹ VM Anti-Debug only runs inside the Bytecode VM wrapper');
-  if(_vmOn&&CHK('o_scopefog'))
-    w.push('ℹ Scope Fog inside VM: EXEC_RAW fallback statements inherit fog scope — usually fine');
-  if(_vmOn&&CHK('o_cff'))
-    w.push('ℹ CFF + VM: CFF runs before VM compilation. Complex CFF output may increase EXEC_RAW fallback rate');
-  if(_vmOn&&CHK('o_cfhash'))
-    w.push('⚠ Control Flow Hash wraps in a function; VM wraps in an IIFE — nesting is fine but verify execution');
-  if(CHK('o_bc_compact')&&CHK('o_bc_tablescatter'))
-    w.push('ℹ Compact Dispatcher + Table Scatter: compact mode inlines all opcodes directly — table scatter has no effect when compact is on');
-  if(CHK('o_bc_compact')&&CHK('o_bc_alias'))
-    w.push('ℹ Compact Dispatcher handles opcode aliases inside the switch — aliases still work but add extra case labels');
-  if(CHK('o_bc_enc')&&CHK('o_bc_dead'))
-    w.push('ℹ Bytecode Encryption + Dead Variable Noise: noise values are also encrypted — static analysis of the array reveals nothing either way');
-  if(CHK('o_bc_regsmear')&&CHK('o_bc_stackob'))
-    w.push('ℹ Register Smear + Stack Obfuscation: combined, stack shape is obfuscated both structurally and by phantom entries');
-  if(CHK('o_bc_macro')&&CHK('o_bc_enc'))
-    w.push('ℹ Macro Operands + Bytecode Encryption: macros fold before encryption — no interaction issues');
-  if(!_vmOn&&(CHK('o_bc_compact')||CHK('o_bc_macro')||CHK('o_bc_alias')||CHK('o_bc_enc')||CHK('o_bc_regsmear')||CHK('o_bc_poolindir')))
-    w.push('ℹ Bytecode Hardening options have no effect when VM is disabled');
-
-  // Domain lock
-  if(CHK('o_dom')&&typeof domains!=='undefined'&&domains.length===0)
-    w.push('⚠ Domain Lock is on but no domains have been added — will block execution everywhere');
-
-  // Protection redundancy
-  if(CHK('o_self')&&CHK('o_tamp'))
-    w.push('ℹ Self-Defending + Tamper Detection are complementary — both add different integrity checks');
-
-  body.innerHTML=w.length
-    ?w.map(x=>`<div class="ci-item" style="color:${x.startsWith('⚠')?'var(--red)':'var(--amb)'}">${x}</div>`).join('')
-    :'<div class="ci-ok">✓ No issues</div>';
-}
+function applyVmMode(mode){}
+function _syncVmState(){}
+function applyVmEnable(){}
 
 function getOpts(){
   return{
@@ -4180,54 +4117,54 @@ function getOpts(){
     strict_mode: VAL('o_strict_mode')||'auto',
     mini:     CHK('o_mini'),
     semi:     CHK('o_semi'),
-    simplify: false,          // removed — undoes number obfuscation
+    simplify: false,
     ignimport:CHK('o_ignimport'),
-    con:      CHK('o_con'),
-    self:     CHK('o_self'),
-    antib:    false,          // removed — duplicate of self-defending
-    native:   CHK('o_native'),
-    tamp:     CHK('o_tamp'),
-    dbg:      CHK('o_dbg'),
-    dom:      CHK('o_dom'),
+    con:      false,
+    self:     false,
+    antib:    false,
+    native:   false,
+    tamp:     false,
+    dbg:      false,
+    dom:      false,
     srcmap:   CHK('o_srcmap'),
-    sarr:     CHK('o_sarr'),
-    sarr_enc: getEncType(),
-    sarr_idx_types:getIdxTypes(),
-    srot:     CHK('o_srot'),
-    sshuf:    CHK('o_sshuf'),
-    calltrans:CHK('o_calltrans'),
-    wcount:   INT('o_wcount',1),
-    wparams:  INT('o_wparams',2),
-    senc:     CHK('o_senc'),
-    charcode: CHK('o_charcode'),
-    atob:     CHK('o_atob'),
-    tmpl:     CHK('o_tmpl'),
-    ssplit:   CHK('o_ssplit'),
-    clfold:   CHK('o_clfold'),
-    ptrenc:   CHK('o_ptrenc'),
-    ren:      CHK('o_ren'),
-    namegen:  VAL('o_namegen'),
-    renglobal:false,          // removed — breaks external dependencies
-    renprop:  CHK('o_renprop'),
-    prop:     CHK('o_prop'),
-    unimangle:CHK('o_unimangle'),
-    fakeproto:CHK('o_fakeproto'),
-    hexn:     CHK('o_hexn'),
-    nsplit:   CHK('o_nsplit'),
-    math:     CHK('o_math'),
-    evaldisguise:CHK('o_evaldisguise'),
-    cff:      CHK('o_cff'),
-    dead:     CHK('o_dead'),
-    iife:     CHK('o_iife'),
-    comma:    false,          // removed — redundant with iife
-    objkeys:  CHK('o_objkeys'),
+    sarr:     false,
+    sarr_enc: 'none',
+    sarr_idx_types:['hex'],
+    srot:     false,
+    sshuf:    false,
+    calltrans:false,
+    wcount:   1,
+    wparams:  2,
+    senc:     false,
+    charcode: false,
+    atob:     false,
+    tmpl:     false,
+    ssplit:   false,
+    clfold:   false,
+    ptrenc:   false,
+    ren:      false,
+    namegen:  'hexadecimal',
+    renglobal:false,
+    renprop:  false,
+    prop:     false,
+    unimangle:false,
+    fakeproto:false,
+    hexn:     false,
+    nsplit:   false,
+    math:     false,
+    evaldisguise:false,
+    cff:      false,
+    dead:     false,
+    iife:     false,
+    comma:    false,
+    objkeys:  false,
     bc:       CHK('o_bc'),
     bc_jmpenc:CHK('o_bc_jmpenc'),
     bc_wrapinit:CHK('o_bc_wrapinit'),
     bc_decoy: CHK('o_bc_decoy'),
     bc_dead:  CHK('o_bc_dead'),
     bc_antidebug:CHK('o_bc_antidebug'),
-    bc_sarrbconly:CHK('o_bc_sarrbconly'),
+    bc_sarrbconly:false,
     bc_opcount: INT('o_bc_opcount',128),
     bc_poolenc:  VAL('o_bc_poolenc')||'xor',
     bc_idxenc:   VAL('o_bc_idxenc')||'xor',
@@ -4250,217 +4187,27 @@ function getOpts(){
     bc_kchunk:   CHK('o_bc_kchunk'),
     bc_watermark:CHK('o_bc_watermark'),
     bcchunk:  INT('o_bcchunk',64),
-    idxshift: INT('o_idxshift',0),
+    idxshift: 0,
     target:   currentTarget,
-    opaque:     CHK('o_opaque'),
-    canary:     CHK('o_canary'),
-    envfp:      CHK('o_envfp'),
-    deobtrap:   CHK('o_deobtrap'),
-    proxywrap:  CHK('o_proxywrap'),
-    junkpoly:   CHK('o_junkpoly'),
-    hashlocked: CHK('o_hashlocked'),
-    interntrap: false,        // removed — duplicate of string array
-    callmutate:   CHK('o_callmutate'),
-    scopefog:     CHK('o_scopefog'),
-    tdztrap:      CHK('o_tdztrap'),
-    protguard:    CHK('o_protguard'),
-    timingcanary: CHK('o_timingcanary'),
-    homoglyph:    CHK('o_homoglyph'),
-    cfhash:       CHK('o_cfhash'),
+    opaque:     false,
+    canary:     false,
+    envfp:      false,
+    deobtrap:   false,
+    proxywrap:  false,
+    junkpoly:   false,
+    hashlocked: false,
+    interntrap: false,
+    callmutate:   false,
+    scopefog:     false,
+    tdztrap:      false,
+    protguard:    false,
+    timingcanary: false,
+    homoglyph:    false,
+    cfhash:       false,
     vm_mode:      VAL('o_vm_mode')||'none',
   };
 }
 
-// VM helpers — Bytecode VM only
-function updateOpcodeDisplay(){
-  const total=INT('o_bc_opcount',128);
-  const decoy=Math.max(0,total-20);
-  SETD('v-op-decoy',decoy);
-  SETD('v-op-total',total);
-}
-// All state lives in: o_vm_enable (checkbox), o_bc (hidden checkbox), o_vm_mode (hidden input)
-
-function _syncVmState(){
-  const on=CHK('o_vm_enable');
-  const bcEl=G('o_bc');if(bcEl)bcEl.checked=on;
-  SETV('o_vm_mode',on?'bytecode':'none');
-  const infoNone=G('vm-info-none'),infoBc=G('vm-info-bc');
-  if(infoNone)infoNone.style.display=on?'none':'block';
-  if(infoBc)infoBc.style.display=on?'block':'none';
-  liveCheck();
-}
-
-// applyVmMode: mode='bytecode' enables VM, anything else disables.
-// Used by presets and loadSettings.
-function applyVmMode(mode){
-  const on=(mode==='bytecode');
-  const enEl=G('o_vm_enable');if(enEl)enEl.checked=on;
-  _syncVmState();
-}
-
-function applyVmEnable(){
-  // Called directly by the toggle's onchange
-  _syncVmState();
-  saveSettings();
-}
-
-
-
-// Presets
-function setEnc(rc4,xor,none){SET('enc-rc4',rc4);SET('enc-xor',xor);SET('enc-none',none||false);msSync('enc');}
-function setIdx(hex,computed){SET('idx-hex',hex);SET('idx-computed',computed||false);msSync('idx');}
-function applyPreset(){
-  const p=G('preset').value;
-  const TRAP_IDS=['o_opaque','o_canary','o_envfp','o_deobtrap','o_proxywrap','o_junkpoly','o_hashlocked'];
-  const ADV_IDS=['o_scopefog','o_tdztrap','o_protguard','o_timingcanary','o_callmutate','o_homoglyph','o_cfhash'];
-  const ALL=[
-    'o_html','o_mini','o_semi','o_ignimport','o_con',
-    'o_self','o_native','o_tamp','o_dbg','o_dom','o_srcmap',
-    'o_sarr','o_srot','o_sshuf','o_calltrans',
-    'o_senc','o_charcode','o_atob','o_tmpl','o_ssplit','o_clfold','o_ptrenc',
-    'o_ren','o_renprop','o_prop','o_unimangle','o_fakeproto',
-    'o_hexn','o_nsplit','o_math','o_evaldisguise',
-    'o_cff','o_dead','o_iife','o_objkeys',
-    'o_bc','o_vm_enable','o_bc_jmpenc','o_bc_wrapinit',
-    'o_bc_decoy','o_bc_dead','o_bc_antidebug','o_bc_sarrbconly',
-    'o_bc_poolshuf','o_bc_poolpad','o_bc_iparr','o_bc_stackob','o_bc_tablescatter',
-    'o_bc_compact','o_bc_macro','o_bc_alias','o_bc_enc','o_bc_regsmear','o_bc_poolindir',
-    'o_bc_integrity','o_bc_envcheck','o_bc_tdguard','o_bc_kchunk','o_bc_watermark',
-    ...TRAP_IDS,...ADV_IDS];
-  ALL.forEach(id=>{const e=G(id);if(e){e.disabled=false;e.checked=false;}});
-
-  if(p==='light'){
-    SETV('o_vm_mode','none');applyVmMode('none');
-    ['o_senc','o_ren','o_hexn','o_mini'].forEach(id=>SET(id,true));
-    setEnc(false,false,false);setIdx(true,false);
-    SETV('o_namegen','hexadecimal');
-    SETV('o_wcount','1');SETD('v-wc','1');
-    SETV('o_bc_opcount','20');SETD('v-bc-opcount','20');
-
-  }else if(p==='medium'){
-    SETV('o_vm_mode','none');applyVmMode('none');
-    ['o_sarr','o_srot','o_sshuf','o_calltrans',
-     'o_senc','o_atob',
-     'o_ren','o_prop','o_hexn','o_nsplit',
-     'o_dead','o_iife',
-     'o_mini','o_semi',
-     'o_clfold','o_ptrenc',
-     'o_self','o_tamp',
-     'o_opaque','o_junkpoly'].forEach(id=>SET(id,true));
-    setEnc(false,true,false);setIdx(true,false);
-    SETV('o_namegen','hexadecimal');
-    SETV('o_wcount','1');SETD('v-wc','1');
-    SETV('o_bc_opcount','64');SETD('v-bc-opcount','64');
-    SETV('o_idxshift','0');SETD('v-idxsh','0');
-
-  }else if(p==='high'){
-    SETV('o_vm_mode','bytecode');applyVmMode('bytecode');
-    ['o_sarr','o_srot','o_sshuf','o_calltrans',
-     'o_senc','o_atob','o_tmpl','o_ssplit',
-     'o_ren','o_prop','o_hexn','o_nsplit','o_math','o_evaldisguise',
-     'o_cff','o_dead','o_iife',
-     'o_bc','o_bc_jmpenc','o_bc_decoy','o_bc_dead','o_bc_antidebug',
-     'o_bc_poolshuf','o_bc_poolpad','o_bc_iparr','o_bc_stackob',
-     'o_bc_envcheck','o_bc_tdguard','o_bc_kchunk',
-     'o_bc_macro','o_bc_alias','o_bc_regsmear','o_bc_poolindir',
-     'o_self','o_native','o_tamp','o_dbg',
-     'o_mini','o_semi',
-     'o_clfold','o_ptrenc','o_unimangle','o_fakeproto',
-     'o_opaque','o_canary','o_envfp','o_deobtrap','o_junkpoly','o_hashlocked',
-     'o_proxywrap','o_scopefog','o_tdztrap','o_protguard','o_timingcanary','o_callmutate',
-    ].forEach(id=>SET(id,true));
-    setEnc(true,true,false);setIdx(true,false);
-    SETV('o_namegen','hexadecimal');
-    SETV('o_wcount','2');SETD('v-wc','2');
-    SETV('o_wparams','2');SETD('v-wp','2');
-    SETV('o_idxshift','13');SETD('v-idxsh','13');
-    SETV('o_bc_opcount','128');SETD('v-bc-opcount','128');
-    SETV('o_bc_poolenc','sbox');
-    SETV('o_bc_idxenc','xor');
-    SETV('o_bc_dispatch','while');
-    SETV('o_bc_baseenc','hex');
-    SETV('o_bcchunk','64');SETD('v-bcc','64');
-    updateOpcodeDisplay();
-
-  }else if(p==='max'){
-    SETV('o_vm_mode','bytecode');applyVmMode('bytecode');
-    // Enable everything except features that reliably break code or are mutually exclusive
-    const skip=['o_html','o_dom','o_con','o_charcode','o_srcmap','o_renprop',
-                'o_bc_sarrbconly','o_bc_wrapinit','o_bc_tablescatter','o_bc_compact',
-                'o_homoglyph','o_cfhash']; // homoglyph+cfhash kept optional — very slow; compact conflicts with scatter
-    ALL.filter(id=>!skip.includes(id)).forEach(id=>SET(id,true));
-    setEnc(true,true,false);setIdx(true,true);
-    SETV('o_namegen','hexadecimal');
-    SETV('o_wcount','3');SETD('v-wc','3');
-    SETV('o_wparams','3');SETD('v-wp','3');
-    SETV('o_idxshift','29');SETD('v-idxsh','29');
-    SETV('o_thresh','1');SETD('v-thresh','1.00');
-    SETV('o_bc_opcount','220');SETD('v-bc-opcount','220');
-    SETV('o_bc_poolenc','chacha');
-    SETV('o_bc_idxenc','xor');
-    SETV('o_bc_dispatch','trampoline');
-    SETV('o_bc_baseenc','mixed');
-    SETV('o_bcchunk','32');SETD('v-bcc','32');
-    updateOpcodeDisplay();
-  }
-
-  // 'custom' = clear everything, let user build from scratch
-  if(p==='custom'){
-    SETV('o_vm_mode','none');applyVmMode('none');
-    setEnc(false,false,false);setIdx(true,false);
-    // Reset every slider to its min value
-    const DISP_MAP={'o_thresh':'v-thresh','o_idxshift':'v-idxsh','o_cff_t':'v-cff',
-      'o_dead_t':'v-dead','o_dbgint':'v-dbg','o_wcount':'v-wc','o_wparams':'v-wp',
-      'o_sschunk':'v-ssc','o_bcchunk':'v-bcc','o_bc_opcount':'v-bc-opcount'};
-    document.querySelectorAll('input[type=range][id]').forEach(el=>{
-      const minVal=el.min||'0';
-      el.value=minVal;
-      const dispId=DISP_MAP[el.id];
-      if(dispId){const dv=G(dispId);if(dv)dv.textContent=(el.step&&parseFloat(el.step)<1)?parseFloat(minVal).toFixed(2):minVal;}
-    });
-    showSub('sarr-sub',false);showSub('bc-sub',false);showSub('ct-sub',false);
-    showSub('ssplit-chunk-sub',false);showSub('cff-sub',false);showSub('dead-sub',false);
-    showSub('dbg-sub',false);showSub('ren-sub',false);showSub('dom-sub',false);
-    showSub('smap-sub',false);showSub('dict-sub',false);showSub('bc-chunk-sub',CHK('o_bc_kchunk'));
-    if(G('renprop-w'))G('renprop-w').style.display='none';
-    if(G('btn-map'))G('btn-map').disabled=true;
-    applyTargetConstraints();
-    refreshAllSliders();
-    updateOpcodeDisplay();
-    liveCheck();
-    const pd2=document.getElementById('sb-preset-display');
-    if(pd2)pd2.textContent='Preset: Custom';
-    saveSettings();
-    return;
-  }
-
-  applyTargetConstraints();
-  showSub('smap-sub',CHK('o_srcmap'));
-  refreshAllSliders();
-  updateOpcodeDisplay();
-  if(G('btn-map'))G('btn-map').disabled=!CHK('o_srcmap');
-  liveCheck();
-  const pd=document.getElementById('sb-preset-display');
-  if(pd){const p=document.getElementById('preset');if(p)pd.textContent='Preset: '+p.options[p.selectedIndex].text;}
-  saveSettings();
-}
-
-// Input presets
-const INPUT_PRESETS={
-  hello:`// Hello World\nfunction greet(name) {\n  var msg = 'Hello, ' + name + '!';\n  console.log(msg);\n  return msg.length;\n}\ngreet('world');`,
-  class:`// ES6 Class\nclass Animal {\n  constructor(name, sound) {\n    this.name = name;\n    this.sound = sound;\n  }\n  speak() {\n    return this.name + ' says ' + this.sound;\n  }\n  static create(name, sound) { return new Animal(name, sound); }\n}\nvar dog = Animal.create('Dog', 'woof');\nconsole.log(dog.speak());`,
-  crypto:`// Crypto Utility\nfunction xorEncrypt(data, key) {\n  var result = '';\n  for (var i = 0; i < data.length; i++) {\n    result += String.fromCharCode(data.charCodeAt(i) ^ key.charCodeAt(i % key.length));\n  }\n  return btoa(result);\n}\nfunction xorDecrypt(data, key) {\n  var raw = atob(data);\n  var result = '';\n  for (var i = 0; i < raw.length; i++) {\n    result += String.fromCharCode(raw.charCodeAt(i) ^ key.charCodeAt(i % key.length));\n  }\n  return result;\n}\nvar secret = 'my_api_key_12345';\nvar enc = xorEncrypt(secret, 'k9mX');\nconsole.log('Encrypted:', enc);\nconsole.log('Decrypted:', xorDecrypt(enc, 'k9mX'));`,
-  api:`// API Fetch Wrapper\nvar API_BASE = 'https://api.example.com/v2';\nvar API_KEY  = 'sk-live-abc123def456';\nfunction apiRequest(endpoint, data) {\n  return fetch(API_BASE + endpoint, {\n    method: 'POST',\n    headers: { 'Authorization': 'Bearer ' + API_KEY, 'Content-Type': 'application/json' },\n    body: JSON.stringify(data)\n  }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });\n}\napiRequest('/users/create', { name: 'Alice', role: 'admin' })\n  .then(function(res) { console.log('Created:', res.id); })\n  .catch(function(e) { console.error('Failed:', e.message); });`,
-  license:`// License Validator\nvar LICENSE_KEY = 'XXXX-YYYY-ZZZZ-1234';\nvar EXPIRY_DATE = '2025-12-31';\nfunction validateLicense(key) {\n  var parts = key.split('-');\n  if (parts.length !== 4) return false;\n  var checksum = 0;\n  for (var i = 0; i < parts.length - 1; i++)\n    for (var j = 0; j < parts[i].length; j++)\n      checksum ^= parts[i].charCodeAt(j);\n  var today = new Date().toISOString().slice(0,10);\n  if (today > EXPIRY_DATE) { console.error('License expired'); return false; }\n  console.log('License valid'); return checksum !== 0;\n}\nconsole.log(validateLicense(LICENSE_KEY));`,
-  antidbg:`// Anti-Debug Target\n(function() {\n  var startTime = Date.now();\n  var counter = 0;\n  function sensitiveOperation(input) {\n    var result = 0;\n    for (var i = 0; i < input.length; i++)\n      result = (result * 31 + input.charCodeAt(i)) | 0;\n    return result.toString(16);\n  }\n  function checkIntegrity() {\n    var elapsed = Date.now() - startTime;\n    if (elapsed > 500 && counter < 2) console.warn('Timing anomaly');\n    counter++;\n  }\n  setInterval(checkIntegrity, 200);\n  var hash = sensitiveOperation('secret_payload_data');\n  console.log('Hash:', hash);\n}());`
-};
-function applyInputPreset(name){
-  if(!name||!INPUT_PRESETS[name])return;
-  if(inputEditor)inputEditor.setValue(INPUT_PRESETS[name]);
-  const sel=G('input-preset');if(sel)sel.value='';
-}
-
-// Run
 function runObfuscate(){
   const src=inputEditor.getValue();
   if(!src.trim()){alert('Paste some JavaScript first.');return;}
@@ -4495,9 +4242,22 @@ function runObfuscate(){
     _lastMap=null;G('btn-map').disabled=true;
   }
 }
+
+function applyInputPreset(name){
+  const SAMPLES={
+    hello:'// Hello World\nfunction greet(name) {\n  console.log(\'Hello, \' + name + \'!\');\n  return name.length;\n}\ngreet(\'world\');',
+    class:'class Animal {\n  constructor(name) {\n    this.name = name;\n  }\n  speak() {\n    console.log(`${this.name} makes a noise.`);\n  }\n}\nconst dog = new Animal(\'Dog\');\ndog.speak();',
+    crypto:'function sha256(msg) {\n  const encoder = new TextEncoder();\n  const data = encoder.encode(msg);\n  return crypto.subtle.digest(\'SHA-256\', data);\n}\nsha256(\'hello\').then(h => console.log(h));',
+    api:'async function fetchUser(id) {\n  const res = await fetch(`https://api.example.com/users/${id}`);\n  if (!res.ok) throw new Error(\'Not found\');\n  const data = await res.json();\n  return data;\n}\nfetchUser(1).then(console.log);',
+    license:'function checkLicense(key) {\n  const valid = key.startsWith(\'LIC-\') && key.length === 20;\n  if (!valid) { alert(\'Invalid license\'); return false; }\n  localStorage.setItem(\'license\', key);\n  return true;\n}',
+    antidbg:'(function() {\n  setInterval(function() { debugger; }, 100);\n  if (window.outerWidth - window.innerWidth > 100) {\n    document.body.innerHTML = \'\';\n  }\n})();'
+  };
+  if(SAMPLES[name]){inputEditor.setValue(SAMPLES[name]);}
+  document.getElementById('input-preset').value='';
+}
+
 function clearInput(){inputEditor.setValue('');}
 
-// ─── BEAUTIFY ─────────────────────────────────────────────────────────────────
 function beautifyInput(){
   const src=inputEditor.getValue();
   if(!src.trim())return;
@@ -4505,7 +4265,6 @@ function beautifyInput(){
     const beautified=_jsBeautify(src);
     inputEditor.setValue(beautified);
   }catch(e){
-    // fallback: at least normalize line endings and re-indent via simple heuristic
     alert('Beautify error: '+e.message);
   }
 }
@@ -4993,466 +4752,21 @@ function _jsBeautify(src){
   return out.trim();
 }
 
-// ─── SEARCH ────────────────────────────────────────────────────────────────────
-const _searchState={in:{matches:[],cur:-1,marks:[]},out:{matches:[],cur:-1,marks:[]}};
-let _lastFocusedSide='in'; // track which editor was last focused
-
-function _getEditor(side){return side==='in'?inputEditor:outputEditor;}
-
-// Track which editor was last focused
-function _trackFocus(){
-  if(inputEditor)inputEditor.on('focus',()=>{_lastFocusedSide='in';});
-  if(outputEditor)outputEditor.on('focus',()=>{_lastFocusedSide='out';});
-}
-
-function toggleSearch(side){
-  const bar=G('search-'+side);
-  const visible=bar.style.display!=='none';
-  if(visible){
-    // Close
-    bar.style.display='none';
-    _clearSearchMarks(side);
-    _searchState[side].matches=[];
-    _searchState[side].cur=-1;
-    G('search-'+side+'-count').textContent='';
-    // Return focus to editor
-    _getEditor(side).focus();
-  }else{
-    // Open
-    bar.style.display='flex';
-    const inp=G('search-'+side+'-inp');
-    // Pre-fill with selected text if any
-    const ed=_getEditor(side);
-    const sel=ed.getSelection();
-    if(sel&&sel.length<200){inp.value=sel;}
-    inp.focus();inp.select();
-    doSearch(side);
-  }
-  setTimeout(fitEditors,30);
-}
-
-function _clearSearchMarks(side){
-  _searchState[side].marks.forEach(m=>{try{m.clear();}catch(_){}});
-  _searchState[side].marks=[];
-}
-
-function doSearch(side){
-  const query=G('search-'+side+'-inp').value;
-  _clearSearchMarks(side);
-  const st=_searchState[side];
-  st.matches=[];st.cur=-1;
-  const countEl=G('search-'+side+'-count');
-  if(!query){countEl.textContent='';return;}
-  const ed=_getEditor(side);
-  const doc=ed.getDoc();
-  const content=doc.getValue();
-  const lower=content.toLowerCase();
-  const ql=query.toLowerCase();
-  let pos=0;
-  while(pos<content.length){
-    const idx=lower.indexOf(ql,pos);
-    if(idx<0)break;
-    st.matches.push(idx);
-    pos=idx+1;
-  }
-  if(!st.matches.length){countEl.textContent='No results';return;}
-  // Highlight all matches
-  st.marks=st.matches.map(idx=>{
-    const from=doc.posFromIndex(idx);
-    const to=doc.posFromIndex(idx+query.length);
-    return doc.markText(from,to,{className:'ed-search-highlight'});
-  });
-  countEl.textContent=`1 / ${st.matches.length}`;
-  st.cur=0;
-  _jumpToMatch(side,0,true);
-}
-
-function _jumpToMatch(side,idx,initial){
-  const ed=_getEditor(side);
-  const st=_searchState[side];
-  if(!st.matches.length)return;
-  idx=((idx%st.matches.length)+st.matches.length)%st.matches.length;
-  st.cur=idx;
-  // Re-mark all: highlight + current
-  _clearSearchMarks(side);
-  const doc=ed.getDoc();
-  const query=G('search-'+side+'-inp').value;
-  st.marks=st.matches.map((mIdx,mi)=>{
-    const from=doc.posFromIndex(mIdx);
-    const to=doc.posFromIndex(mIdx+query.length);
-    return doc.markText(from,to,{className:mi===idx?'ed-search-current':'ed-search-highlight'});
-  });
-  G('search-'+side+'-count').textContent=`${idx+1} / ${st.matches.length}`;
-  const curIdx=st.matches[idx];
-  const from=doc.posFromIndex(curIdx);
-  ed.scrollIntoView({line:from.line,ch:from.ch},100);
-  if(!initial)ed.setCursor(from);
-}
-
-function searchNav(side,dir){
-  const st=_searchState[side];
-  if(!st.matches.length)return;
-  _jumpToMatch(side,st.cur+dir);
-}
-
-function searchKey(e,side){
-  if(e.key==='Enter'){e.preventDefault();searchNav(side,e.shiftKey?-1:1);}
-  if(e.key==='Escape'){e.preventDefault();toggleSearch(side);}
-}
-
-// ── Replace (input only) ──────────────────────────────────────────────────────
-function replaceKey(e){
-  if(e.key==='Enter'){e.preventDefault();e.shiftKey?replaceAll():replaceOne();}
-  if(e.key==='Escape'){e.preventDefault();toggleSearch('in');}
-}
-
-function replaceOne(){
-  const st=_searchState['in'];
-  if(!st.matches.length)return;
-  const cur=st.cur<0?0:st.cur;
-  const query=G('search-in-inp').value;
-  const replacement=G('replace-in-inp').value;
-  if(!query)return;
-  const ed=inputEditor;
-  const doc=ed.getDoc();
-  const mIdx=st.matches[cur];
-  const from=doc.posFromIndex(mIdx);
-  const to=doc.posFromIndex(mIdx+query.length);
-  doc.replaceRange(replacement,from,to);
-  // Re-run search so indices update
-  doSearch('in');
-  // Stay at same position (now pointing to the next match after replaced one)
-  if(st.matches.length>0){
-    const next=Math.min(cur,st.matches.length-1);
-    _jumpToMatch('in',next);
-  }
-}
-
-function replaceAll(){
-  const query=G('search-in-inp').value;
-  const replacement=G('replace-in-inp').value;
-  if(!query)return;
-  const ed=inputEditor;
-  const content=ed.getValue();
-  // Case-insensitive replaceAll preserving case of replacement exactly
-  const lower=content.toLowerCase();
-  const ql=query.toLowerCase();
-  let result='',pos=0,count=0;
-  while(pos<content.length){
-    const idx=lower.indexOf(ql,pos);
-    if(idx<0){result+=content.slice(pos);break;}
-    result+=content.slice(pos,idx)+replacement;
-    pos=idx+query.length;
-    count++;
-  }
-  if(count===0)return;
-  ed.setValue(result);
-  _clearSearchMarks('in');
-  _searchState['in'].matches=[];
-  _searchState['in'].cur=-1;
-  G('search-in-count').textContent=`Replaced ${count}`;
-  setTimeout(()=>{
-    const c=G('search-in-count');
-    if(c&&c.textContent.startsWith('Replaced'))c.textContent='';
-    doSearch('in');
-  },1800);
-}
-
-// Global Ctrl+F handler — opens search for the last-focused editor
-document.addEventListener('keydown',function(e){
-  if((e.ctrlKey||e.metaKey)&&e.key==='f'){
-    e.preventDefault();
-    // Determine which side: use last focused, but if cursor is inside output wrap use 'out'
-    let side=_lastFocusedSide||'in';
-    const bar=G('search-'+side);
-    if(bar.style.display==='none'){
-      toggleSearch(side);
-    }else{
-      // Already open — focus find input
-      G('search-'+side+'-inp').focus();
-      G('search-'+side+'-inp').select();
-    }
-  }
-  // Ctrl+H — open input search+replace
-  if((e.ctrlKey||e.metaKey)&&e.key==='h'){
-    e.preventDefault();
-    const bar=G('search-in');
-    if(bar.style.display==='none')toggleSearch('in');
-    // Focus replace input
-    setTimeout(()=>{const r=G('replace-in-inp');if(r)r.focus();},60);
-  }
-});
-function copyOut(){
-  const v=outputEditor.getValue();if(!v)return;
-  function _setCopied(){const btn=G('btn-copy');btn.textContent='Copied!';setTimeout(()=>{btn.textContent='Copy';},1400);}
-  navigator.clipboard.writeText(v).then(_setCopied).catch(()=>{
-    // Fallback for non-https
-    const ta=document.createElement('textarea');
-    ta.value=v;ta.style.position='fixed';ta.style.opacity='0';
-    document.body.appendChild(ta);ta.select();
-    document.execCommand('copy');document.body.removeChild(ta);
-    _setCopied();
-  });
-}
-function dlMap(){
-  if(!_lastMap)return;
-  const blob=new Blob([_lastMap],{type:'application/json'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=(VAL('o_smap_url')||'output.js.map').split('/').pop();
-  a.click();
-}
-
-// CodeMirror Init
-const inputEditor=CodeMirror(G('in-editor'),{
-  mode:'javascript',lineNumbers:true,foldGutter:true,
-  gutters:['CodeMirror-linenumbers','CodeMirror-foldgutter'],
-  extraKeys:{'Ctrl-Q':cm=>cm.foldCode(cm.getCursor()),'Cmd-Q':cm=>cm.foldCode(cm.getCursor())},
-  matchBrackets:true,autoCloseBrackets:true,lineWrapping:false,tabSize:2,indentWithTabs:false,
-  value:'// Paste your JavaScript here\n\nfunction greet(name) {\n  console.log(\'Hello, \' + name + \'!\');\n  return name.length;\n}\n\ngreet(\'world\');',
-});
-const outputEditor=CodeMirror(G('out-editor'),{
-  mode:'javascript',lineNumbers:true,foldGutter:true,
-  gutters:['CodeMirror-linenumbers','CodeMirror-foldgutter'],
-  readOnly:true,lineWrapping:false,tabSize:2,value:'',
-});
-_trackFocus();
-
 // ================================================================
-//  AUTO-CONFIG
+//  PERSISTENCE
 // ================================================================
-function scanScript(src){
-  const s={
-    hasWindowDoc:/\b(window|document|navigator|location|localStorage|sessionStorage|XMLHttpRequest|fetch)\b/.test(src),
-    hasNodeApis:/\b(process|Buffer|__dirname|__filename)\b/.test(src),
-    hasEval:/\beval\s*\(|\bnew\s+Function\s*\(/.test(src),
-    hasImports:/^\s*(import\s[\s\S]|export\s|(const|var|let)\s+[\w{*].*=\s*require\s*\()/m.test(src),
-    hasTemplateLit:/`[^`]*\$\{/.test(src),
-    hasAtobBtoa:/\b(atob|btoa)\s*\(/.test(src),
-    hasAsyncAwait:/\b(async\s+function|async\s+\(|await\s)/.test(src),
-    hasClasses:/\bclass\s+[A-Z]/.test(src),
-    hasStrictMode:/['"]use strict['"]/.test(src),
-    hasLabeledLoop:/\b(break|continue)\s+[a-zA-Z_$][a-zA-Z0-9_$]*/.test(src),
-    hasWithStmt:/\bwith\s*\(/.test(src),
-    hasRegex:/(?<![*\/])\/(?!\*)[^\n]{1,80}\/[gimsuy]*/.test(src),
-    hasDomWrite:/\.(innerHTML|outerHTML|write|writeln)\s*[=\(]/.test(src),
-    hasTryCatch:/\btry\s*\{/.test(src),
-    hasTypedArrays:/\b(Uint8Array|Int32Array|Float64Array|ArrayBuffer)\b/.test(src),
-    bytes:src.length,lines:src.split('\n').length,
-  };
-  if(s.hasWindowDoc&&!s.hasNodeApis)s.detectedTarget='browser';
-  else if(s.hasNodeApis&&!s.hasWindowDoc)s.detectedTarget='node';
-  else s.detectedTarget='browser';
-  s.evalRisk=s.hasEval;
-  s.atobRisk=s.hasAtobBtoa;
-  s.renameRisk=s.hasWithStmt;
-  return s;
-}
-function acBuildBadges(s){
-  const b=[];
-  const add=(cls,txt)=>b.push(`<span class="ac-badge ${cls}">${txt}</span>`);
-  if(s.detectedTarget==='node')add('info','Node.js');
-  if(s.hasWindowDoc)add('info','Browser DOM');
-  if(s.hasEval)add('warn','eval / new Function');
-  if(s.hasImports)add('info','import / require');
-  if(s.hasAtobBtoa)add('warn','native atob/btoa');
-  if(s.hasTemplateLit)add('neu','Template literals');
-  if(s.hasAsyncAwait)add('neu','async/await');
-  if(s.hasClasses)add('neu','ES6 Classes');
-  if(s.hasWithStmt)add('warn','with() statement');
-  if(s.hasRegex)add('neu','RegExp');
-  if(s.hasTypedArrays)add('neu','TypedArrays');
-  if(s.hasStrictMode)add('neu','"use strict"');
-  const sz=s.bytes<2000?'<2 KB':s.bytes<10000?'<10 KB':s.bytes<50000?'<50 KB':'50+ KB';
-  add('neu',sz+' · '+s.lines+' lines');
-  if(!b.length)add('neu','Plain JS');
-  return b.join('');
-}
-
-let _acScan=null,_acLevel='high',_acRecs=[];
-
-function acBuildRecs(s,level){
-  const recs=[];
-  const on=(label,reason,fn)=>recs.push({kind:'on',icon:'+',label,reason,fn});
-  const off=(label,reason,fn)=>recs.push({kind:'off',icon:'−',label,reason,fn});
-
-  if(s.detectedTarget==='browser'){
-    on('Target: Browser','Browser APIs detected',()=>setTarget('browser'));
-  }else if(s.detectedTarget==='node'){
-    on('Target: Node.js','No browser APIs detected',()=>setTarget('node'));
-  }else{
-    on('Target: Browser','Standard browser environment',()=>setTarget('browser'));
-  }
-
-  on('String Array','Core layer — extracts all strings',()=>{SET('o_sarr',true);showSub('sarr-sub',true);});
-
-  if(level==='light'){
-    off('String Array Encoding','Light level — skip encoding',()=>setEnc(false,false,true));
-    off('Rotate + Shuffle','Not needed at light level',()=>{SET('o_srot',false);SET('o_sshuf',false);});
-    off('Calls Transform','Light level',()=>{SET('o_calltrans',false);showSub('ct-sub',false);});
-  }else if(level==='medium'){
-    on('XOR Encoding','Single layer XOR',()=>setEnc(false,true,false));
-    on('Rotate + Shuffle','Randomize array layout',()=>{SET('o_srot',true);SET('o_sshuf',true);});
-    on('Calls Transform','Proxy wrapper chain',()=>{SET('o_calltrans',true);showSub('ct-sub',true);});
-  }else{
-    on('RC4 + XOR Encoding','Dual-layer encryption',()=>setEnc(true,true,false));
-    on('Rotate + Shuffle','Randomize array layout',()=>{SET('o_srot',true);SET('o_sshuf',true);});
-    on('Calls Transform','Proxy wrapper chain',()=>{SET('o_calltrans',true);showSub('ct-sub',true);});
-  }
-
-  if(level==='high'||level==='max'){
-    on('Rename Variables','Hex identifier names',()=>{SET('o_ren',true);showSub('ren-sub',true);});
-    on('Bracket Access','obj.foo → obj["foo"]',()=>SET('o_prop',true));
-    on('Hex Literals + Splitting','Number obfuscation',()=>{SET('o_hexn',true);SET('o_nsplit',true);SET('o_math',true);});
-    on('Control Flow Flattening','While/switch dispatch',()=>{SET('o_cff',true);showSub('cff-sub',true);});
-    on('Dead Code Injection','Opaque predicates',()=>{SET('o_dead',true);showSub('dead-sub',true);});
-    on('IIFE Wrap','Scope isolation',()=>{SET('o_iife',true);});
-    on('Closure Trap Fold','Custom: reduce-based string encoding',()=>SET('o_clfold',true));
-    on('Pointer Encoding','Custom: indirection chain on decoder calls',()=>SET('o_ptrenc',true));
-    on('Unicode Mangle','Custom: \\uNNNN identifier escaping',()=>SET('o_unimangle',true));
-    on('Fake Proto Chain','Custom: phantom prototype assignments',()=>SET('o_fakeproto',true));
-    on('Eval Disguise','Custom: -~[] arithmetic for small ints',()=>SET('o_evaldisguise',true));
-  }else{
-    off('Rename Variables','Enabled from high level upward',()=>{SET('o_ren',false);showSub('ren-sub',false);});
-    off('Custom Methods','Enabled from high level upward',()=>{SET('o_clfold',false);SET('o_ptrenc',false);SET('o_unimangle',false);SET('o_fakeproto',false);SET('o_evaldisguise',false);});
-  }
-
-  if(s.renameRisk){off('Rename Variables — skipped','with() statement detected — rename unsafe',()=>{SET('o_ren',false);showSub('ren-sub',false);});}
-
-  if(level==='high'||level==='max'){
-    if(s.detectedTarget==='browser'){
-      on('Self-Defending','Infinite loop on reformat',()=>SET('o_self',true));
-      on('Tamper Detection','Sentinel variable guard',()=>SET('o_tamp',true));
-      on('Native Fn Check','Detect hooked natives',()=>SET('o_native',true));
-      on('Debug Protection','DevTools freeze',()=>{SET('o_dbg',true);showSub('dbg-sub',true);});
-    }
-  }
-
-  if(!s.evalRisk&&(level==='high'||level==='max')){
-    on('Bytecode VM','Source → int[] + encrypted constant pool — no source string at runtime',()=>{
-      SET('o_bc',true);showSub('bc-sub',true);
-      SET('o_bc_jmpenc',true);
-      SET('o_bc_decoy',true);SET('o_bc_dead',true);SET('o_bc_antidebug',true);
-      SET('o_bc_poolshuf',true);SET('o_bc_poolpad',true);
-      SET('o_bc_iparr',true);SET('o_bc_stackob',true);
-      SET('o_bc_envcheck',true);SET('o_bc_tdguard',true);
-      SET('o_bc_kchunk',true);
-    });
-  }else if(s.evalRisk&&level==='max'){
-    on('Bytecode VM — WARNING','Code uses eval; VM adds another Function layer — verify output',()=>{
-      SET('o_bc',true);showSub('bc-sub',true);
-    });
-  }else{
-    off('Bytecode VM','Enabled from high level upward',()=>{SET('o_bc',false);showSub('bc-sub',false);});
-  }
-
-  on('Compact Output','Remove whitespace',()=>SET('o_mini',true));
-  if(level!=='light')on('Collapse Semicolons','Merge var declarations',()=>SET('o_semi',true));
-
-  // Advanced traps
-  if(level==='medium'||level==='high'||level==='max'){
-    on('Opaque Predicates','Tautology guards confuse symbolic execution',()=>SET('o_opaque',true));
-    on('Junk Polyglot Blocks','Dead CFF-look-alike blocks waste deobfuscator time',()=>SET('o_junkpoly',true));
-  }
-  if(level==='high'||level==='max'){
-    on('Stack Canary','Crashes inliners that call decoder out-of-context',()=>SET('o_canary',true));
-    on('Environment Fingerprint','Fails static emulators and sandbox engines',()=>SET('o_envfp',true));
-    on('Deobfuscator Trap','Infinite-regress bait for automated unpackers',()=>SET('o_deobtrap',true));
-    on('Hash-Locked Decoder','Integrity check — patch the array and decoding breaks silently',()=>SET('o_hashlocked',true));
-  }
-  if(level==='max'){
-    on('Proxy Function Wrap','Wraps renamed fns in Proxy; destroys static call graphs',()=>SET('o_proxywrap',true));
-  }
-
-  return recs;
-}
-
-function acRenderRecs(){
-  const el=G('ac-recs');
-  if(!_acScan){el.innerHTML='<span style="color:var(--mute);font-size:11px;">Paste code in the editor first.</span>';return;}
-  _acRecs=acBuildRecs(_acScan,_acLevel);
-  if(!_acRecs.length){el.innerHTML='<span style="color:var(--mute);font-size:11px;">No recommendations.</span>';return;}
-  el.innerHTML=_acRecs.map(r=>`<div class="ac-rec ${r.kind}"><span class="ac-rec-icon">${r.icon}</span><span class="ac-rec-text"><b>${r.label}</b><small>${r.reason}</small></span></div>`).join('');
-}
-
-function openAutoConfig(){
-  const src=(typeof inputEditor!=='undefined'?inputEditor.getValue():'').trim();
-  _acScan=src?scanScript(src):null;
-  G('ac-badges').innerHTML=_acScan?acBuildBadges(_acScan):'<span style="color:var(--mute);font-size:11px;">Editor is empty.</span>';
-  const cur=G('preset').value;
-  _acLevel=['light','medium','high','max'].includes(cur)?cur:'high';
-  document.querySelectorAll('.ac-lvl').forEach(el=>el.classList.toggle('sel',el.dataset.l===_acLevel));
-  acRenderRecs();
-  G('ac-overlay').classList.add('open');
-}
-function closeAutoConfig(){G('ac-overlay').classList.remove('open');}
-function acPickLevel(l){
-  _acLevel=l;
-  document.querySelectorAll('.ac-lvl').forEach(el=>el.classList.toggle('sel',el.dataset.l===l));
-  acRenderRecs();
-}
-function applyAutoConfig(){
-  if(!_acScan&&!_acRecs.length){closeAutoConfig();return;}
-  const ALL=[
-    'o_html','o_mini','o_semi','o_ignimport','o_con',
-    'o_self','o_native','o_tamp','o_dbg','o_dom','o_srcmap',
-    'o_sarr','o_srot','o_sshuf','o_calltrans',
-    'o_senc','o_charcode','o_atob','o_tmpl','o_ssplit','o_clfold','o_ptrenc',
-    'o_ren','o_renprop','o_prop','o_unimangle','o_fakeproto',
-    'o_hexn','o_nsplit','o_math','o_evaldisguise',
-    'o_cff','o_dead','o_iife','o_objkeys',
-    'o_bc','o_vm_enable','o_bc_jmpenc','o_bc_wrapinit',
-    'o_bc_decoy','o_bc_dead','o_bc_antidebug','o_bc_sarrbconly',
-    'o_bc_poolshuf','o_bc_poolpad','o_bc_iparr','o_bc_stackob','o_bc_tablescatter',
-    'o_bc_compact','o_bc_macro','o_bc_alias','o_bc_enc','o_bc_regsmear','o_bc_poolindir',
-    'o_bc_integrity','o_bc_envcheck','o_bc_tdguard','o_bc_kchunk','o_bc_watermark',
-    'o_opaque','o_canary','o_envfp','o_deobtrap','o_proxywrap','o_junkpoly','o_hashlocked',
-    'o_callmutate','o_scopefog','o_tdztrap','o_protguard','o_timingcanary','o_homoglyph','o_cfhash'];
-  ALL.forEach(id=>{const e=G(id);if(e){e.disabled=false;e.checked=false;}});
-  // Reset VM and multiselects to clean state before applying recs
-  SETV('o_vm_mode','none');applyVmMode('none');
-  setEnc(false,false,false);setIdx(true,false);
-  _acRecs.forEach(r=>{if(r.fn)r.fn();});
-  if(_acScan)setTarget(_acScan.detectedTarget||'browser');
-  SETV('preset','custom');
-  showSub('smap-sub',CHK('o_srcmap'));
-  if(G('btn-map'))G('btn-map').disabled=!CHK('o_srcmap');
-  applyTargetConstraints();
-  refreshAllSliders();
-  updateOpcodeDisplay();
-  liveCheck();
-  closeAutoConfig();
-  saveSettings();
-}
-
-// ================================================================
-//  PERSISTENCE — save/load all settings + input to localStorage
-// ================================================================
-const PERSIST_KEY='obscura_v10'; // v10: single VM tab, bc-chunk-sub added
+const PERSIST_KEY='obscura_clean_v1';
 
 function saveSettings(){
   try{
-    const data={v:10};
-    data.preset=VAL('preset');
-    data.target=currentTarget;
-    // Every checkbox that has an id
-    document.querySelectorAll('input[type=checkbox][id]').forEach(el=>{
-      data['ck_'+el.id]=el.checked;
-    });
-    // Every range slider
-    document.querySelectorAll('input[type=range][id]').forEach(el=>{
-      data['sl_'+el.id]=el.value;
-    });
-    // Text inputs / selects
-    ['seed-val','o_idpfx','o_namegen','o_domredir','o_smap_url','o_smap_root','o_vm_mode','o_strict_mode','o_bc_poolenc','o_bc_idxenc','o_bc_dispatch','o_bc_baseenc'].forEach(id=>{
-      const e=G(id);if(e)data['tx_'+id]=e.value;
-    });
-    // Tag inputs
-    ['ta-force','ta-resstr','ta-resname','ta-dict'].forEach(id=>{
-      data['tags_'+id]=getTags(id);
-    });
-    data.domains=domains;
+    const data={v:1};
     data.inputCode=inputEditor?inputEditor.getValue():'';
+    ['o_mini','o_semi','o_ignimport','o_html','o_srcmap'].forEach(id=>{
+      const e=document.getElementById(id);if(e)data['ck_'+id]=e.checked;
+    });
+    ['o_strict_mode','o_smap_url','o_smap_root','seed-val'].forEach(id=>{
+      const e=document.getElementById(id);if(e)data['tx_'+id]=e.value;
+    });
     localStorage.setItem(PERSIST_KEY,JSON.stringify(data));
   }catch(e){console.warn('save failed',e);}
 }
@@ -5462,145 +4776,51 @@ function loadSettings(){
     const raw=localStorage.getItem(PERSIST_KEY);
     if(!raw)return false;
     const data=JSON.parse(raw);
-    if(!data||data.v!==10)return false;
-
-    // Restore preset select value WITHOUT calling applyPreset (that would overwrite everything)
-    if(data.preset){const e=G('preset');if(e)e.value=data.preset;}
-
-    // Zero all checkboxes first so no preset bleed-through, then restore saved state
-    document.querySelectorAll('input[type=checkbox][id]').forEach(el=>{
-      el.checked=data['ck_'+el.id]!==undefined?data['ck_'+el.id]:false;
+    if(!data||data.v!==1)return false;
+    ['o_mini','o_semi','o_ignimport','o_html','o_srcmap'].forEach(id=>{
+      if(data['ck_'+id]!==undefined){const e=document.getElementById(id);if(e)e.checked=data['ck_'+id];}
     });
-
-    // Restore sliders + their display spans
-    const DISP={'o_thresh':'v-thresh','o_idxshift':'v-idxsh','o_cff_t':'v-cff',
-      'o_dead_t':'v-dead','o_dbgint':'v-dbg','o_wcount':'v-wc','o_wparams':'v-wp',
-      'o_sschunk':'v-ssc','o_bcchunk':'v-bcc','o_bc_opcount':'v-bc-opcount'};
-    document.querySelectorAll('input[type=range][id]').forEach(el=>{
-      if(data['sl_'+el.id]!==undefined){
-        el.value=data['sl_'+el.id];
-        const dispId=DISP[el.id];
-        if(dispId){
-          const dv=G(dispId);if(dv){
-            const v=data['sl_'+el.id];
-            dv.textContent=(el.step&&parseFloat(el.step)<1)?parseFloat(v).toFixed(2):v;
-          }
-        }
-      }
+    ['o_strict_mode','o_smap_url','o_smap_root','seed-val'].forEach(id=>{
+      if(data['tx_'+id]!==undefined){const e=document.getElementById(id);if(e)e.value=data['tx_'+id];}
     });
-
-    // Text inputs + selects
-    ['seed-val','o_idpfx','o_namegen','o_domredir','o_smap_url','o_smap_root','o_vm_mode','o_strict_mode','o_bc_poolenc','o_bc_idxenc','o_bc_dispatch','o_bc_baseenc'].forEach(id=>{
-      if(data['tx_'+id]!==undefined){const e=G(id);if(e)e.value=data['tx_'+id];}
-    });
-
-    // Target buttons
-    if(data.target){
-      currentTarget=data.target;
-      document.querySelectorAll('.tp').forEach(p=>p.classList.toggle('active',p.dataset.t===data.target));
-    }
-
-    // Tag inputs
-    ['ta-force','ta-resstr','ta-resname','ta-dict'].forEach(id=>{
-      const tags=data['tags_'+id];
-      if(Array.isArray(tags)&&tags.length){
-        // derive input id: ta-force->ti-force, ta-resstr->ti-resstr etc
-        const iid='ti-'+id.slice(3);
-        tags.forEach(v=>addTag(id,iid,v,true));
-      }
-    });
-
-    // Domains
-    if(Array.isArray(data.domains)&&data.domains.length){
-      domains=data.domains;renderDomains();
-    }
-
-    // Fix sub-panel visibility based on restored checkbox states
-    const _restoredVmMode=data['tx_o_vm_mode']||VAL('o_vm_mode')||'none';
-    applyVmMode(_restoredVmMode);
-    showSub('smap-sub',CHK('o_srcmap'));
-    if(G('btn-map'))G('btn-map').disabled=!CHK('o_srcmap');
-
-    // Multi-select display text
-    msSync('enc');msSync('idx');
-    updateOpcodeDisplay();
-
-    // Apply visual dimming for target (no disabling)
-    applyTargetConstraints();
-    liveCheck();
-    // Restore btn-map enabled state
-    G('btn-map').disabled=!CHK('o_srcmap');
-
-    // Update status bar displays to match restored state
-    const sbPreset=G('sb-preset-display');
-    if(sbPreset){
-      const presetEl=G('preset');
-      if(presetEl)sbPreset.textContent='Preset: '+presetEl.options[presetEl.selectedIndex].text;
-    }
-    const sbTarget=G('sb-target-display');
-    if(sbTarget)sbTarget.textContent='Target: '+({browser:'Browser','browser-no-eval':'No Eval',node:'Node.js'}[currentTarget]||currentTarget);
-
-    // Input editor — do after a tick so CM is fully ready
+    showSub('smap-sub',document.getElementById('o_srcmap')&&document.getElementById('o_srcmap').checked);
+    if(document.getElementById('btn-map'))document.getElementById('btn-map').disabled=!(document.getElementById('o_srcmap')&&document.getElementById('o_srcmap').checked);
     if(data.inputCode){
       setTimeout(()=>{if(inputEditor)inputEditor.setValue(data.inputCode);},50);
     }
-
     return true;
   }catch(e){console.warn('load failed',e);return false;}
 }
 
-// Move perf text from labels to toggle tooltips
-(function(){
-  document.querySelectorAll('.row').forEach(row=>{
-    const perfEl=row.querySelector('b.perf, .perf-tag');
-    if(!perfEl)return;
-    const tog=row.querySelector('.tog');
-    if(!tog)return;
-    const txt=perfEl.textContent.trim();
-    if(txt)tog.setAttribute('data-perf',txt);
+function copyOut(){
+  const v=outputEditor.getValue();if(!v)return;
+  function _setCopied(){const btn=G('btn-copy');btn.textContent='Copied!';setTimeout(()=>{btn.textContent='Copy';},1400);}
+  navigator.clipboard.writeText(v).then(_setCopied).catch(()=>{
+    const ta=document.createElement('textarea');
+    ta.value=v;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');document.body.removeChild(ta);
+    _setCopied();
   });
-})();
+}
 
-// Init — do NOT call applyPreset() here; window.load handler does it after loadSettings()
-document.querySelectorAll('input[type=checkbox]').forEach(el=>el.addEventListener('change',liveCheck));
+function dlMap(){
+  if(!_lastMap)return;
+  const blob=new Blob([_lastMap],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=(VAL('o_smap_url')||'output.js.map').split('/').pop();
+  a.click();
+}
 
-// Boot: try to load saved state, fall back to default preset
 window.addEventListener('load',()=>{
   initSliders();
   setTimeout(fitEditors,80);
-  const ok=loadSettings();
-  setTimeout(refreshAllSliders,10);
-  setTimeout(updateOpcodeDisplay,10);
-  if(!ok){applyPreset();}
-  // Force-correct all sub-panel visibility after init
-  (function fixSubPanels(){
-    showSub('smap-sub',CHK('o_srcmap'));
-    if(G('btn-map'))G('btn-map').disabled=!CHK('o_srcmap');
-    const vm=VAL('o_vm_mode')||'none';
-    applyVmMode(vm);
-  })();
-  // Wire up auto-save after load so save isn't triggered during init
-  // Checkboxes and ranges that are NOT the preset select itself: also mark as "custom"
+  loadSettings();
+  // Wire auto-save
   document.querySelectorAll('input[id],select[id]').forEach(el=>{
-    el.addEventListener('change',function(){
-      // When user manually changes any option (not the preset dropdown), mark as custom
-      if(el.id!=='preset'&&el.type!=='hidden'){
-        const presetEl=G('preset');
-        if(presetEl&&presetEl.value!=='custom'){
-          presetEl.value='custom';
-          const pd=G('sb-preset-display');if(pd)pd.textContent='Preset: Custom';
-        }
-      }
-      saveSettings();
-    });
-    if(el.type==='range')el.addEventListener('input',function(){
-      const presetEl=G('preset');
-      if(presetEl&&presetEl.value!=='custom'){
-        presetEl.value='custom';
-        const pd=G('sb-preset-display');if(pd)pd.textContent='Preset: Custom';
-      }
-      saveSettings();
-    });
+    el.addEventListener('change',saveSettings);
+    if(el.type==='range')el.addEventListener('input',saveSettings);
   });
   if(inputEditor){
     inputEditor.on('change',()=>{
