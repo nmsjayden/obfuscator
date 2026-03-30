@@ -562,7 +562,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
     <option value="custom">Custom</option>
   </select>
   <div class="tgap"></div>
-  <button class="txt-btn" onclick="openAutoConfig()">Auto-Config</button>
   <button class="txt-btn" id="btn-copy" onclick="copyOut()">Copy</button>
   <button class="txt-btn" id="btn-map" onclick="dlMap()" disabled>Map</button>
   <div class="tsep"></div>
@@ -649,13 +648,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
   <div id="panel">
     <div id="panel-top-wrap">
     <div id="panel-top">
-      <button class="stab active" data-tab="strings"     onclick="switchTab('strings')">Strings</button>
-      <button class="stab"        data-tab="identifiers"  onclick="switchTab('identifiers')">Idents</button>
-      <button class="stab"        data-tab="flow"         onclick="switchTab('flow')">Flow</button>
-      <button class="stab"        data-tab="vm"           onclick="switchTab('vm')">VM</button>
-      <button class="stab"        data-tab="protection"   onclick="switchTab('protection')">Protect</button>
-      <button class="stab"        data-tab="output"       onclick="switchTab('output')">Output</button>
-      <button class="stab"        data-tab="general"      onclick="switchTab('general')">More</button>
+      <button class="stab active" data-tab="vm"     onclick="switchTab('vm')">VM</button>
+      <button class="stab"        data-tab="output"  onclick="switchTab('output')">Output</button>
     </div><!-- end panel-top -->
     <div id="tab-scroll-hint">
       <span id="tab-scroll-arrow">›</span>
@@ -663,8 +657,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
   </div><!-- end panel-top-wrap -->
     <div id="panel-scroll">
 
-      <!-- STRINGS -->
-      <div class="tpanel active" id="tpanel-strings">
+      <!-- STRINGS (hidden — controlled by presets/engine only) -->
+      <div class="tpanel" id="tpanel-strings">
         <div class="grp">
           <div class="grp-lbl">String Array</div>
           <div class="row"><label class="rl">Enable<small>Extract all strings into a shared encrypted pool — decoder called at runtime · <b class="perf">+15% output size</b></small></label><label class="tog"><input type="checkbox" id="o_sarr" checked onchange="showSub('sarr-sub',this.checked);liveCheck()"><span class="tk"></span></label></div>
@@ -763,13 +757,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
       </div>
 
       <!-- VM -->
-      <div class="tpanel" id="tpanel-vm">
-
-        <!-- Enable -->
+      <div class="tpanel active" id="tpanel-vm">
         <div class="grp">
           <div class="grp-lbl">Bytecode VM</div>
-          <input type="hidden" id="o_vm_mode" value="none">
-          <input type="checkbox" id="o_bc" style="display:none">
           <div class="row">
             <label class="rl">Enable<small>Compiles JS to a custom stack-based bytecode — no source string ever exists at runtime</small></label>
             <label class="tog"><input type="checkbox" id="o_vm_enable" onchange="applyVmEnable()"><span class="tk"></span></label>
@@ -777,126 +767,86 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           <div id="vm-info-none" class="info-box">VM off — source runs after standard obfuscation passes only.</div>
           <div id="vm-info-bc" class="info-box" style="display:none">Source compiled to integer bytecode + encrypted constant pool. Dispatcher loop executes opcodes directly — no source string is ever reconstructed at runtime. Unsupported constructs fall to per-statement EXEC_RAW.</div>
         </div>
-
-        <!-- Options shown when VM enabled -->
-        <div id="bc-sub">
-
-          <!-- Opcode Space -->
-          <div class="grp">
-            <div class="grp-lbl">Opcode Space</div>
-            <div class="op-stats">
-              <div class="op-stat">
-                <span class="op-stat-num">20</span>
-                <span class="op-stat-lbl">Real</span>
-              </div>
-              <div class="op-stat">
-                <span class="op-stat-num" id="v-op-decoy">108</span>
-                <span class="op-stat-lbl">Decoy</span>
-              </div>
-              <div class="op-stat op-stat-hi">
-                <span class="op-stat-num" id="v-op-total">128</span>
-                <span class="op-stat-lbl">Total</span>
-              </div>
-            </div>
-            <div class="sl">
-              <div class="sl-head"><span class="sl-name">Total Opcode Slots</span><span class="sv" id="v-bc-opcount">128</span></div>
-              <div class="srow"><input type="range" id="o_bc_opcount" min="20" max="256" step="1" value="128" oninput="SETD('v-bc-opcount',this.value);updateOpcodeDisplay()"></div>
-            </div>
-            <div class="row"><label class="rl">Decoy Opcodes<small>Fill unused slots with dead handler fns — attacker can't tell real from fake</small></label><label class="tog"><input type="checkbox" id="o_bc_decoy" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Dead Variable Noise<small>Unreferenced vars scattered through bytecode array — pollutes static analysis</small></label><label class="tog"><input type="checkbox" id="o_bc_dead" checked><span class="tk"></span></label></div>
-          </div>
-
-          <!-- Constant Pool Encoding -->
-          <div class="grp">
-            <div class="grp-lbl">Constant Pool</div>
-            <div class="info-box" style="margin-bottom:6px;">All strings, identifiers, and literals are encrypted in a pool. The bytecode only references pool indices — no readable values in the bytecode array.</div>
-
-            <div class="fld"><div class="fld-lbl">Pool Encoding</div>
-              <select class="fsel" id="o_bc_poolenc" onchange="liveCheck()">
-                <option value="xor" selected>XOR per-entry (fast, per-byte keyed)</option>
-                <option value="xorshift">XOR + bit-rotation (stronger byte mixing)</option>
-                <option value="sbox">S-Box substitution (PRESENT-style 4-bit)</option>
-                <option value="chacha">ChaCha8 stream (strongest, uses existing key schedule)</option>
-              </select>
-            </div>
-
-            <div class="fld"><div class="fld-lbl">Index Encoding</div>
-              <select class="fsel" id="o_bc_idxenc">
-                <option value="raw">Raw integers</option>
-                <option value="xor" selected>XOR-masked indices (idx ^ per-run salt)</option>
-                <option value="delta">Delta encoding (each idx = prev + delta)</option>
-                <option value="fibonacci">Fibonacci scramble (non-linear index mapping)</option>
-              </select>
-            </div>
-
-            <div class="row"><label class="rl">Pool Shuffling<small>Re-order pool entries at obfuscation time — bytecode indices are adjusted accordingly</small></label><label class="tog"><input type="checkbox" id="o_bc_poolshuf" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Null Padding Entries<small>Inject dummy pool entries between real ones — inflates and fragments the pool</small></label><label class="tog"><input type="checkbox" id="o_bc_poolpad" checked><span class="tk"></span></label></div>
-          </div>
-
-          <!-- Dispatcher Hardening -->
-          <div class="grp">
-            <div class="grp-lbl">Dispatcher Hardening</div>
-            <div class="fld"><div class="fld-lbl">Dispatch Style</div>
-              <select class="fsel" id="o_bc_dispatch">
-                <option value="while" selected>while + switch (standard)</option>
-                <option value="trampoline">Trampoline (mutual recursion — no loop visible)</option>
-                <option value="table">Direct table (dispatch[bytecode[ip++]]() — minimal loop body)</option>
-              </select>
-            </div>
-            <div class="row"><label class="rl">Compact Dispatcher<small>Single executor path instead of per-opcode handler objects — smaller output, ~20% overhead on recursion-heavy code</small></label><label class="tog"><input type="checkbox" id="o_bc_compact"><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">IP in Array<small>Instruction pointer stored as state.ip[0] — harder to patch than a plain variable</small></label><label class="tog"><input type="checkbox" id="o_bc_iparr" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Stack Obfuscation<small>Wrap push/pop with aliased helper fns — call-graph tracers lose the stack shape</small></label><label class="tog"><input type="checkbox" id="o_bc_stackob" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Opcode Table Scatter<small>Split dispatch table into multiple objects merged at runtime — no single dispatch table visible</small></label><label class="tog"><input type="checkbox" id="o_bc_tablescatter"><span class="tk"></span></label></div>
-          </div>
-
-          <!-- Bytecode Hardening -->
-          <div class="grp">
-            <div class="grp-lbl">Bytecode Hardening</div>
-            <div class="row"><label class="rl">Macro Operands<small>Fold common instruction sequences (PUSH+LOAD+ADD+STORE) into single macro opcodes — breaks pattern recognition</small></label><label class="tog"><input type="checkbox" id="o_bc_macro" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Opcode Aliasing<small>Map each real opcode to multiple slot values — dispatch table has N entries per handler, pattern-matching fails</small></label><label class="tog"><input type="checkbox" id="o_bc_alias"><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Bytecode Array Encryption<small>XOR entire bytecode array at rest — decrypted one entry at a time inside the dispatcher, never fully plaintext</small></label><label class="tog"><input type="checkbox" id="o_bc_enc"><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Register Smear<small>Insert phantom push/pop noise between real instructions — static stack-depth analysis sees wrong operand counts</small></label><label class="tog"><input type="checkbox" id="o_bc_regsmear"><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Pool Access Indirection<small>Wrap pool decryptor in an extra call-chain layer — direct pool reads disappear from the call graph</small></label><label class="tog"><input type="checkbox" id="o_bc_poolindir"><span class="tk"></span></label></div>
-          </div>
-
-          <!-- Execution Hardening -->
-          <div class="grp">
-            <div class="grp-lbl">Execution</div>
-            <div class="row"><label class="rl">Aliased Constructor Chain<small>({}).constructor.constructor — no literal new Function string</small></label><label class="tog"><input type="checkbox" id="o_bc_jmpenc" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Wrap in Init Fn<small>Nest entire VM body in a named wrapper function</small></label><label class="tog"><input type="checkbox" id="o_bc_wrapinit"><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">String Array Inside VM Only<small>Apply String Array only inside VM wrapper — leaner outer output</small></label><label class="tog"><input type="checkbox" id="o_bc_sarrbconly"><span class="tk"></span></label></div>
-          </div>
-
-          <!-- Runtime Defenses -->
-          <div class="grp">
-            <div class="grp-lbl">Runtime Defenses</div>
-            <div class="row"><label class="rl">Anti-Debug Loop<small>setInterval debugger trap inside VM wrapper</small></label><label class="tog"><input type="checkbox" id="o_bc_antidebug" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Integrity Sentinel<small>Checksum the dispatcher fn body at runtime — patching any opcode handler breaks it</small></label><label class="tog"><input type="checkbox" id="o_bc_integrity"><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">Environment Check<small>Verify browser globals exist before executing — crashes headless sandbox environments</small></label><label class="tog"><input type="checkbox" id="o_bc_envcheck" checked><span class="tk"></span></label></div>
-            <div class="row"><label class="rl">TextDecoder Hook Guard<small>Verify TextDecoder is native before decrypting constant pool — detects override attacks</small></label><label class="tog"><input type="checkbox" id="o_bc_tdguard" checked><span class="tk"></span></label></div>
-          </div>
-
-          <!-- Output -->
-          <div class="grp">
-            <div class="grp-lbl">Output</div>
-            <div class="fld"><div class="fld-lbl">Base Encoding</div>
-              <select class="fsel" id="o_bc_baseenc">
-                <option value="hex" selected>Hex integers (0x1a, 0xff…)</option>
-                <option value="decimal">Decimal integers (26, 255…)</option>
-                <option value="octal">Octal integers (0o32, 0o377…)</option>
-                <option value="mixed">Mixed radix (random per value)</option>
-              </select>
-            </div>
-            <div class="row"><label class="rl">Chunk Bytecode Array<small>Split bytecode array into N smaller vars joined at runtime — no single large literal</small></label><label class="tog"><input type="checkbox" id="o_bc_kchunk" checked><span class="tk"></span></label></div>
-            <div class="sl"><div class="sl-head"><span class="sl-name">Bytecode Chunk Size (opcodes)</span><span class="sv" id="v-bcc">64</span></div><div class="srow"><input type="range" id="o_bcchunk" min="8" max="256" step="8" value="64" oninput="SETD('v-bcc',this.value)"></div></div>
-            <div class="row"><label class="rl">Watermark<small>Embed a hidden fingerprint in the opcode layout — survives re-obfuscation</small></label><label class="tog"><input type="checkbox" id="o_bc_watermark"><span class="tk"></span></label></div>
-          </div>
-
-        </div><!-- end bc-sub -->
-
       </div><!-- end tpanel-vm -->
 
-      <!-- PROTECTION -->
+      <!-- Hidden engine inputs — not shown in any tab; read by getOpts() and presets -->
+      <div id="engine-store" style="display:none">
+        <input type="hidden" id="o_vm_mode" value="none">
+        <input type="checkbox" id="o_bc">
+        <input type="checkbox" id="o_bc_jmpenc" checked>
+        <input type="checkbox" id="o_bc_wrapinit">
+        <input type="checkbox" id="o_bc_decoy" checked>
+        <input type="checkbox" id="o_bc_dead" checked>
+        <input type="checkbox" id="o_bc_antidebug" checked>
+        <input type="checkbox" id="o_bc_sarrbconly">
+        <input type="range"    id="o_bc_opcount" min="20" max="256" step="1" value="128">
+        <select id="o_bc_poolenc"><option value="xor" selected>xor</option><option value="xorshift">xorshift</option><option value="sbox">sbox</option><option value="chacha">chacha</option></select>
+        <select id="o_bc_idxenc"><option value="raw">raw</option><option value="xor" selected>xor</option><option value="delta">delta</option><option value="fibonacci">fibonacci</option></select>
+        <input type="checkbox" id="o_bc_poolshuf" checked>
+        <input type="checkbox" id="o_bc_poolpad" checked>
+        <select id="o_bc_dispatch"><option value="while" selected>while</option><option value="trampoline">trampoline</option><option value="table">table</option></select>
+        <input type="checkbox" id="o_bc_compact">
+        <input type="checkbox" id="o_bc_iparr" checked>
+        <input type="checkbox" id="o_bc_stackob" checked>
+        <input type="checkbox" id="o_bc_tablescatter">
+        <input type="checkbox" id="o_bc_macro" checked>
+        <input type="checkbox" id="o_bc_alias">
+        <input type="checkbox" id="o_bc_enc">
+        <input type="checkbox" id="o_bc_regsmear">
+        <input type="checkbox" id="o_bc_poolindir">
+        <input type="checkbox" id="o_bc_integrity">
+        <input type="checkbox" id="o_bc_envcheck" checked>
+        <input type="checkbox" id="o_bc_tdguard" checked>
+        <select id="o_bc_baseenc"><option value="hex" selected>hex</option><option value="decimal">decimal</option><option value="octal">octal</option><option value="mixed">mixed</option></select>
+        <input type="checkbox" id="o_bc_kchunk" checked>
+        <input type="range"    id="o_bcchunk" min="8" max="256" step="8" value="64">
+        <input type="checkbox" id="o_bc_watermark">
+        <span id="v-op-decoy">108</span>
+        <span id="v-op-total">128</span>
+        <span id="v-bc-opcount">128</span>
+        <span id="v-bcc">64</span>
+      </div>
+
+      <!-- OUTPUT -->
+      <div class="tpanel" id="tpanel-output">
+        <div class="grp">
+          <div class="grp-lbl">Minification</div>
+          <div class="fld" style="margin-bottom:6px;">
+            <div class="fld-lbl">Strict Mode</div>
+            <select class="fsel" id="o_strict_mode">
+              <option value="always">'use strict' — always prepend</option>
+              <option value="auto" selected>Auto — only if source has it</option>
+              <option value="never">Never — strip existing</option>
+            </select>
+          </div>
+          <div class="row"><label class="rl">Compact Output<small>Strip whitespace, single line · <b class="perf">perf ×1.0 — reduces size</b></small></label><label class="tog"><input type="checkbox" id="o_mini" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Collapse Semicolons<small>Merge consecutive var declarations · <b class="perf">perf ×1.0 — reduces size</b></small></label><label class="tog"><input type="checkbox" id="o_semi" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Ignore Imports<small>Pass import/export/require lines through unchanged</small></label><label class="tog"><input type="checkbox" id="o_ignimport"><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">HTML Mode<small>Obfuscate all &lt;script&gt; blocks inside an HTML file</small></label><label class="tog"><input type="checkbox" id="o_html"><span class="tk"></span></label></div>
+        </div>
+        <div class="grp">
+          <div class="grp-lbl">Source Map</div>
+          <div class="row"><label class="rl">Generate<small>Produce a .map file linking output back to original source</small></label><label class="tog"><input type="checkbox" id="o_srcmap" onchange="showSub('smap-sub',this.checked);if(G('btn-map'))G('btn-map').disabled=!this.checked"><span class="tk"></span></label></div>
+          <div id="smap-sub" style="display:none">
+            <div class="fld"><div class="fld-lbl">Map URL</div><input class="fi" id="o_smap_url" type="text" placeholder="output.js.map"></div>
+            <div class="fld"><div class="fld-lbl">Source Root</div><input class="fi" id="o_smap_root" type="text" placeholder="/"></div>
+            <div class="info-box">Keep .map files private — they contain your original source.</div>
+          </div>
+        </div>
+        <div class="grp">
+          <div class="grp-lbl">Seed</div>
+          <div class="seed-row">
+            <input class="fi" id="seed-val" type="text" placeholder="blank = random each run">
+            <button class="btn-rng" onclick="doRandomSeed()">↺</button>
+          </div>
+        </div>
+        <div class="grp">
+          <div class="grp-lbl">Conflicts</div>
+          <div id="conflicts-inner"></div>
+        </div>
+      </div>
+
+      <!-- PROTECTION (hidden — controlled by presets/engine only) -->
       <div class="tpanel" id="tpanel-protection">
         <div class="grp">
           <div class="grp-lbl">Runtime Defenses</div>
@@ -944,47 +894,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
       </div>
 
       <!-- OUTPUT -->
-      <div class="tpanel" id="tpanel-output">
-        <div class="grp">
-          <div class="grp-lbl">Minification</div>
-          <div class="fld" style="margin-bottom:6px;">
-            <div class="fld-lbl">Strict Mode</div>
-            <select class="fsel" id="o_strict_mode">
-              <option value="always">'use strict' — always prepend</option>
-              <option value="auto" selected>Auto — only if source has it</option>
-              <option value="never">Never — strip existing</option>
-            </select>
-          </div>
-          <div class="row"><label class="rl">Compact Output<small>Strip whitespace, single line · <b class="perf">perf ×1.0 — reduces size</b></small></label><label class="tog"><input type="checkbox" id="o_mini" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Collapse Semicolons<small>Merge consecutive var declarations · <b class="perf">perf ×1.0 — reduces size</b></small></label><label class="tog"><input type="checkbox" id="o_semi" checked><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">Ignore Imports<small>Pass import/export/require lines through unchanged · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_ignimport"><span class="tk"></span></label></div>
-          <div class="row"><label class="rl">HTML Mode<small>Obfuscate all &lt;script&gt; blocks inside an HTML file · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_html"><span class="tk"></span></label></div>
-        </div>
-        <div class="grp">
-          <div class="grp-lbl">Source Map</div>
-          <div class="row"><label class="rl">Generate<small>Produce a .map file linking output back to original source · <b class="perf">perf ×1.0</b></small></label><label class="tog"><input type="checkbox" id="o_srcmap" onchange="showSub('smap-sub',this.checked);G('btn-map').disabled=!this.checked"><span class="tk"></span></label></div>
-          <div id="smap-sub" style="display:none">
-            <div class="fld"><div class="fld-lbl">Map URL</div><input class="fi" id="o_smap_url" type="text" placeholder="output.js.map"></div>
-            <div class="fld"><div class="fld-lbl">Source Root</div><input class="fi" id="o_smap_root" type="text" placeholder="/"></div>
-            <div class="info-box">Keep .map files private — they contain your original source.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- MORE (General + Conflicts) -->
+      <!-- MORE tab hidden —  engine inputs live in #engine-store -->
       <div class="tpanel" id="tpanel-general">
-        <div class="grp">
-          <div class="grp-lbl">Seed</div>
-          <div class="seed-row">
-            <input class="fi" id="seed-val" type="text" placeholder="blank = random each run">
-            <button class="btn-rng" onclick="doRandomSeed()">↺</button>
-          </div>
-        </div>
-        <div class="grp">
-          <div class="grp-lbl">Conflicts</div>
-          <div id="conflicts-inner"></div>
-        </div>
-      </div>
 
       <!-- conflicts tab (hidden, engine still needs it) -->
       <div id="tpanel-conflicts"></div>
@@ -1080,8 +991,7 @@ function togglePanel(){
   // Called every time we switch tabs — resets scroll position + re-checks hint
   window._onTabSwitch=function(){
     const s=sc();
-    if(s)s.scrollTop=0;          // scroll back to top of new tab
-    // Use rAF so DOM has painted the new tab content before measuring
+    if(s)s.scrollTop=0;
     requestAnimationFrame(()=>{
       updateBottomHint();
     });
@@ -4162,7 +4072,7 @@ function obfuscate(src,opts){
 let currentTarget='browser';
 const TARGET_OFF={
   'browser':[],
-  'browser-no-eval':['o_bc','o_bc_wrapinit','o_bc_decoy','o_bc_dead','o_bc_antidebug','o_bc_sarrbconly'],
+  'browser-no-eval':['o_vm_enable','o_bc_wrapinit','o_bc_decoy','o_bc_dead','o_bc_antidebug','o_bc_sarrbconly'],
   'node':['o_dom','o_dbg','o_native','o_atob','o_html','o_bc_antidebug'],
 };
 function setTarget(t){
@@ -4372,11 +4282,8 @@ function updateOpcodeDisplay(){
 
 function _syncVmState(){
   const on=CHK('o_vm_enable');
-  // Keep hidden inputs in sync
   const bcEl=G('o_bc');if(bcEl)bcEl.checked=on;
   SETV('o_vm_mode',on?'bytecode':'none');
-  // Show/hide sub-panel and info boxes
-  showSub('bc-sub',on);
   const infoNone=G('vm-info-none'),infoBc=G('vm-info-bc');
   if(infoNone)infoNone.style.display=on?'none':'block';
   if(infoBc)infoBc.style.display=on?'block':'none';
@@ -4514,8 +4421,9 @@ function applyPreset(){
     showSub('sarr-sub',false);showSub('bc-sub',false);showSub('ct-sub',false);
     showSub('ssplit-chunk-sub',false);showSub('cff-sub',false);showSub('dead-sub',false);
     showSub('dbg-sub',false);showSub('ren-sub',false);showSub('dom-sub',false);
-    showSub('smap-sub',false);showSub('dict-sub',false);
-    G('renprop-w').style.display='none';
+    showSub('smap-sub',false);showSub('dict-sub',false);showSub('bc-chunk-sub',CHK('o_bc_kchunk'));
+    if(G('renprop-w'))G('renprop-w').style.display='none';
+    if(G('btn-map'))G('btn-map').disabled=true;
     applyTargetConstraints();
     refreshAllSliders();
     updateOpcodeDisplay();
@@ -4527,20 +4435,10 @@ function applyPreset(){
   }
 
   applyTargetConstraints();
-  showSub('sarr-sub',CHK('o_sarr'));
+  showSub('smap-sub',CHK('o_srcmap'));
   refreshAllSliders();
   updateOpcodeDisplay();
-  showSub('bc-sub',CHK('o_bc'));
-  showSub('ct-sub',CHK('o_calltrans'));
-  showSub('ssplit-chunk-sub',CHK('o_ssplit'));
-  showSub('cff-sub',CHK('o_cff'));
-  showSub('dead-sub',CHK('o_dead'));
-  showSub('dbg-sub',CHK('o_dbg'));
-  showSub('ren-sub',CHK('o_ren'));
-  showSub('dom-sub',CHK('o_dom'));
-  showSub('smap-sub',CHK('o_srcmap'));
-  G('btn-map').disabled=!CHK('o_srcmap');
-  G('renprop-w').style.display=CHK('o_renprop')?'block':'none';
+  if(G('btn-map'))G('btn-map').disabled=!CHK('o_srcmap');
   liveCheck();
   const pd=document.getElementById('sb-preset-display');
   if(pd){const p=document.getElementById('preset');if(p)pd.textContent='Preset: '+p.options[p.selectedIndex].text;}
@@ -5517,18 +5415,8 @@ function applyAutoConfig(){
   _acRecs.forEach(r=>{if(r.fn)r.fn();});
   if(_acScan)setTarget(_acScan.detectedTarget||'browser');
   SETV('preset','custom');
-  showSub('sarr-sub',CHK('o_sarr'));
-  showSub('bc-sub',CHK('o_bc'));
-  showSub('ct-sub',CHK('o_calltrans'));
-  showSub('ssplit-chunk-sub',CHK('o_ssplit'));
-  showSub('cff-sub',CHK('o_cff'));
-  showSub('dead-sub',CHK('o_dead'));
-  showSub('dbg-sub',CHK('o_dbg'));
-  showSub('ren-sub',CHK('o_ren'));
-  showSub('dom-sub',CHK('o_dom'));
   showSub('smap-sub',CHK('o_srcmap'));
-  G('btn-map').disabled=!CHK('o_srcmap');
-  G('renprop-w').style.display=CHK('o_renprop')?'block':'none';
+  if(G('btn-map'))G('btn-map').disabled=!CHK('o_srcmap');
   applyTargetConstraints();
   refreshAllSliders();
   updateOpcodeDisplay();
@@ -5540,11 +5428,11 @@ function applyAutoConfig(){
 // ================================================================
 //  PERSISTENCE — save/load all settings + input to localStorage
 // ================================================================
-const PERSIST_KEY='obscura_v9'; // v9: added bc_compact, bc_macro, bc_alias, bc_enc, bc_regsmear, bc_poolindir
+const PERSIST_KEY='obscura_v10'; // v10: single VM tab, bc-chunk-sub added
 
 function saveSettings(){
   try{
-    const data={v:9};
+    const data={v:10};
     data.preset=VAL('preset');
     data.target=currentTarget;
     // Every checkbox that has an id
@@ -5574,7 +5462,7 @@ function loadSettings(){
     const raw=localStorage.getItem(PERSIST_KEY);
     if(!raw)return false;
     const data=JSON.parse(raw);
-    if(!data||data.v!==9)return false;
+    if(!data||data.v!==10)return false;
 
     // Restore preset select value WITHOUT calling applyPreset (that would overwrite everything)
     if(data.preset){const e=G('preset');if(e)e.value=data.preset;}
@@ -5630,18 +5518,8 @@ function loadSettings(){
     // Fix sub-panel visibility based on restored checkbox states
     const _restoredVmMode=data['tx_o_vm_mode']||VAL('o_vm_mode')||'none';
     applyVmMode(_restoredVmMode);
-    showSub('sarr-sub',CHK('o_sarr'));
-    showSub('bc-sub',CHK('o_bc'));
-    showSub('ct-sub',CHK('o_calltrans'));
-    showSub('ssplit-chunk-sub',CHK('o_ssplit'));
-    showSub('cff-sub',CHK('o_cff'));
-    showSub('dead-sub',CHK('o_dead'));
-    showSub('dbg-sub',CHK('o_dbg'));
-    showSub('ren-sub',CHK('o_ren'));
-    showSub('dom-sub',CHK('o_dom'));
     showSub('smap-sub',CHK('o_srcmap'));
-    if(VAL('o_namegen')==='dictionary')showSub('dict-sub',true);
-    G('renprop-w').style.display=CHK('o_renprop')?'block':'none';
+    if(G('btn-map'))G('btn-map').disabled=!CHK('o_srcmap');
 
     // Multi-select display text
     msSync('enc');msSync('idx');
@@ -5696,21 +5574,8 @@ window.addEventListener('load',()=>{
   if(!ok){applyPreset();}
   // Force-correct all sub-panel visibility after init
   (function fixSubPanels(){
-    // These sub-panels are shown/hidden by their checkbox
-    const pairs=[
-      ['sarr-sub','o_sarr'],['ct-sub','o_calltrans'],['cff-sub','o_cff'],['dead-sub','o_dead'],
-      ['dbg-sub','o_dbg'],['ren-sub','o_ren'],
-      ['dom-sub','o_dom'],['smap-sub','o_srcmap'],['ssplit-chunk-sub','o_ssplit'],
-    ];
-    pairs.forEach(([sub,chk])=>{
-      const el=document.getElementById(sub);
-      if(!el)return;
-      const cb=document.getElementById(chk);
-      el.style.display=(cb&&cb.checked)?'block':'none';
-    });
-    // dict-sub: only when namegen=dictionary
-    showSub('dict-sub',VAL('o_namegen')==='dictionary');
-    // Sync VM enable toggle + bc-sub from restored o_vm_mode
+    showSub('smap-sub',CHK('o_srcmap'));
+    if(G('btn-map'))G('btn-map').disabled=!CHK('o_srcmap');
     const vm=VAL('o_vm_mode')||'none';
     applyVmMode(vm);
   })();
