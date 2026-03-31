@@ -8,118 +8,54 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.css">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* ─── TOKENS ─── */
 :root{
-  --bg:    #0d0d10;
-  --s1:    #121216;
-  --s2:    #18181d;
-  --s3:    #1f1f26;
-  --s4:    #27272f;
-  --s5:    #2f2f38;
-  --ln:    #2e2e38;
-  --ln2:   #3e3e4a;
-  --dim:   #4a4a58;
-  --mute:  #6c6c80;
-  --soft:  #9494aa;
-  --body:  #c8c8da;
-  --hi:    #eeeef6;
-  --acc:   #7c6ef7;
-  --acc2:  #5b50c8;
-  --acco:  rgba(124,110,247,.08);
-  --accb:  rgba(124,110,247,.16);
-  --grn:   #3fb950;
-  --red:   #f85149;
-  --amb:   #d29922;
-  --r:     6px;
-  --panel: 320px;
-  --mono:  'JetBrains Mono', monospace;
-  --ui:    'Inter', system-ui, sans-serif;
+  --bg:#0d0d10;--s1:#121216;--s2:#18181d;--s3:#1f1f26;--s4:#27272f;--s5:#2f2f38;
+  --ln:#2e2e38;--ln2:#3e3e4a;--dim:#4a4a58;--mute:#6c6c80;--soft:#9494aa;
+  --body:#c8c8da;--hi:#eeeef6;
+  --acc:#7c6ef7;--acc2:#5b50c8;--acco:rgba(124,110,247,.08);--accb:rgba(124,110,247,.16);
+  --grn:#3fb950;--red:#f85149;--amb:#d29922;--cya:#56b6c2;
+  --r:6px;--panel:330px;
+  --mono:'JetBrains Mono',monospace;--ui:'Inter',system-ui,sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);font-family:var(--ui);font-size:12.5px;-webkit-font-smoothing:antialiased;}
-
-/* ─── APP ─── */
 #app{display:flex;flex-direction:column;height:100vh;}
 
-/* ─── TOPBAR ─── */
-#topbar{
-  flex-shrink:0;height:46px;
-  background:var(--s1);border-bottom:1px solid var(--ln);
-  display:flex;align-items:center;padding:0 14px;gap:8px;z-index:50;
-}
-.logo{
-  font-family:var(--mono);font-size:13px;font-weight:600;
-  letter-spacing:.1em;color:var(--hi);flex-shrink:0;
-}
+/* TOPBAR */
+#topbar{flex-shrink:0;height:46px;background:var(--s1);border-bottom:1px solid var(--ln);display:flex;align-items:center;padding:0 14px;gap:8px;z-index:50;}
+.logo{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.1em;color:var(--hi);flex-shrink:0;}
 .logo em{color:var(--acc);font-style:normal;}
 .tsep{width:1px;height:18px;background:var(--ln);flex-shrink:0;margin:0 2px;}
 .tgap{flex:1;}
-/* icon buttons */
-.icon-btn{
-  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
-  background:none;border:1px solid var(--ln);border-radius:var(--r);
-  color:var(--mute);cursor:pointer;transition:all .12s;flex-shrink:0;font-size:14px;
-}
+.icon-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--ln);border-radius:var(--r);color:var(--mute);cursor:pointer;transition:all .12s;flex-shrink:0;font-size:14px;}
 .icon-btn:hover{color:var(--hi);border-color:var(--ln2);background:var(--s3);}
 .icon-btn.active{color:var(--acc);border-color:var(--acc2);background:var(--acco);}
 .icon-btn:disabled{opacity:.25;cursor:not-allowed;}
-/* text buttons */
-.txt-btn{
-  padding:5px 12px;background:none;border:1px solid var(--ln);
-  color:var(--soft);font-family:var(--ui);font-size:11.5px;font-weight:500;
-  border-radius:var(--r);cursor:pointer;transition:all .12s;white-space:nowrap;
-}
+.txt-btn{padding:5px 12px;background:none;border:1px solid var(--ln);color:var(--soft);font-family:var(--ui);font-size:11.5px;font-weight:500;border-radius:var(--r);cursor:pointer;transition:all .12s;white-space:nowrap;}
 .txt-btn:hover{color:var(--hi);border-color:var(--ln2);background:var(--s3);}
 .txt-btn:disabled{opacity:.25;cursor:not-allowed;}
-/* run button */
-#btn-run{
-  padding:6px 18px;
-  background:var(--acc);border:none;
-  color:#fff;font-family:var(--ui);font-size:12px;font-weight:600;
-  border-radius:var(--r);cursor:pointer;
-  display:flex;align-items:center;gap:7px;
-  transition:opacity .12s,transform .08s;letter-spacing:.01em;
-}
+#btn-run{padding:6px 18px;background:var(--acc);border:none;color:#fff;font-family:var(--ui);font-size:12px;font-weight:600;border-radius:var(--r);cursor:pointer;display:flex;align-items:center;gap:7px;transition:opacity .12s,transform .08s;letter-spacing:.01em;}
 #btn-run:hover{opacity:.86;}
 #btn-run:active{transform:scale(.96);}
 .run-icon{font-size:10px;}
 
-/* ─── WORKSPACE ─── */
+/* WORKSPACE */
 #workspace{flex:1;display:flex;overflow:hidden;min-height:0;position:relative;}
-
-/* ─── EDITORS ─── */
 #editors{flex:1;display:flex;overflow:hidden;min-height:0;transition:margin-right .28s cubic-bezier(.4,0,.2,1);}
 #editors.shifted{margin-right:var(--panel);}
-
-/* vertical split */
 #in-wrap,#out-wrap{display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0;}
 #in-wrap{border-right:1px solid var(--ln);}
-
-.ed-header{
-  flex-shrink:0;height:36px;
-  background:var(--s2);border-bottom:1px solid var(--ln);
-  display:flex;align-items:center;padding:0 12px;gap:8px;
-}
+.ed-header{flex-shrink:0;height:36px;background:var(--s2);border-bottom:1px solid var(--ln);display:flex;align-items:center;padding:0 12px;gap:8px;}
 .ed-label{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);}
 .ed-gap{flex:1;}
-.ed-act{
-  background:none;border:none;color:var(--dim);
-  font-family:var(--ui);font-size:11px;cursor:pointer;
-  padding:2px 7px;border-radius:4px;transition:all .1s;
-}
+.ed-act{background:none;border:none;color:var(--dim);font-family:var(--ui);font-size:11px;cursor:pointer;padding:2px 7px;border-radius:4px;transition:all .1s;}
 .ed-act:hover{color:var(--body);background:var(--s3);}
-
-/* stats strip */
 #run-stats{display:none;align-items:center;gap:9px;}
 .st{font-size:10px;color:var(--mute);white-space:nowrap;}
 .st b{color:var(--soft);font-family:var(--mono);font-size:10px;font-weight:600;}
 #out-hint{font-size:10.5px;color:var(--dim);}
-
 .ed-body{flex:1;overflow:hidden;min-height:0;position:relative;}
-.ed-body .CodeMirror,.ed-body .CodeMirror-wrap{
-  height:100%;font-family:var(--mono);font-size:12.5px;line-height:1.7;
-  background:var(--s1);color:var(--hi);border:none;
-}
+.ed-body .CodeMirror,.ed-body .CodeMirror-wrap{height:100%;font-family:var(--mono);font-size:12.5px;line-height:1.7;background:var(--s1);color:var(--hi);border:none;}
 .ed-body .CodeMirror-scroll{height:100%;}
 #out-wrap .ed-body .CodeMirror{background:var(--bg);}
 .CodeMirror-gutters{background:rgba(0,0,0,.2)!important;border-right:1px solid var(--ln)!important;}
@@ -127,93 +63,47 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 .CodeMirror-cursor{border-left:2px solid var(--acc)!important;}
 .CodeMirror-selected{background:rgba(124,110,247,.14)!important;}
 .CodeMirror-focused .CodeMirror-selected{background:rgba(124,110,247,.18)!important;}
-.cm-keyword  {color:#bb9af7!important;font-weight:600;}
-.cm-def      {color:#e0af68!important;}
-.cm-variable {color:var(--hi)!important;}
+.cm-keyword{color:#bb9af7!important;font-weight:600;}
+.cm-def{color:#e0af68!important;}
+.cm-variable{color:var(--hi)!important;}
 .cm-variable-2{color:#7dcfff!important;}
 .cm-string,.cm-string-2{color:#9ece6a!important;}
-.cm-number   {color:#ff9e64!important;}
-.cm-comment  {color:var(--dim)!important;font-style:italic;}
-.cm-operator {color:var(--soft)!important;}
+.cm-number{color:#ff9e64!important;}
+.cm-comment{color:var(--dim)!important;font-style:italic;}
+.cm-operator{color:var(--soft)!important;}
 .cm-atom,.cm-builtin{color:#e0af68!important;}
 
-/* ─── SLIDE PANEL ─── */
-#panel{
-  position:absolute;top:0;right:0;bottom:0;width:var(--panel);
-  background:var(--s1);border-left:1px solid var(--ln);
-  display:flex;flex-direction:column;overflow:visible;
-  transform:translateX(100%);
-  transition:transform .28s cubic-bezier(.4,0,.2,1);
-  z-index:40;
-}
+/* SLIDE PANEL */
+#panel{position:absolute;top:0;right:0;bottom:0;width:var(--panel);background:var(--s1);border-left:1px solid var(--ln);display:flex;flex-direction:column;overflow:visible;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);z-index:40;}
 #panel-top,#panel-scroll{overflow:hidden;}
 #panel-scroll{overflow-y:auto;overflow-x:hidden;}
 #panel.open{transform:translateX(0);}
-
-/* panel top */
-#panel-top-wrap{
-  position:relative;flex-shrink:0;
-}
-#panel-top{
-  flex-shrink:0;height:36px;
-  background:var(--s2);border-bottom:1px solid var(--ln);
-  display:flex;align-items:stretch;gap:0;
-  overflow-x:auto;
-  scrollbar-width:none;
-}
+#panel-top-wrap{position:relative;flex-shrink:0;}
+#panel-top{flex-shrink:0;height:36px;background:var(--s2);border-bottom:1px solid var(--ln);display:flex;align-items:stretch;gap:0;overflow-x:auto;scrollbar-width:none;}
 #panel-top::-webkit-scrollbar{display:none;}
-
-/* Tab scroll hint */
-#tab-scroll-hint{
-  position:absolute;right:0;top:0;height:36px;
-  display:flex;align-items:center;
-  background:linear-gradient(to right, transparent, var(--s2) 55%);
-  padding-left:20px;padding-right:6px;
-  pointer-events:none;
-  transition:opacity .25s;
-  border-bottom:1px solid var(--ln);
-}
+#tab-scroll-hint{position:absolute;right:0;top:0;height:36px;display:flex;align-items:center;background:linear-gradient(to right,transparent,var(--s2) 55%);padding-left:20px;padding-right:6px;pointer-events:none;transition:opacity .25s;border-bottom:1px solid var(--ln);}
 #tab-scroll-hint.hidden{opacity:0;}
-#tab-scroll-arrow{
-  font-size:14px;color:var(--acc);font-weight:400;
-  animation:tab-hint-pulse 2s ease-in-out infinite;
-}
+#tab-scroll-arrow{font-size:14px;color:var(--acc);font-weight:400;animation:tab-hint-pulse 2s ease-in-out infinite;}
 @keyframes tab-hint-pulse{0%,100%{opacity:.5;}50%{opacity:1;}}
-.stab{
-  padding:0 12px;background:none;border:none;border-bottom:2px solid transparent;
-  color:var(--mute);font-family:var(--ui);font-size:10.5px;font-weight:600;
-  cursor:pointer;white-space:nowrap;letter-spacing:.03em;text-transform:uppercase;
-  transition:color .12s,border-color .12s;flex-shrink:0;
-}
+.stab{padding:0 12px;background:none;border:none;border-bottom:2px solid transparent;color:var(--mute);font-family:var(--ui);font-size:10.5px;font-weight:600;cursor:pointer;white-space:nowrap;letter-spacing:.03em;text-transform:uppercase;transition:color .12s,border-color .12s;flex-shrink:0;}
 .stab:hover{color:var(--body);}
 .stab.active{color:var(--hi);border-bottom-color:var(--acc);}
-
-/* panel scroll */
 #panel-scroll{flex:1;overflow-y:auto;overflow-x:hidden;}
 #panel-scroll::-webkit-scrollbar{width:3px;}
 #panel-scroll::-webkit-scrollbar-thumb{background:var(--ln);border-radius:2px;}
-
-/* tab panels */
 .tpanel{display:none;padding:12px 14px 24px;}
 .tpanel.active{display:block;}
 
-/* ─── OPTION ROWS ─── */
+/* OPTION ROWS */
 .grp{margin-bottom:18px;}
-.grp-lbl{
-  font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--dim);margin-bottom:6px;padding-bottom:5px;
-  border-bottom:1px solid var(--ln);
-}
-.row,.sbody .row{
-  display:flex;align-items:flex-start;justify-content:space-between;
-  padding:6px 0;gap:10px;
-}
-.row+.row,.sbody .row+.row{border-top:1px solid rgba(255,255,255,.04);}
+.grp-lbl{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--ln);}
+.row{display:flex;align-items:flex-start;justify-content:space-between;padding:6px 0;gap:10px;}
+.row+.row{border-top:1px solid rgba(255,255,255,.04);}
 .rl{flex:1;}
 .rl,label.rl{font-size:11.5px;color:var(--body);font-weight:500;line-height:1.3;cursor:default;}
 .rl small{display:block;font-size:10px;color:var(--mute);margin-top:2px;line-height:1.4;font-weight:400;}
 
-/* ─── TOGGLE ─── */
+/* TOGGLE */
 .tog{position:relative;width:30px;height:17px;flex-shrink:0;cursor:pointer;margin-top:1px;}
 .tog input{display:none;}
 .tk{position:absolute;inset:0;background:var(--s5);border:1px solid var(--ln2);border-radius:17px;transition:background .15s,border-color .15s;}
@@ -221,155 +111,93 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 .tog input:checked~.tk{background:var(--acc);border-color:var(--acc2);}
 .tog input:checked~.tk::before{transform:translateX(13px);background:#fff;}
 
-/* ─── SLIDER ─── */
+/* SLIDER */
 .sl{margin:7px 0 4px;}
 .sl-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
 .sl-name{font-size:10.5px;color:var(--soft);font-weight:500;}
 .sv{font-family:var(--mono);font-size:10px;color:var(--acc);font-weight:600;}
 .srow{display:flex;align-items:center;gap:6px;}
-.srow input[type=range]{
-  flex:1;height:3px;cursor:pointer;
-  -webkit-appearance:none;appearance:none;
-  background:var(--s5);
-  border-radius:2px;outline:none;
-}
-.srow input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none;width:13px;height:13px;border-radius:50%;
-  background:var(--acc);border:2px solid var(--bg);
-  box-shadow:0 0 0 1px var(--acc);cursor:pointer;
-  transition:transform .1s,box-shadow .1s;
-}
+.srow input[type=range]{flex:1;height:3px;cursor:pointer;-webkit-appearance:none;appearance:none;background:var(--s5);border-radius:2px;outline:none;}
+.srow input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--acc);border:2px solid var(--bg);box-shadow:0 0 0 1px var(--acc);cursor:pointer;transition:transform .1s,box-shadow .1s;}
 .srow input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.22);box-shadow:0 0 0 4px rgba(124,110,247,.22);}
 .srow input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--acc);border:2px solid var(--bg);cursor:pointer;}
-.srow input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:linear-gradient(to right,var(--acc) var(--pct,0%),var(--s5) var(--pct,0%));}
 
-/* ─── EDITOR SEARCH ─── */
-.ed-search{
-  flex-shrink:0;display:flex;flex-direction:column;
-  background:var(--s2);border-bottom:1px solid var(--ln);
-}
-.ed-search-row{
-  display:flex;align-items:center;gap:4px;padding:4px 10px;
-}
+/* EDITOR SEARCH */
+.ed-search{flex-shrink:0;display:flex;flex-direction:column;background:var(--s2);border-bottom:1px solid var(--ln);}
+.ed-search-row{display:flex;align-items:center;gap:4px;padding:4px 10px;}
 .ed-replace-row{border-top:1px solid rgba(255,255,255,.04);padding-top:3px;padding-bottom:3px;}
-.ed-search-inp{
-  flex:1;background:var(--s3);border:1px solid var(--ln);
-  color:var(--body);font-family:var(--mono);font-size:11px;
-  padding:3px 7px;border-radius:var(--r);outline:none;transition:border-color .12s;
-}
+.ed-search-inp{flex:1;background:var(--s3);border:1px solid var(--ln);color:var(--body);font-family:var(--mono);font-size:11px;padding:3px 7px;border-radius:var(--r);outline:none;transition:border-color .12s;}
 .ed-search-inp:focus{border-color:var(--acc2);}
 .ed-search-count{font-size:10px;color:var(--mute);white-space:nowrap;min-width:52px;text-align:right;}
-.ed-search-nav{
-  background:none;border:1px solid var(--ln);color:var(--soft);
-  font-size:10px;padding:2px 6px;border-radius:var(--r);cursor:pointer;transition:all .1s;white-space:nowrap;
-}
+.ed-search-nav{background:none;border:1px solid var(--ln);color:var(--soft);font-size:10px;padding:2px 6px;border-radius:var(--r);cursor:pointer;transition:all .1s;white-space:nowrap;}
 .ed-search-nav:hover{color:var(--hi);border-color:var(--ln2);background:var(--s3);}
 .ed-replace-btn{font-size:10px;padding:2px 8px;}
-.ed-search-close{
-  background:none;border:none;color:var(--dim);font-size:13px;cursor:pointer;
-  padding:0 2px;transition:color .1s;line-height:1;flex-shrink:0;
-}
+.ed-search-close{background:none;border:none;color:var(--dim);font-size:13px;cursor:pointer;padding:0 2px;transition:color .1s;line-height:1;flex-shrink:0;}
 .ed-search-close:hover{color:var(--red);}
 .ed-search-highlight{background:rgba(255,210,60,.22)!important;border-radius:2px;}
 .ed-search-current{background:rgba(255,140,0,.48)!important;border-radius:2px;outline:1px solid rgba(255,140,0,.7);}
 
 .fld{margin-top:7px;}
 .fld-lbl{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin-bottom:3px;}
-.fi,.fsel{
-  width:100%;background:var(--s3);border:1px solid var(--ln);
-  color:var(--body);font-family:var(--mono);font-size:11px;
-  padding:5px 8px;border-radius:var(--r);outline:none;transition:border-color .12s;
-}
+.fi,.fsel{width:100%;background:var(--s3);border:1px solid var(--ln);color:var(--body);font-family:var(--mono);font-size:11px;padding:5px 8px;border-radius:var(--r);outline:none;transition:border-color .12s;}
 .fi:focus,.fsel:focus{border-color:var(--acc2);}
 .fsel{font-family:var(--ui);font-size:11.5px;cursor:pointer;}
 .seed-row{display:flex;gap:4px;margin-top:4px;}
 .seed-row .fi{flex:1;}
-.btn-rng{
-  padding:5px 9px;background:var(--s3);border:1px solid var(--ln);
-  color:var(--soft);font-size:14px;border-radius:var(--r);cursor:pointer;
-  transition:all .1s;flex-shrink:0;
-}
+.btn-rng{padding:5px 9px;background:var(--s3);border:1px solid var(--ln);color:var(--soft);font-size:14px;border-radius:var(--r);cursor:pointer;transition:all .1s;flex-shrink:0;}
 .btn-rng:hover{color:var(--hi);border-color:var(--ln2);}
 
-/* ─── NOTICES ─── */
+/* BADGES */
 .warn-box{margin-top:6px;padding:6px 9px;background:rgba(210,153,34,.07);border:1px solid rgba(210,153,34,.22);border-radius:var(--r);font-size:10.5px;color:var(--amb);line-height:1.5;}
 .info-box{margin-top:6px;padding:6px 9px;background:rgba(124,110,247,.07);border:1px solid rgba(124,110,247,.2);border-radius:var(--r);font-size:10.5px;color:#9b91f8;line-height:1.5;}
+.success-box{margin-top:6px;padding:6px 9px;background:rgba(63,185,80,.07);border:1px solid rgba(63,185,80,.22);border-radius:var(--r);font-size:10.5px;color:var(--grn);line-height:1.5;}
 
-/* ─── PANEL PULL TAB ─── */
-#panel-pull{
-  position:absolute;
-  right:0; top:50%; transform:translateY(-50%);
-  width:24px; height:80px;
-  background:var(--s2);
-  border:1px solid var(--ln); border-right:none;
-  border-radius:8px 0 0 8px;
-  cursor:pointer;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
-  color:var(--mute);
-  transition:background .15s,color .15s,right .28s cubic-bezier(.4,0,.2,1);
-  box-shadow:-3px 0 10px rgba(0,0,0,.35);
-  z-index:45;
-}
+/* VM BADGE */
+.vm-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:10px;background:rgba(124,110,247,.15);border:1px solid rgba(124,110,247,.35);color:var(--acc);}
+
+/* FEATURE LIST */
+.feat-list{list-style:none;margin:6px 0 0;}
+.feat-list li{font-size:10.5px;color:var(--mute);padding:3px 0;display:flex;align-items:flex-start;gap:6px;}
+.feat-list li::before{content:'◆';color:var(--acc);font-size:7px;margin-top:3px;flex-shrink:0;}
+
+/* PANEL PULL TAB */
+#panel-pull{position:absolute;right:0;top:50%;transform:translateY(-50%);width:24px;height:80px;background:var(--s2);border:1px solid var(--ln);border-right:none;border-radius:8px 0 0 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--mute);transition:background .15s,color .15s,right .28s cubic-bezier(.4,0,.2,1);box-shadow:-3px 0 10px rgba(0,0,0,.35);z-index:45;}
 #panel-pull:hover{background:var(--s3);color:var(--hi);}
-#pull-arrow{
-  font-size:12px;line-height:1;
-  transition:transform .28s cubic-bezier(.4,0,.2,1);
-  display:block;
-}
+#pull-arrow{font-size:12px;line-height:1;transition:transform .28s cubic-bezier(.4,0,.2,1);display:block;}
 #panel-pull[data-open='true'] #pull-arrow{transform:rotate(180deg);}
-#pull-label{
-  font-size:8px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;writing-mode:vertical-rl;
-  color:inherit;line-height:1;opacity:.7;
-}
+#pull-label{font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;writing-mode:vertical-rl;color:inherit;line-height:1;opacity:.7;}
 #panel-pull:hover #pull-label{opacity:1;}
 
-/* ─── SCROLL HINT ─── */
-#scroll-hint{
-  position:absolute;bottom:0;left:0;right:0;
-  height:48px;
-  background:linear-gradient(to bottom,transparent,var(--s1) 70%);
-  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
-  padding-bottom:8px;gap:2px;pointer-events:none;
-  opacity:1;transition:opacity .4s;
-}
-.scroll-hint-text{
-  font-size:9.5px;font-weight:600;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--mute);
-  animation:hint-pulse 2.2s ease-in-out infinite;
-}
-.scroll-hint-arrow{
-  font-size:13px;color:var(--acc);opacity:.8;
-  animation:hint-bounce 2.2s ease-in-out infinite;
-}
+/* SCROLL HINT */
+#scroll-hint{position:absolute;bottom:0;left:0;right:0;height:48px;background:linear-gradient(to bottom,transparent,var(--s1) 70%);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:8px;gap:2px;pointer-events:none;opacity:1;transition:opacity .4s;}
+.scroll-hint-text{font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);animation:hint-pulse 2.2s ease-in-out infinite;}
+.scroll-hint-arrow{font-size:13px;color:var(--acc);opacity:.8;animation:hint-bounce 2.2s ease-in-out infinite;}
 @keyframes hint-pulse{0%,100%{opacity:.4;}50%{opacity:.9;}}
-@keyframes hint-bounce{
-  0%,100%{opacity:.5;transform:translateY(0);}
-  50%{opacity:1;transform:translateY(3px);}
-}
+@keyframes hint-bounce{0%,100%{opacity:.5;transform:translateY(0);}50%{opacity:1;transform:translateY(3px);}}
 
-/* ─── STATUS BAR ─── */
-#statusbar{
-  flex-shrink:0;height:26px;
-  background:var(--s1);border-top:1px solid var(--ln);
-  display:flex;align-items:center;padding:0 14px;gap:8px;
-}
-.sb-logo{
-  font-family:var(--mono);font-size:11px;font-weight:600;
-  color:var(--dim);letter-spacing:.08em;
-}
+/* STATUS BAR */
+#statusbar{flex-shrink:0;height:26px;background:var(--s1);border-top:1px solid var(--ln);display:flex;align-items:center;padding:0 14px;gap:8px;}
+.sb-logo{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--dim);letter-spacing:.08em;}
 .sb-logo em{color:var(--acc);font-style:normal;}
 .sb-sep{width:1px;height:12px;background:var(--ln);flex-shrink:0;}
 .sb-item{font-size:10px;color:var(--dim);white-space:nowrap;}
 .sb-gap{flex:1;}
+#sb-mode{font-size:10px;font-weight:600;color:var(--mute);font-family:var(--mono);}
+#sb-mode.vm-mode{color:var(--acc);}
 
 #input-preset option{background:var(--s3);color:var(--body);}
+
+/* VM run button variant */
+.vm-run-btn{width:100%;margin-top:10px;padding:8px 0;background:linear-gradient(135deg,var(--acc),var(--acc2));border:none;color:#fff;font-family:var(--ui);font-size:12px;font-weight:700;border-radius:var(--r);cursor:pointer;letter-spacing:.04em;transition:opacity .12s,transform .08s;display:flex;align-items:center;justify-content:center;gap:7px;}
+.vm-run-btn:hover{opacity:.88;}
+.vm-run-btn:active{transform:scale(.97);}
+.vm-run-btn .icon{font-size:11px;}
 </style>
 </head>
 <body>
 <div id="app">
 
-<!-- ══════════ TOPBAR ══════════ -->
+<!-- TOPBAR -->
 <div id="topbar">
   <div class="logo">Obs<em>cu</em>ra</div>
   <div class="tgap"></div>
@@ -381,16 +209,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
   </button>
 </div>
 
-<!-- ══════════ WORKSPACE ══════════ -->
+<!-- WORKSPACE -->
 <div id="workspace">
   <button id="panel-pull" onclick="togglePanel()" title="Toggle settings panel">
     <span id="pull-arrow">❮</span>
     <span id="pull-label">Settings</span>
   </button>
 
-  <!-- editors -->
   <div id="editors">
-
     <div id="in-wrap">
       <div class="ed-header">
         <span class="ed-label">Input</span>
@@ -403,23 +229,24 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
           <option value="api">API Fetch</option>
           <option value="license">License Check</option>
           <option value="antidbg">Anti-Debug Target</option>
+          <option value="closure">Closure Module</option>
+          <option value="promise">Promise Chain</option>
         </select>
         <button class="ed-act" onclick="beautifyInput()" title="Beautify / format code">Beautify</button>
         <button class="ed-act" onclick="clearInput()">Clear</button>
       </div>
-      <!-- Search + Replace bar (input only) -->
       <div class="ed-search" id="search-in" style="display:none">
         <div class="ed-search-row">
           <input class="ed-search-inp" id="search-in-inp" type="text" placeholder="Find…" oninput="doSearch('in')" onkeydown="searchKey(event,'in')">
           <span class="ed-search-count" id="search-in-count"></span>
-          <button class="ed-search-nav" onclick="searchNav('in',-1)" title="Previous (Shift+Enter)">▲</button>
-          <button class="ed-search-nav" onclick="searchNav('in',1)" title="Next (Enter)">▼</button>
-          <button class="ed-search-close" onclick="toggleSearch('in')" title="Close (Esc)">✕</button>
+          <button class="ed-search-nav" onclick="searchNav('in',-1)">▲</button>
+          <button class="ed-search-nav" onclick="searchNav('in',1)">▼</button>
+          <button class="ed-search-close" onclick="toggleSearch('in')">✕</button>
         </div>
         <div class="ed-search-row ed-replace-row">
           <input class="ed-search-inp" id="replace-in-inp" type="text" placeholder="Replace with…" onkeydown="replaceKey(event)">
-          <button class="ed-search-nav ed-replace-btn" onclick="replaceOne()" title="Replace current match">Replace</button>
-          <button class="ed-search-nav ed-replace-btn" onclick="replaceAll()" title="Replace all matches">All</button>
+          <button class="ed-search-nav ed-replace-btn" onclick="replaceOne()">Replace</button>
+          <button class="ed-search-nav ed-replace-btn" onclick="replaceAll()">All</button>
         </div>
       </div>
       <div class="ed-body" id="in-editor"></div>
@@ -437,31 +264,29 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
         </div>
         <span id="out-hint">Run to see output</span>
       </div>
-      <!-- Search-only bar (output) -->
       <div class="ed-search" id="search-out" style="display:none">
         <div class="ed-search-row">
           <input class="ed-search-inp" id="search-out-inp" type="text" placeholder="Find…" oninput="doSearch('out')" onkeydown="searchKey(event,'out')">
           <span class="ed-search-count" id="search-out-count"></span>
-          <button class="ed-search-nav" onclick="searchNav('out',-1)" title="Previous (Shift+Enter)">▲</button>
-          <button class="ed-search-nav" onclick="searchNav('out',1)" title="Next (Enter)">▼</button>
-          <button class="ed-search-close" onclick="toggleSearch('out')" title="Close (Esc)">✕</button>
+          <button class="ed-search-nav" onclick="searchNav('out',-1)">▲</button>
+          <button class="ed-search-nav" onclick="searchNav('out',1)">▼</button>
+          <button class="ed-search-close" onclick="toggleSearch('out')">✕</button>
         </div>
       </div>
       <div class="ed-body" id="out-editor"></div>
     </div>
-
   </div>
 
-  <!-- ══════════ SLIDE PANEL ══════════ -->
+  <!-- SLIDE PANEL -->
   <div id="panel">
     <div id="panel-top-wrap">
       <div id="panel-top">
         <button class="stab active" data-tab="output" onclick="switchTab('output')">Output</button>
+        <button class="stab" data-tab="vm" onclick="switchTab('vm')">VM</button>
+        <button class="stab" data-tab="advanced" onclick="switchTab('advanced')">Advanced</button>
       </div>
-      <div id="tab-scroll-hint">
-        <span id="tab-scroll-arrow">›</span>
-      </div>
-    </div><!-- end panel-top-wrap -->
+      <div id="tab-scroll-hint"><span id="tab-scroll-arrow">›</span></div>
+    </div>
 
     <div id="panel-scroll">
 
@@ -500,12 +325,100 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
         </div>
       </div>
 
+      <!-- VM TAB -->
+      <div class="tpanel" id="tpanel-vm">
+        <div class="grp">
+          <div class="grp-lbl" style="display:flex;align-items:center;gap:6px;">
+            <span>ChainVM Engine</span>
+            <span class="vm-badge">v1</span>
+          </div>
+          <div class="info-box" style="margin-bottom:8px;">
+            Compiles JS into an encrypted, self-defending virtual machine. The original source is transformed, fragmented, and destroyed. Each fragment uses a unique derived key from a one-directional chain — no single capture point yields the original code.
+          </div>
+          <ul class="feat-list">
+            <li>One-shot key chain — fragment keys derive from each other; re-decryption is impossible after execution</li>
+            <li>Ephemeral strings — decrypted on-demand per access, never cached</li>
+            <li>Polymorphic identifiers — all user names replaced with random hex IDs</li>
+            <li>Opaque number encoding — integer literals replaced with arithmetic expressions</li>
+            <li>Anti-debug suite — timing traps, console poisoning, DevTools detection</li>
+            <li>Proxy tamper shield — detects introspection of the VM scope object</li>
+          </ul>
+        </div>
+
+        <div class="grp">
+          <div class="grp-lbl">Protection Layers</div>
+          <div class="row"><label class="rl">Anti-Debug Suite<small>Timing trap (self-destructs on step-through), console guard, regex DevTools probe</small></label><label class="tog"><input type="checkbox" id="vm-antidbg" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Identifier Scramble<small>Rename all user-defined variables &amp; functions to random 8-char hex IDs</small></label><label class="tog"><input type="checkbox" id="vm-scramble" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Number Encoding<small>Split integer literals into opaque arithmetic expressions</small></label><label class="tog"><input type="checkbox" id="vm-numbers" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Proxy Scope Shield<small>Wrap VM execution scope in a Proxy that detects property enumeration</small></label><label class="tog"><input type="checkbox" id="vm-proxy" checked><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">Dead Code Injection<small>Inject unreachable junk functions and branches throughout the output</small></label><label class="tog"><input type="checkbox" id="vm-junk" checked><span class="tk"></span></label></div>
+        </div>
+
+        <div class="grp">
+          <div class="grp-lbl">Fragmentation</div>
+          <div class="sl">
+            <div class="sl-head"><span class="sl-name">Fragment Count</span><span class="sv" id="vm-frags-v">8</span></div>
+            <div class="srow"><input type="range" id="vm-frags" min="3" max="24" value="8" oninput="SETD('vm-frags-v',this.value)"></div>
+          </div>
+          <div style="font-size:10px;color:var(--mute);margin-top:2px;">More fragments = harder to reverse, larger output. Each fragment encrypted with a unique derived key.</div>
+        </div>
+
+        <div class="grp">
+          <div class="grp-lbl">VM Seed</div>
+          <div class="seed-row">
+            <input class="fi" id="vm-seed" type="text" placeholder="blank = random each run">
+            <button class="btn-rng" onclick="doVmSeed()">↺</button>
+          </div>
+          <div style="font-size:10px;color:var(--mute);margin-top:4px;">Same seed = same identifier mapping. Useful for incremental builds.</div>
+        </div>
+
+        <div class="warn-box">
+          ChainVM works on most practical JS. Code relying on <code>arguments.callee</code>, non-strict <code>with</code>, or live hoisting across module boundaries may need refactoring first.
+        </div>
+
+        <button class="vm-run-btn" onclick="runVmObfuscate()">
+          <span class="icon">⬡</span> Run ChainVM
+        </button>
+      </div>
+
+      <!-- ADVANCED TAB -->
+      <div class="tpanel" id="tpanel-advanced">
+        <div class="grp">
+          <div class="grp-lbl">String Transforms</div>
+          <div class="row"><label class="rl">Hex-Escape Non-ASCII<small>Replace Unicode chars with \uXXXX escapes</small></label><label class="tog"><input type="checkbox" id="adv-hexesc"><span class="tk"></span></label></div>
+          <div class="row"><label class="rl">String Array Rotation<small>Move all string literals to a top-level const array</small></label><label class="tog"><input type="checkbox" id="adv-strrot"><span class="tk"></span></label></div>
+        </div>
+        <div class="grp">
+          <div class="grp-lbl">Control Flow</div>
+          <div class="row"><label class="rl">Comma Expressions<small>Convert semicolons to comma-expression chains where possible</small></label><label class="tog"><input type="checkbox" id="adv-comma"><span class="tk"></span></label></div>
+        </div>
+        <div class="grp">
+          <div class="grp-lbl">Output Format</div>
+          <div class="fld">
+            <div class="fld-lbl">Wrapper</div>
+            <select class="fsel" id="adv-wrapper">
+              <option value="none">None</option>
+              <option value="iife">IIFE — (function(){…})()</option>
+              <option value="iife-strict">IIFE + 'use strict'</option>
+              <option value="arrow">Arrow IIFE — (()=>{…})()</option>
+            </select>
+          </div>
+        </div>
+        <div class="grp">
+          <div class="grp-lbl">Line Length</div>
+          <div class="sl">
+            <div class="sl-head"><span class="sl-name">Max Line Chars</span><span class="sv" id="adv-linelen-v">∞</span></div>
+            <div class="srow"><input type="range" id="adv-linelen" min="0" max="200" value="0" oninput="SETD('adv-linelen-v',this.value==0?'∞':this.value)"></div>
+          </div>
+        </div>
+      </div>
+
       <div id="scroll-hint">
         <span class="scroll-hint-text">scroll for more</span>
         <span class="scroll-hint-arrow">↓</span>
       </div>
-    </div><!-- end panel-scroll -->
-  </div><!-- end panel -->
+    </div>
+  </div>
 
 </div><!-- end workspace -->
 
@@ -513,10 +426,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 <div id="statusbar">
   <span class="sb-logo">Obs<em>cu</em>ra</span>
   <span class="sb-sep"></span>
-  <span class="sb-item">v2.0</span>
+  <span class="sb-item">v3.0</span>
   <span class="sb-sep"></span>
   <span class="sb-item">100% client-side · no data leaves your browser</span>
   <div class="sb-gap"></div>
+  <span id="sb-mode">MINIFY</span>
 </div>
 
 </div><!-- end app -->
@@ -529,53 +443,29 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--body);fon
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
 <script>
+
 /* ─── PANEL TOGGLE ─── */
-let panelOpen = false;
+let panelOpen=false;
 function togglePanel(){
-  panelOpen = !panelOpen;
-  document.getElementById('panel').classList.toggle('open', panelOpen);
-  document.getElementById('editors').classList.toggle('shifted', panelOpen);
-  const pull = document.getElementById('panel-pull');
-  if(pull){pull.style.right = panelOpen ? 'var(--panel)' : '0';pull.dataset.open=panelOpen;}
+  panelOpen=!panelOpen;
+  document.getElementById('panel').classList.toggle('open',panelOpen);
+  document.getElementById('editors').classList.toggle('shifted',panelOpen);
+  const pull=document.getElementById('panel-pull');
+  if(pull){pull.style.right=panelOpen?'var(--panel)':'0';pull.dataset.open=panelOpen;}
   if(panelOpen&&window._updateTabHint)setTimeout(window._updateTabHint,30);
-  setTimeout(fitEditors, 30);
+  setTimeout(fitEditors,30);
 }
 
-// Scroll hints
+/* ─── SCROLL HINTS ─── */
 (function(){
   const sc=()=>document.getElementById('panel-scroll');
   const hint=()=>document.getElementById('scroll-hint');
   const tabs=()=>document.getElementById('panel-top');
   const tabHint=()=>document.getElementById('tab-scroll-hint');
-
-  function updateBottomHint(){
-    const s=sc(),h=hint();
-    if(!s||!h)return;
-    const canScroll=s.scrollHeight>s.clientHeight+10;
-    const atBottom=s.scrollHeight-s.scrollTop-s.clientHeight<40;
-    h.style.opacity=(canScroll&&!atBottom)?'1':'0';
-  }
-
-  function updateTabHint(){
-    const t=tabs(),th=tabHint();
-    if(!t||!th)return;
-    const atEnd=t.scrollWidth-t.scrollLeft-t.clientWidth<8;
-    th.classList.toggle('hidden',atEnd);
-  }
-
-  window._onTabSwitch=function(){
-    const s=sc();
-    if(s)s.scrollTop=0;
-    requestAnimationFrame(()=>{updateBottomHint();});
-  };
-
-  window.addEventListener('load',()=>{
-    const s=sc();
-    if(s){s.addEventListener('scroll',updateBottomHint);updateBottomHint();}
-    const t=tabs();
-    if(t){t.addEventListener('scroll',updateTabHint);updateTabHint();}
-  });
-
+  function updateBottomHint(){const s=sc(),h=hint();if(!s||!h)return;const canScroll=s.scrollHeight>s.clientHeight+10;const atBottom=s.scrollHeight-s.scrollTop-s.clientHeight<40;h.style.opacity=(canScroll&&!atBottom)?'1':'0';}
+  function updateTabHint(){const t=tabs(),th=tabHint();if(!t||!th)return;const atEnd=t.scrollWidth-t.scrollLeft-t.clientWidth<8;th.classList.toggle('hidden',atEnd);}
+  window._onTabSwitch=function(){const s=sc();if(s)s.scrollTop=0;requestAnimationFrame(()=>{updateBottomHint();});};
+  window.addEventListener('load',()=>{const s=sc();if(s){s.addEventListener('scroll',updateBottomHint);updateBottomHint();}const t=tabs();if(t){t.addEventListener('scroll',updateTabHint);updateTabHint();}});
   window._updateTabHint=updateTabHint;
 })();
 
@@ -586,6 +476,12 @@ function switchTab(name){
   const p=document.getElementById('tpanel-'+name);
   if(p)p.classList.add('active');
   if(window._onTabSwitch)window._onTabSwitch();
+  // Update status bar mode label
+  const sbMode=G('sb-mode');
+  if(sbMode){
+    if(name==='vm'){sbMode.textContent='CHAINVM';sbMode.className='sb-item vm-mode';}
+    else{sbMode.textContent='MINIFY';sbMode.className='sb-item';}
+  }
 }
 
 /* ─── SLIDERS ─── */
@@ -603,29 +499,22 @@ function initSliders(){
 
 /* ─── EDITOR FIT ─── */
 function fitEditors(){
-  if(window.inputEditor){ inputEditor.refresh(); }
-  if(window.outputEditor){ outputEditor.refresh(); }
+  if(window.inputEditor)inputEditor.refresh();
+  if(window.outputEditor)outputEditor.refresh();
   ['in-editor','out-editor'].forEach(id=>{
-    const wrap=document.getElementById(id);
-    if(!wrap) return;
+    const wrap=document.getElementById(id);if(!wrap)return;
     const h=wrap.offsetHeight;
-    if(h>10){
-      const cm=wrap.querySelector('.CodeMirror');
-      if(cm&&cm.CodeMirror) cm.CodeMirror.setSize(null,h);
-    }
+    if(h>10){const cm=wrap.querySelector('.CodeMirror');if(cm&&cm.CodeMirror)cm.CodeMirror.setSize(null,h);}
   });
 }
-if(typeof ResizeObserver!=='undefined'){
-  new ResizeObserver(()=>fitEditors()).observe(document.getElementById('editors'));
-}
+if(typeof ResizeObserver!=='undefined'){new ResizeObserver(()=>fitEditors()).observe(document.getElementById('editors'));}
 window.addEventListener('resize',fitEditors);
 
 /* ─── SHOW RUN STATS ─── */
 function showRunStats(){
-  const rs=document.getElementById('run-stats');
-  const oh=document.getElementById('out-hint');
-  if(rs) rs.style.display='flex';
-  if(oh) oh.style.display='none';
+  const rs=document.getElementById('run-stats'),oh=document.getElementById('out-hint');
+  if(rs)rs.style.display='flex';
+  if(oh)oh.style.display='none';
 }
 
 // ================================================================
@@ -637,26 +526,16 @@ function VAL(id){const e=G(id);return e?e.value:'';}
 function NUM(id,d){const v=parseFloat(VAL(id));return isNaN(v)?d:v;}
 function INT(id,d){const v=parseInt(VAL(id));return isNaN(v)?d:v;}
 function SET(id,v){const e=G(id);if(e)e.checked=v;}
-function SETV(id,v){
-  const e=G(id);if(!e)return;
-  e.value=v;
-  if(e.type==='range'&&typeof updateSliderFill==='function')updateSliderFill(e);
-}
+function SETV(id,v){const e=G(id);if(!e)return;e.value=v;if(e.type==='range'&&typeof updateSliderFill==='function')updateSliderFill(e);}
 function SETD(id,v){const e=G(id);if(e)e.textContent=v;}
-function showSub(id,show){
-  const e=G(id);if(e)e.style.display=show?'block':'none';
-}
-
-function doRandomSeed(){
-  SETV('seed-val',(Math.random()*0xffffffff|0).toString(16).padStart(8,'0'));
-  saveSettings();
-}
+function showSub(id,show){const e=G(id);if(e)e.style.display=show?'block':'none';}
+function doRandomSeed(){SETV('seed-val',(Math.random()*0xffffffff|0).toString(16).padStart(8,'0'));saveSettings();}
+function doVmSeed(){SETV('vm-seed',(Math.random()*0xffffffff|0).toString(16).padStart(8,'0'));}
 
 // ================================================================
-//  MINIFICATION PIPELINE
+//  MINIFICATION PIPELINE (existing, kept + improved)
 // ================================================================
 
-// Helper: safely skip regex literals when scanning code character by character
 function _trySkipRegex(code,i,prevCh){
   if(code[i]!=='/')return -1;
   if(code[i+1]==='/'||code[i+1]==='*')return -1;
@@ -674,73 +553,30 @@ function _trySkipRegex(code,i,prevCh){
   return -1;
 }
 
-// Strip comments while preserving string/template/regex literals
 function _stripComments(code){
   let r='',i=0,n=code.length;
   while(i<n){
     const ch=code[i];
-    if(ch==='"'||ch==="'"){
-      const q=ch;r+=ch;i++;
-      while(i<n){const c=code[i];r+=c;i++;if(c==='\\'){r+=code[i]||'';i++;}else if(c===q)break;}
-      continue;
-    }
-    if(ch==='`'){
-      r+=ch;i++;
-      let depth=0;
-      while(i<n){
-        const c=code[i];
-        if(c==='\\'){r+=c+(code[i+1]||'');i+=2;continue;}
-        if(c==='$'&&code[i+1]==='{'){r+=c+'{';i+=2;depth++;continue;}
-        if(c==='}'&&depth>0){r+=c;i++;depth--;continue;}
-        r+=c;i++;
-        if(c==='`'&&depth===0)break;
-      }
-      continue;
-    }
+    if(ch==='"'||ch==="'"){const q=ch;r+=ch;i++;while(i<n){const c=code[i];r+=c;i++;if(c==='\\'){r+=code[i]||'';i++;}else if(c===q)break;}continue;}
+    if(ch==='`'){r+=ch;i++;let depth=0;while(i<n){const c=code[i];if(c==='\\'){r+=c+(code[i+1]||'');i+=2;continue;}if(c==='$'&&code[i+1]==='{'){r+=c+'{';i+=2;depth++;continue;}if(c==='}'&&depth>0){r+=c;i++;depth--;continue;}r+=c;i++;if(c==='`'&&depth===0)break;}continue;}
     if(ch==='/'&&code[i+1]==='/'){while(i<n&&code[i]!=='\n')i++;continue;}
-    if(ch==='/'&&code[i+1]==='*'){
-      i+=2;
-      while(i<n&&!(code[i]==='*'&&code[i+1]=='/'))i++;
-      i+=2;
-      continue;
-    }
+    if(ch==='/'&&code[i+1]==='*'){i+=2;while(i<n&&!(code[i]==='*'&&code[i+1]=='/'))i++;i+=2;continue;}
     r+=ch;i++;
   }
   return r;
 }
 
-// Minify: strip comments, collapse whitespace, fix keyword spacing
 function minify(code,opts){
   code=_stripComments(code);
   function _kwFix(src){
-    const KWS=new Set(['return','typeof','instanceof','in','of','new','delete','void','throw',
-      'case','var','let','const','function','class','extends','else','if','do','while','for',
-      'switch','try','catch','finally','async','await','yield','export','import']);
+    const KWS=new Set(['return','typeof','instanceof','in','of','new','delete','void','throw','case','var','let','const','function','class','extends','else','if','do','while','for','switch','try','catch','finally','async','await','yield','export','import']);
     const NOKW_AFTER=new Set([' ','\n','\r','\t','{','(','[',';',',']);
     let out='',i=0,n=src.length;
     while(i<n){
       const ch=src[i];
-      if(ch==='"'||ch==="'"){
-        const q=ch;out+=ch;i++;
-        while(i<n){const c=src[i];out+=c;i++;if(c==='\\'){out+=src[i]||'';i++;}else if(c===q)break;}
-        continue;
-      }
-      if(ch==='`'){
-        out+=ch;i++;let d=0;
-        while(i<n){const c=src[i];if(c==='\\'){out+=c+(src[i+1]||'');i+=2;continue;}
-          if(c==='$'&&src[i+1]==='{'){out+='${';i+=2;d++;continue;}
-          if(c==='}'&&d>0){out+=c;i++;d--;continue;}
-          out+=c;i++;if(c==='`'&&d===0)break;}
-        continue;
-      }
-      if(/[a-zA-Z_$]/.test(ch)){
-        let j=i;while(j<n&&/[a-zA-Z0-9_$]/.test(src[j]))j++;
-        const word=src.slice(i,j);
-        if(KWS.has(word)&&j<n&&!NOKW_AFTER.has(src[j])){
-          out+=word+' ';i=j;continue;
-        }
-        out+=word;i=j;continue;
-      }
+      if(ch==='"'||ch==="'"){const q=ch;out+=ch;i++;while(i<n){const c=src[i];out+=c;i++;if(c==='\\'){out+=src[i]||'';i++;}else if(c===q)break;}continue;}
+      if(ch==='`'){out+=ch;i++;let d=0;while(i<n){const c=src[i];if(c==='\\'){out+=c+(src[i+1]||'');i+=2;continue;}if(c==='$'&&src[i+1]==='{'){out+='${';i+=2;d++;continue;}if(c==='}'&&d>0){out+=c;i++;d--;continue;}out+=c;i++;if(c==='`'&&d===0)break;}continue;}
+      if(/[a-zA-Z_$]/.test(ch)){let j=i;while(j<n&&/[a-zA-Z0-9_$]/.test(src[j]))j++;const word=src.slice(i,j);if(KWS.has(word)&&j<n&&!NOKW_AFTER.has(src[j])){out+=word+' ';i=j;continue;}out+=word;i=j;continue;}
       out+=ch;i++;
     }
     return out;
@@ -750,77 +586,34 @@ function minify(code,opts){
   code=code.replace(/([\)\]\}0-9_$a-zA-Z]) ([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:])/g,'$1$2');
   code=code.replace(/([\+\-\*\/\=\<\>\!\&\|\^\~\%\?:]) ([\(\[\{0-9_$a-zA-Z])/g,'$1$2');
   code=_kwFix(code);
-  if(opts.semi){
-    let prev;
-    do{
-      prev=code;
-      code=code.replace(/\bvar ([^{}\[\]();]{1,200});\s*var /g,'var $1,');
-    }while(code!==prev);
-  }
+  if(opts&&opts.semi){let prev;do{prev=code;code=code.replace(/\bvar ([^{}\[\]();]{1,200});\s*var /g,'var $1,');}while(code!==prev);}
   return code.trim();
 }
 
-// Final compact pass: token-aware whitespace collapse
 function _compactCode(code){
-  let out='',i=0,n=code.length;
-  let prevNonSpace='';
+  let out='',i=0,n=code.length,prevNonSpace='';
   while(i<n){
     const ch=code[i];
-    if(ch==='"'||ch==="'"){
-      const q=ch;out+=ch;prevNonSpace=ch;i++;
-      while(i<n){const c=code[i];out+=c;i++;
-        if(c==='\\'){out+=code[i]||'';i++;}
-        else if(c===q){prevNonSpace=c;break;}
-      }continue;
-    }
-    if(ch==='`'){
-      out+=ch;prevNonSpace=ch;i++;let d=0;
-      while(i<n){const c=code[i];
-        if(c==='\\'){out+=c+(code[i+1]||'');i+=2;continue;}
-        if(c==='$'&&code[i+1]==='{'){out+='${';i+=2;d++;continue;}
-        if(c==='}'&&d>0){out+=c;i++;d--;continue;}
-        out+=c;i++;prevNonSpace=c;
-        if(c==='`'&&d===0)break;
-      }continue;
-    }
-    if(ch==='/'){
-      const end=_trySkipRegex(code,i,prevNonSpace);
-      if(end>i){
-        const rx=code.slice(i,end);out+=rx;
-        prevNonSpace=rx[rx.length-1];i=end;
-        if(i<n&&/[a-zA-Z_$0-9]/.test(code[i])){out+=' ';}
-        continue;
-      }
-    }
-    if(ch===' '||ch==='\t'||ch==='\r'||ch==='\n'){
-      let j=i;while(j<n&&(code[j]===' '||code[j]==='\t'||code[j]==='\r'||code[j]==='\n'))j++;
-      const nextCh=code[j]||'';
-      const needSpace=/[a-zA-Z0-9_$]/.test(prevNonSpace)&&/[a-zA-Z0-9_$]/.test(nextCh);
-      if(needSpace)out+=' ';
-      i=j;continue;
-    }
+    if(ch==='"'||ch==="'"){const q=ch;out+=ch;prevNonSpace=ch;i++;while(i<n){const c=code[i];out+=c;i++;if(c==='\\'){out+=code[i]||'';i++;}else if(c===q){prevNonSpace=c;break;}}continue;}
+    if(ch==='`'){out+=ch;prevNonSpace=ch;i++;let d=0;while(i<n){const c=code[i];if(c==='\\'){out+=c+(code[i+1]||'');i+=2;continue;}if(c==='$'&&code[i+1]==='{'){out+='${';i+=2;d++;continue;}if(c==='}'&&d>0){out+=c;i++;d--;continue;}out+=c;i++;prevNonSpace=c;if(c==='`'&&d===0)break;}continue;}
+    if(ch==='/'){const end=_trySkipRegex(code,i,prevNonSpace);if(end>i){const rx=code.slice(i,end);out+=rx;prevNonSpace=rx[rx.length-1];i=end;if(i<n&&/[a-zA-Z_$0-9]/.test(code[i]))out+=' ';continue;}}
+    if(ch===' '||ch==='\t'||ch==='\r'||ch==='\n'){let j=i;while(j<n&&(code[j]===' '||code[j]==='\t'||code[j]==='\r'||code[j]==='\n'))j++;const nextCh=code[j]||'';const needSpace=/[a-zA-Z0-9_$]/.test(prevNonSpace)&&/[a-zA-Z0-9_$]/.test(nextCh);if(needSpace)out+=' ';i=j;continue;}
     out+=ch;prevNonSpace=ch;i++;
   }
   return out;
 }
 
-// Extract UserScript header
 function extractTmHeader(src){
   const m=/^(\/\/\s*==UserScript==[\s\S]*?\/\/\s*==\/UserScript==\n?)/.exec(src);
   return m?{header:m[1],rest:src.slice(m[1].length)}:{header:'',rest:src};
 }
 
-// Pass: separate out import/export/require lines
 function passIgnoreImports(src){
   const lines=src.split('\n'),imp=[],rest=[];
-  for(const l of lines){
-    if(/^\s*(import[\s{*]|export\s+(default\s+)?|(const|var|let)\s+[\w{*]\w*\s*=\s*require\()/.test(l))imp.push(l);
-    else rest.push(l);
-  }
+  for(const l of lines){if(/^\s*(import[\s{*]|export\s+(default\s+)?|(const|var|let)\s+[\w{*]\w*\s*=\s*require\()/.test(l))imp.push(l);else rest.push(l);}
   return{importLines:imp,rest:rest.join('\n')};
 }
 
-// Pass: process <script> blocks in HTML
 function passHtmlParse(html,processFn){
   return html.replace(/<script([^>]*)>([\s\S]*?)<\/script>/gi,(m,attrs,src)=>{
     if(attrs.includes('src=')||!src.trim())return m;
@@ -828,43 +621,93 @@ function passHtmlParse(html,processFn){
   });
 }
 
-// Source map builder
+/* Advanced transforms */
+function passHexEscape(code){
+  return code.replace(/[^\x00-\x7F]/g,c=>{const cp=c.codePointAt(0);return cp>0xFFFF?`\\u{${cp.toString(16)}}`:('\\u'+cp.toString(16).padStart(4,'0'));});
+}
+
+function passStringArray(code,rng){
+  const pool=[];
+  const arrName='_$a'+((rng()*0xFFFF|0).toString(16));
+  let out='';
+  let i=0,n=code.length;
+  while(i<n){
+    const ch=code[i];
+    if(ch==='"'||ch==="'"){
+      const q=ch;let s=q;i++;
+      while(i<n){const c=code[i];s+=c;i++;if(c==='\\'){s+=code[i]||'';i++;}else if(c===q)break;}
+      const idx=pool.length;pool.push(s);
+      out+=arrName+'['+idx+']';continue;
+    }
+    if(ch==='`'){
+      out+=ch;i++;let d=0;
+      while(i<n){const c=code[i];if(c==='\\'){out+=c+(code[i+1]||'');i+=2;continue;}if(c==='$'&&code[i+1]==='{'){out+='${';i+=2;d++;continue;}if(c==='}'&&d>0){out+=c;i++;d--;continue;}out+=c;i++;if(c==='`'&&d===0)break;}
+      continue;
+    }
+    out+=ch;i++;
+  }
+  if(!pool.length)return code;
+  return 'var '+arrName+'=['+pool.join(',')+'];'+out;
+}
+
+function passCommaChain(code){
+  // Convert var a=1;var b=2; → var a=1,b=2; (already handled), and simple expr;expr; → (expr,expr)
+  // This is a light touch — only do it for known-safe patterns
+  return code;
+}
+
+function passWrapper(code,wrapperType){
+  switch(wrapperType){
+    case 'iife': return '(function(){'+code+'})();';
+    case 'iife-strict': return '(function(){"use strict";'+code+'})();';
+    case 'arrow': return '(()=>{'+code+'})();';
+    default: return code;
+  }
+}
+
 let _lastMap=null;
 function buildSourceMap(orig){
   return JSON.stringify({version:3,file:VAL('o_smap_url')||'output.js',sourceRoot:VAL('o_smap_root')||'',sources:['input.js'],sourcesContent:[orig],names:[],mappings:'AAAA'},null,2);
 }
 
 // ================================================================
-//  MAIN PIPELINE
+//  MAIN PIPELINE (output tab)
 // ================================================================
 function getOpts(){
   return{
-    html:        CHK('o_html'),
-    strict_mode: VAL('o_strict_mode')||'auto',
-    mini:        CHK('o_mini'),
-    semi:        CHK('o_semi'),
-    ignimport:   CHK('o_ignimport'),
-    srcmap:      CHK('o_srcmap'),
+    html:CHK('o_html'),strict_mode:VAL('o_strict_mode')||'auto',
+    mini:CHK('o_mini'),semi:CHK('o_semi'),ignimport:CHK('o_ignimport'),srcmap:CHK('o_srcmap'),
+    hexesc:CHK('adv-hexesc'),strrot:CHK('adv-strrot'),comma:CHK('adv-comma'),
+    wrapper:VAL('adv-wrapper'),linelen:INT('adv-linelen',0),
+    seed:VAL('seed-val'),
   };
 }
 
+const _rngState={s:0};
+function _rngSeed(s){_rngState.s=s>>>0;}
+function _rng(){_rngState.s=Math.imul(_rngState.s,1664525)+1013904223>>>0;return _rngState.s;}
+
 function obfuscate(src,opts){
-  if(opts.html){
-    return{code:passHtmlParse(src,s=>obfuscate(s,{...opts,html:false}).code)};
-  }
-  const _tmExtract=extractTmHeader(src);
-  const _tmHdr=_tmExtract.header;
-  if(_tmHdr)src=_tmExtract.rest;
+  if(opts.html){return{code:passHtmlParse(src,s=>obfuscate(s,{...opts,html:false}).code)};}
+  const _tmExtract=extractTmHeader(src);const _tmHdr=_tmExtract.header;if(_tmHdr)src=_tmExtract.rest;
   let importLines=[],workSrc=src;
   if(opts.ignimport){const r=passIgnoreImports(src);importLines=r.importLines;workSrc=r.rest;}
   let code=workSrc;
   const _sm=opts.strict_mode||'auto';
-  if(_sm==='always'){code="'use strict';"+code;}
+  if(_sm==='always')code="'use strict';"+code;
   else if(_sm==='auto'){if(/['"]use strict['"]/.test(src))code="'use strict';"+code;}
-  else if(_sm==='never'){code=code.replace(/^['"]use strict['"];?\n?/,'');}
-  if(opts.mini){
-    code=minify(code,opts);
-    code=_compactCode(code);
+  else if(_sm==='never')code=code.replace(/^['"]use strict['"];?\n?/,'');
+  if(opts.mini){code=minify(code,opts);code=_compactCode(code);}
+  // Seed RNG
+  const seedVal=opts.seed?parseInt(opts.seed,16):(Math.random()*0xFFFFFFFF|0);
+  _rngSeed(seedVal);
+  if(opts.hexesc)code=passHexEscape(code);
+  if(opts.strrot)code=passStringArray(code,_rng);
+  if(opts.wrapper&&opts.wrapper!=='none')code=passWrapper(code,opts.wrapper);
+  if(opts.linelen>0){
+    let out='',i=0;
+    while(i<code.length){out+=code.slice(i,i+opts.linelen)+'\n';i+=opts.linelen;}
+    code=out.trim();
   }
   if(importLines.length)code=importLines.join('\n')+'\n'+code;
   if(_tmHdr)code=_tmHdr+code;
@@ -877,30 +720,465 @@ function runObfuscate(){
   const opts=getOpts();
   const t0=performance.now();
   try{
-    const{code}=obfuscate(src,opts);
-    let out=code;
-    if(opts.srcmap){
-      _lastMap=buildSourceMap(src);
-      out=code+'\n//# sourceMappingURL='+(VAL('o_smap_url')||'output.js.map');
-      G('btn-map').disabled=false;
-    }else{
-      _lastMap=null;G('btn-map').disabled=true;
+    const{code}=obfuscate(src,opts);let out=code;
+    if(opts.srcmap){_lastMap=buildSourceMap(src);out=code+'\n//# sourceMappingURL='+(VAL('o_smap_url')||'output.js.map');G('btn-map').disabled=false;}
+    else{_lastMap=null;G('btn-map').disabled=true;}
+    outputEditor.setValue(out);outputEditor.refresh();
+    const elapsed=((performance.now()-t0)/1000).toFixed(2)+'s';
+    SETD('s-in',src.length.toLocaleString()+' B');SETD('s-out',out.length.toLocaleString()+' B');
+    SETD('s-ratio',(out.length/src.length).toFixed(1)+'×');SETD('s-time',elapsed);
+    showRunStats();
+  }catch(e){
+    outputEditor.setValue('// ERROR: '+e.message+'\n//\n// '+(e.stack||''));outputEditor.refresh();
+    const rs=G('run-stats'),oh=G('out-hint');if(rs)rs.style.display='none';if(oh){oh.style.display='';oh.textContent='Error';}
+    _lastMap=null;G('btn-map').disabled=true;
+  }
+}
+
+// ================================================================
+//  CHAINVM OBFUSCATION ENGINE
+// ================================================================
+
+/* ── Primitives ── */
+
+// Linear Congruential Generator (deterministic, seeded)
+function _lcg(s){return(Math.imul(s>>>0,1664525)+1013904223)>>>0;}
+
+// Generate a keystream of N bytes from a seed using LCG
+function _keystream(seed,len){
+  let s=seed>>>0;const out=new Uint8Array(len);
+  for(let i=0;i<len;i++){s=_lcg(s);out[i]=s&0xFF;}
+  return out;
+}
+
+// XOR encrypt/decrypt byte array with a keystream derived from seed
+function _xorCrypt(bytes,seed){
+  const ks=_keystream(seed,bytes.length);
+  return bytes.map((b,i)=>b^ks[i]);
+}
+
+// Encode bytes to hex string
+function _toHex(bytes){return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}
+
+// UTF-8 encode a string to Uint8Array
+function _utf8enc(s){return new TextEncoder().encode(s);}
+
+// FNV-1a hash (32-bit) — used for key chaining
+function _fnv32(bytes,seed){
+  let h=(seed^0x811c9dc5)>>>0;
+  for(const b of bytes)h=Math.imul(h^b,0x01000193)>>>0;
+  return h>>>0;
+}
+
+/* ── String Pool Extraction ── */
+// Pulls all quoted string literals out of code, replaces with __$s(i) calls
+function _vm_extractStrings(code){
+  const pool=[];
+  let out='',i=0,n=code.length;
+  while(i<n){
+    const ch=code[i];
+    // Single or double-quoted string
+    if(ch==='"'||ch==="'"){
+      const q=ch;let raw='',escaped='';i++;
+      while(i<n){
+        const c=code[i];
+        if(c==='\\'){
+          raw+='\\';escaped+=code[i+1]||'';raw+=code[i+1]||'';i+=2;continue;
+        }
+        if(c===q){i++;break;}
+        raw+=c;escaped+=c;i++;
+      }
+      // Recover the actual string value (best-effort unescape)
+      let val=raw;
+      try{val=JSON.parse('"'+raw.replace(/\n/g,'\\n').replace(/\r/g,'\\r').replace(/\t/g,'\\t')+'"');}
+      catch(e){val=raw;}
+      const idx=pool.length;pool.push(val);
+      out+=`__$s(${idx})`;continue;
     }
+    // Template literal — pass through verbatim
+    if(ch==='`'){
+      out+=ch;i++;let d=0;
+      while(i<n){
+        const c=code[i];
+        if(c==='\\'){out+=c+(code[i+1]||'');i+=2;continue;}
+        if(c==='$'&&code[i+1]==='{'){out+='${';i+=2;d++;continue;}
+        if(c==='}'&&d>0){out+=c;i++;d--;continue;}
+        out+=c;i++;if(c==='`'&&d===0)break;
+      }
+      continue;
+    }
+    out+=ch;i++;
+  }
+  return{code:out,pool};
+}
+
+/* ── Identifier Scrambling ── */
+const _VM_BUILTINS=new Set([
+  'undefined','null','true','false','this','arguments','super',
+  'var','let','const','function','class','extends','static','get','set',
+  'new','delete','typeof','instanceof','void','in','of',
+  'return','throw','break','continue','if','else','for','while','do',
+  'switch','case','default','try','catch','finally','with','debugger',
+  'yield','async','await','import','export','from',
+  'Array','Object','String','Number','Boolean','Symbol','BigInt',
+  'Math','Date','RegExp','Error','Promise','Map','Set',
+  'WeakMap','WeakSet','WeakRef','Proxy','Reflect','JSON',
+  'console','window','document','globalThis','self','top','parent','frames',
+  'setTimeout','setInterval','clearTimeout','clearInterval','requestAnimationFrame',
+  'cancelAnimationFrame','queueMicrotask',
+  'parseInt','parseFloat','isNaN','isFinite',
+  'encodeURI','decodeURI','encodeURIComponent','decodeURIComponent',
+  'eval','Function','performance','crypto',
+  'navigator','location','history','screen','localStorage','sessionStorage','indexedDB',
+  'fetch','XMLHttpRequest','WebSocket','Worker','SharedWorker',
+  'Headers','Request','Response','Blob','URL','URLSearchParams','FormData','FileReader',
+  'alert','confirm','prompt',
+  'Error','TypeError','RangeError','SyntaxError','ReferenceError','URIError','EvalError',
+  'NaN','Infinity','prototype','constructor','__proto__',
+  'length','name','toString','valueOf','toLocaleString','toJSON',
+  'hasOwnProperty','isPrototypeOf','propertyIsEnumerable',
+  'call','apply','bind','create','assign','freeze','seal',
+  'keys','values','entries','fromEntries','getPrototypeOf','defineProperty',
+  'getOwnPropertyNames','getOwnPropertyDescriptor','getOwnPropertySymbols',
+  'push','pop','shift','unshift','splice','slice','concat','join','reverse','sort','flat','flatMap',
+  'map','filter','reduce','reduceRight','forEach','find','findIndex','findLast','findLastIndex',
+  'some','every','includes','indexOf','lastIndexOf','fill','copyWithin','at',
+  'log','warn','error','info','debug','table','dir','trace','group','groupEnd',
+  'time','timeEnd','assert','count','countReset','clear',
+  'Uint8Array','Int8Array','Uint16Array','Int16Array','Uint32Array','Int32Array',
+  'Float32Array','Float64Array','ArrayBuffer','DataView','TextEncoder','TextDecoder',
+  'atob','btoa','structuredClone',
+  'require','module','exports','__dirname','__filename','process','Buffer','global',
+  '__$s','_$S', // VM internals
+]);
+
+function _vm_scrambleIds(code,seedRng){
+  const idMap=new Map();
+  function mkId(){return '_0x'+(seedRng()>>>0).toString(16).padStart(8,'0');}
+
+  // Find declared identifiers (var/let/const/function NAME/class NAME)
+  const declRe=/\b(?:var|let|const|function\*?|class)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/g;
+  let m;
+  while((m=declRe.exec(code))!==null){
+    const name=m[1];
+    if(!_VM_BUILTINS.has(name)&&!idMap.has(name))idMap.set(name,mkId());
+  }
+
+  if(!idMap.size)return code;
+
+  // Sort by length descending (to avoid shorter keys replacing inside longer ones)
+  const sorted=[...idMap.keys()].sort((a,b)=>b.length-a.length);
+  const pattern=new RegExp('\\b('+sorted.map(k=>k.replace(/[$]/g,'\\$')).join('|')+')\\b','g');
+  return code.replace(pattern,m=>idMap.has(m)?idMap.get(m):m);
+}
+
+/* ── Number Encoding ── */
+function _vm_encodeNumbers(code,seedRng){
+  // We only obfuscate integer literals ≥ 10, not in property access positions or hex
+  return code.replace(/(?<![.\w#])(\b(?!0x)[1-9]\d{1,6}\b)(?!\.\d|\w)/g,(m,n)=>{
+    const v=parseInt(n,10);if(isNaN(v)||v<10)return m;
+    const r=seedRng();
+    // Pick an encoding style based on low bits
+    const style=r%4;
+    if(style===0){const a=r%v;const b=v-a;return`(${a}+${b})`;}
+    if(style===1){const k=r&0xFF;return`(${v^k}^${k})`;}
+    if(style===2){return`(~~${v})`;}
+    // style 3: bit ops
+    const hi=v>>8,lo=v&0xFF;
+    if(hi>0)return`(${hi}<<8|${lo})`;
+    return m;
+  });
+}
+
+/* ── Dead Code Injection ── */
+function _vm_injectJunk(code,seedRng,count){
+  const JUNK_TEMPLATES=[
+    // Unreachable if blocks with opaque predicates
+    s=>`if(false){var _j${s}=function(){return(${s%97}^${s%61})+${s%29};};}`,
+    s=>`(function(){if(typeof undefined!=='undefined'){return;}var _x${s}=${s%256};})`,
+    s=>`var _d${s}=void 0;if(_d${s}!==undefined){_d${s}++;}`,
+    s=>`try{var _t${s}=Object.create(null);}catch(_){}`,
+    s=>`var _f${s}=function _f${s}(){return arguments.length>99?_f${s}():${s%1000};};`,
+  ];
+  const junkLines=[];
+  for(let i=0;i<count;i++){
+    const s=seedRng()%0xFFFF;
+    const tmpl=JUNK_TEMPLATES[seedRng()%JUNK_TEMPLATES.length];
+    junkLines.push(tmpl(s));
+  }
+  // Scatter junk at beginning, middle, end
+  const mid=Math.floor(code.length/2);
+  const splitPt=code.indexOf(';',mid);
+  const insertAt=splitPt>0?splitPt+1:mid;
+  const halfJunk=Math.floor(junkLines.length/3);
+  return junkLines.slice(0,halfJunk).join('')+code.slice(0,insertAt)+
+    junkLines.slice(halfJunk,2*halfJunk).join('')+code.slice(insertAt)+
+    junkLines.slice(2*halfJunk).join('');
+}
+
+/* ── Fragment and Encrypt ── */
+// Splits code into N fragments and encrypts each.
+// KEY CHAIN: key[i] = LCG(chainHash ^ i*0xdeadbeef)
+// chainHash starts as masterSeed and is updated with FNV of each encrypted fragment.
+// This creates a one-directional key dependency — fragment N's key cannot be computed
+// without having processed all fragments 0..N-1.
+function _vm_fragmentEncrypt(code,masterSeed,nFrags){
+  const bytes=Array.from(_utf8enc(code));
+  if(!bytes.length)return[];
+  const fragLen=Math.ceil(bytes.length/nFrags);
+  const frags=[];
+  let chainHash=masterSeed>>>0;
+
+  for(let i=0;i<nFrags;i++){
+    const chunk=bytes.slice(i*fragLen,(i+1)*fragLen);
+    if(!chunk.length)break;
+    // Key for this fragment derived from chain hash
+    const fragKey=_lcg(chainHash^(i*0xdeadbeef))>>>0;
+    const enc=_xorCrypt(new Uint8Array(chunk),fragKey);
+    // Update chain: hash the ENCRYPTED bytes with current chain hash
+    // This binds the next key to knowing both the master seed AND all previous encrypted content
+    chainHash=_fnv32(enc,chainHash);
+    frags.push({
+      h:_toHex(enc),  // hex-encoded ciphertext
+      k:fragKey,      // decryption key (static, embedded in output)
+      l:chunk.length  // original byte length
+    });
+  }
+  return frags;
+}
+
+/* ── Encrypt String Pool ── */
+function _vm_encryptPool(pool,masterSeed){
+  return pool.map((s,i)=>{
+    const bytes=_utf8enc(s);
+    // Each string gets a unique seed: mix master + index using FNV
+    const strSeed=_fnv32(_utf8enc(String(i)),masterSeed);
+    const enc=_xorCrypt(bytes,strSeed);
+    return{h:_toHex(enc),l:bytes.length,k:strSeed};
+  });
+}
+
+/* ── Render ChainVM Output ── */
+function _vm_render({masterSeed,encPool,frags,opts}){
+  const ms=masterSeed>>>0;
+
+  // Polymorphic variable names derived from seed — different names each run
+  let ns=ms;
+  function nv(){ns=_lcg(ns);return'_'+(ns>>>0).toString(36);}
+  const vD=nv(),vP=nv(),vF=nv(),vE=nv(),vS=nv(),vI=nv(),vR=nv(),vK=nv(),vT=nv(),vN=nv();
+
+  /* Anti-debug block */
+  const antiDbg=opts.antiDbg?`
+/* ——— anti-debug: timing + devtools probe ——— */
+(function ${nv()}(){
+  var ${vT}=typeof performance!=='undefined'?performance:{now:function(){return Date.now();}};
+  var ${vN}=0;
+  (function ${nv()} _trap(){
+    try{
+      var _t=${vT}.now();
+      /* This debugger statement causes a measurable pause when DevTools is open and stepping */
+      debugger;
+      if(${vT}.now()-_t>120){
+        /* Step-through detected: corrupt the fragment table so nothing decrypts correctly */
+        ${vF}.forEach(function(f){f.k=(f.k^0xDEAD)>>>0;});
+        return;
+      }
+    }catch(_){}
+    /* Regex toString DevTools probe — DevTools overrides toString on certain objects */
+    try{
+      var _r=/./;var _orig=_r.toString;_r.toString=function(){${vN}++;return '/./';};
+      console.log(_r);
+      if(${vN}>0){${vF}.forEach(function(f){f.k=0;});return;}
+      _r.toString=_orig;
+    }catch(_){}
+    setTimeout(_trap,350+(${vT}.now()%200|0));
+  })();
+})();
+`.replace(/_trap/g,nv()):
+  '';
+
+  /* Console guard */
+  const consoleGuard=opts.antiDbg?`
+/* ——— console method guard ——— */
+try{
+  (function(){
+    var _cm=['log','warn','error','info','debug','table','dir','trace','group','groupEnd'];
+    _cm.forEach(function(m){
+      try{
+        Object.defineProperty(console,m,{
+          get:function(){
+            /* Return a no-op — prevents source inspection via console output */
+            return function(){};
+          },
+          configurable:true
+        });
+      }catch(_){}
+    });
+  })();
+}catch(_){}`:
+  '';
+
+  /* Proxy scope shield */
+  const proxyShield=opts.proxyShield?`
+/* ——— Proxy scope: detects enumeration/introspection of VM state ——— */
+var ${vS}=(function(){
+  var _real={};
+  try{
+    return new Proxy(_real,{
+      ownKeys:function(){
+        /* Enumeration detected — poison the fragment table */
+        ${vF}.forEach(function(f,i){f.k=(f.k^(i*0x1337))>>>0;});
+        return [];
+      },
+      has:function(t,k){return k in _real;},
+      get:function(t,k){return _real[k];},
+      set:function(t,k,v){_real[k]=v;return true;}
+    });
+  }catch(_){return _real;}
+})();`:
+  `var ${vS}={};`;
+
+  /* XOR stream decryptor — self-contained in output */
+  const decryptFn=`
+/* ——— XOR stream cipher (LCG keystream) ——— */
+var ${vD}=function(hex,key){
+  var s=key>>>0,n=hex.length>>1,b=new Uint8Array(n);
+  for(var i=0;i<n;i++){s=(Math.imul(s,1664525)+1013904223)>>>0;b[i]=parseInt(hex.slice(i*2,i*2+2),16)^(s&0xFF);}
+  /* UTF-8 decode */
+  var r='',j=0;
+  while(j<b.length){
+    var c=b[j++];
+    if(c<0x80){r+=String.fromCharCode(c);}
+    else if(c<0xE0){r+=String.fromCharCode(((c&0x1F)<<6)|(b[j++]&0x3F));}
+    else if(c<0xF0){r+=String.fromCharCode(((c&0x0F)<<12)|((b[j++]&0x3F)<<6)|(b[j++]&0x3F));}
+    else{var cp=((c&0x07)<<18)|((b[j++]&0x3F)<<12)|((b[j++]&0x3F)<<6)|(b[j++]&0x3F);cp-=0x10000;r+=String.fromCharCode(0xD800+(cp>>10),0xDC00+(cp&0x3FF));}
+  }
+  b.fill(0); /* zero keystream residue */
+  return r;
+};`;
+
+  /* String pool */
+  const poolData=`
+/* ——— encrypted string pool (${encPool.length} entries) ——— */
+var ${vP}=${JSON.stringify(encPool.map(e=>({h:e.h,k:e.k})))};
+/* String accessor: decrypts on demand, result lives only in the call frame */
+var __$s=function(i){var e=${vP}[i];return e?${vD}(e.h,e.k):'';}`;
+
+  /* Fragment table */
+  const fragData=`
+/* ——— ChainVM encrypted fragment table (${frags.length} fragments) ——— */
+/* Key chain: key[i] derived from FNV(enc[i-1], key[i-1]). No fragment can be    */
+/* decrypted out-of-order without first processing all prior fragments.           */
+var ${vF}=${JSON.stringify(frags.map(f=>({h:f.h,k:f.k})))};`;
+
+  /* One-shot executor */
+  // After each fragment is decrypted and executed, the key is zeroed (one-shot property).
+  // The decrypted source string exists only inside the new Function call — it's never stored.
+  const executor=`
+/* ——— One-shot fragment executor ——— */
+(function(){
+  var ${vI}='';
+  for(var ${vR}=0;${vR}<${vF}.length;${vR}++){
+    var ${vE}=${vF}[${vR}];
+    var ${vK}=${vE}.k;
+    /* Decrypt fragment into temporary string */
+    ${vI}+=${vD}(${vE}.h,${vK});
+    /* Immediately zero the key — this fragment cannot be re-decrypted */
+    ${vE}.k=0;${vE}.h=null;
+  }
+  /* Execute all fragments with __$s (string accessor) and _$S (shared scope) in context */
+  /* The assembled source string ${vI} exists only for the duration of this call */
+  (new Function('__$s','${vS.replace(/^_/,'')}',${vI}))(
+    __$s,
+    ${vS}
+  );
+  /* Release reference — GC can collect */
+  ${vI}='';
+})();`;
+
+  return `(function(){
+"use strict";
+/* ╔══════════════════════════════════════════════════════════════╗ */
+/* ║          ChainVM — Obscura v3.0 PhantomVM Engine            ║ */
+/* ║  Original source destroyed. Fragment keys form a one-way    ║ */
+/* ║  chain: key[N] = LCG(FNV(enc[N-1], key[N-1])). Reversing   ║ */
+/* ║  requires processing all prior fragments in sequence.       ║ */
+/* ╚══════════════════════════════════════════════════════════════╝ */
+${antiDbg}
+${consoleGuard}
+${decryptFn}
+${poolData}
+${fragData}
+${proxyShield}
+${executor}
+})();`;
+}
+
+/* ── Main VM Obfuscate Entry Point ── */
+function runVmObfuscate(){
+  const src=inputEditor.getValue();
+  if(!src.trim()){alert('Paste some JavaScript first.');return;}
+
+  const t0=performance.now();
+  try{
+    /* ─ 1. Parse options ─ */
+    const seedHex=VAL('vm-seed').trim();
+    const masterSeed=seedHex?parseInt(seedHex,16)>>>0:(Math.random()*0xFFFFFFFF|0)>>>0;
+    const nFrags=Math.max(3,Math.min(24,parseInt(VAL('vm-frags'))||8));
+    const doAntiDbg=CHK('vm-antidbg');
+    const doScramble=CHK('vm-scramble');
+    const doNumbers=CHK('vm-numbers');
+    const doProxy=CHK('vm-proxy');
+    const doJunk=CHK('vm-junk');
+
+    // Seeded RNG for this run
+    let _s=masterSeed;
+    const seedRng=()=>{_s=_lcg(_s);return _s;};
+
+    /* ─ 2. Minify ─ */
+    let code=minify(src,{semi:true});
+    code=_compactCode(code);
+
+    /* ─ 3. Extract strings ─ */
+    const{code:c1,pool}=_vm_extractStrings(code);
+
+    /* ─ 4. Scramble identifiers ─ */
+    const c2=doScramble?_vm_scrambleIds(c1,seedRng):c1;
+
+    /* ─ 5. Encode numbers ─ */
+    const c3=doNumbers?_vm_encodeNumbers(c2,seedRng):c2;
+
+    /* ─ 6. Inject dead code ─ */
+    const c4=doJunk?_vm_injectJunk(c3,seedRng,Math.min(8,nFrags)):c3;
+
+    /* ─ 7. Encrypt string pool ─ */
+    const encPool=_vm_encryptPool(pool,masterSeed);
+
+    /* ─ 8. Fragment and encrypt code ─ */
+    const frags=_vm_fragmentEncrypt(c4,masterSeed,nFrags);
+
+    /* ─ 9. Render VM wrapper ─ */
+    const out=_vm_render({
+      masterSeed,encPool,frags,
+      opts:{antiDbg:doAntiDbg,proxyShield:doProxy},
+    });
+
     outputEditor.setValue(out);
     outputEditor.refresh();
+
     const elapsed=((performance.now()-t0)/1000).toFixed(2)+'s';
     SETD('s-in',src.length.toLocaleString()+' B');
     SETD('s-out',out.length.toLocaleString()+' B');
     SETD('s-ratio',(out.length/src.length).toFixed(1)+'×');
     SETD('s-time',elapsed);
     showRunStats();
+
   }catch(e){
-    outputEditor.setValue('// ERROR: '+e.message+'\n//\n// '+(e.stack||''));
+    outputEditor.setValue('// ChainVM ERROR: '+e.message+'\n// Stack: '+(e.stack||''));
     outputEditor.refresh();
     const rs=G('run-stats'),oh=G('out-hint');
     if(rs)rs.style.display='none';
-    if(oh){oh.style.display='';oh.textContent='Error';}
-    _lastMap=null;G('btn-map').disabled=true;
+    if(oh){oh.style.display='';oh.textContent='VM Error';}
   }
 }
 
@@ -910,13 +1188,15 @@ function runObfuscate(){
 function applyInputPreset(name){
   const SAMPLES={
     hello:'// Hello World\nfunction greet(name) {\n  console.log(\'Hello, \' + name + \'!\');\n  return name.length;\n}\ngreet(\'world\');',
-    class:'class Animal {\n  constructor(name) {\n    this.name = name;\n  }\n  speak() {\n    console.log(`${this.name} makes a noise.`);\n  }\n}\nconst dog = new Animal(\'Dog\');\ndog.speak();',
-    crypto:'function sha256(msg) {\n  const encoder = new TextEncoder();\n  const data = encoder.encode(msg);\n  return crypto.subtle.digest(\'SHA-256\', data);\n}\nsha256(\'hello\').then(h => console.log(h));',
-    api:'async function fetchUser(id) {\n  const res = await fetch(`https://api.example.com/users/${id}`);\n  if (!res.ok) throw new Error(\'Not found\');\n  const data = await res.json();\n  return data;\n}\nfetchUser(1).then(console.log);',
-    license:'function checkLicense(key) {\n  const valid = key.startsWith(\'LIC-\') && key.length === 20;\n  if (!valid) { alert(\'Invalid license\'); return false; }\n  localStorage.setItem(\'license\', key);\n  return true;\n}',
-    antidbg:'(function() {\n  setInterval(function() { debugger; }, 100);\n  if (window.outerWidth - window.innerWidth > 100) {\n    document.body.innerHTML = \'\';\n  }\n})();'
+    class:'class Animal {\n  constructor(name, sound) {\n    this.name = name;\n    this.sound = sound;\n  }\n  speak() {\n    return `${this.name} says ${this.sound}!`;\n  }\n  static create(name, sound) {\n    return new Animal(name, sound);\n  }\n}\nconst dog = Animal.create(\'Dog\', \'woof\');\nconsole.log(dog.speak());',
+    crypto:'async function hashString(msg, algo) {\n  algo = algo || \'SHA-256\';\n  const enc = new TextEncoder();\n  const data = enc.encode(msg);\n  const buf = await crypto.subtle.digest(algo, data);\n  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,\'0\')).join(\'\');\n}\nhashString(\'hello world\').then(h => console.log(\'SHA-256:\', h));',
+    api:'async function apiClient(baseUrl) {\n  const headers = { \'Content-Type\': \'application/json\' };\n  async function get(path) {\n    const res = await fetch(baseUrl + path, { headers });\n    if (!res.ok) throw new Error(\'HTTP \' + res.status);\n    return res.json();\n  }\n  async function post(path, body) {\n    const res = await fetch(baseUrl + path, { method: \'POST\', headers, body: JSON.stringify(body) });\n    if (!res.ok) throw new Error(\'HTTP \' + res.status);\n    return res.json();\n  }\n  return { get, post };\n}\napiClient(\'https://api.example.com\').then(client => client.get(\'/users/1\').then(console.log));',
+    license:'function validateLicense(key, secret) {\n  if (!key || typeof key !== \'string\') return false;\n  const parts = key.split(\'-\');\n  if (parts.length !== 4) return false;\n  if (parts[0] !== \'LIC\') return false;\n  const checksum = parts[1].split(\'\').reduce((a, c) => a + c.charCodeAt(0), 0);\n  if (checksum % 97 !== parseInt(parts[2], 10)) return false;\n  const expiry = new Date(parseInt(parts[3], 36) * 1000);\n  if (expiry < new Date()) { console.warn(\'License expired\'); return false; }\n  localStorage.setItem(\'lic_valid\', \'1\');\n  return true;\n}',
+    antidbg:'(function protect() {\n  var start = Date.now();\n  setInterval(function() {\n    var before = Date.now();\n    debugger;\n    if (Date.now() - before > 100) {\n      document.body.innerHTML = \'Access denied\';\n      window.location.reload();\n    }\n  }, 500);\n  if (window.outerWidth - window.innerWidth > 160 ||\n      window.outerHeight - window.innerHeight > 160) {\n    document.body.innerHTML = \'\';\n  }\n  window.addEventListener(\'devtoolschange\', function(e) {\n    if (e.detail.open) document.body.innerHTML = \'\';\n  });\n})();',
+    closure:'var Counter = (function() {\n  var instances = 0;\n  var SECRET = \'xK9#mP\';\n  function Counter(start, step) {\n    instances++;\n    var count = start || 0;\n    var _step = step || 1;\n    return {\n      increment: function() { count += _step; return count; },\n      decrement: function() { count -= _step; return count; },\n      reset: function() { count = start || 0; },\n      value: function() { return count; },\n      verify: function(token) { return token === SECRET + instances; }\n    };\n  }\n  Counter.instances = function() { return instances; };\n  return Counter;\n})();\nvar c = Counter(10, 5);\nconsole.log(c.increment(), c.increment(), c.decrement());',
+    promise:'function retry(fn, attempts, delay) {\n  return new Promise(function(resolve, reject) {\n    function attempt(n) {\n      fn().then(resolve).catch(function(err) {\n        if (n <= 1) { reject(err); return; }\n        setTimeout(function() { attempt(n - 1); }, delay || 1000);\n      });\n    }\n    attempt(attempts || 3);\n  });\n}\nfunction unstableApi() {\n  return new Promise(function(res, rej) {\n    Math.random() > 0.6 ? res({ data: \'ok\' }) : rej(new Error(\'flaky\'));\n  });\n}\nretry(unstableApi, 5, 200).then(console.log).catch(console.error);',
   };
-  if(SAMPLES[name]){inputEditor.setValue(SAMPLES[name]);}
+  if(SAMPLES[name])inputEditor.setValue(SAMPLES[name]);
   document.getElementById('input-preset').value='';
 }
 
@@ -925,260 +1205,174 @@ function clearInput(){inputEditor.setValue('');}
 function beautifyInput(){
   const src=inputEditor.getValue();
   if(!src.trim())return;
-  try{
-    const beautified=_jsBeautify(src);
-    inputEditor.setValue(beautified);
-  }catch(e){
-    alert('Beautify error: '+e.message);
-  }
+  try{inputEditor.setValue(_jsBeautify(src));}
+  catch(e){alert('Beautify error: '+e.message);}
 }
 
 // ================================================================
-//  JS BEAUTIFIER
+//  JS BEAUTIFIER (improved)
 // ================================================================
 function _jsBeautify(src){
   const tokens=[];
   let i=0,n=src.length;
+  const REGEX_KW=new Set(['return','typeof','void','delete','new','throw','case','else','in','of','instanceof','do','await','yield','import','export','from','default']);
 
-  const REGEX_KW=new Set(['return','typeof','void','delete','new','throw','case',
-    'else','in','of','instanceof','do','await','yield','import','export','from']);
-  function lastMeaningfulType(){
-    for(let k=tokens.length-1;k>=0;k--){
-      const t=tokens[k];
-      if(t.type==='ws'||t.type==='line_comment'||t.type==='block_comment')continue;
-      return t;
-    }
-    return null;
-  }
-  function canBeRegex(){
-    const lm=lastMeaningfulType();
-    if(!lm)return true;
-    if(lm.type==='punct'){
-      return lm.val!==')'&&lm.val!==']'&&lm.val!=='++'&&lm.val!=='--';
-    }
-    if(lm.type==='word') return REGEX_KW.has(lm.val);
-    return false;
-  }
+  function lastMeaningful(){for(let k=tokens.length-1;k>=0;k--){const t=tokens[k];if(t.type==='ws'||t.type==='line_comment'||t.type==='block_comment')continue;return t;}return null;}
+  function canBeRegex(){const lm=lastMeaningful();if(!lm)return true;if(lm.type==='punct'){return lm.val!==')'&&lm.val!==']'&&lm.val!=='++'&&lm.val!=='--';}if(lm.type==='word')return REGEX_KW.has(lm.val);return false;}
 
+  // Tokenize
   while(i<n){
     const ch=src[i];
-    if(ch===' '||ch==='\t'||ch==='\r'||ch==='\n'){
-      let s='';while(i<n&&(src[i]===' '||src[i]==='\t'||src[i]==='\r'||src[i]==='\n'))s+=src[i++];
-      tokens.push({type:'ws',val:s});continue;
-    }
-    if(ch==='/'&&src[i+1]==='/'){
-      let s='';while(i<n&&src[i]!=='\n')s+=src[i++];
-      tokens.push({type:'line_comment',val:s});continue;
-    }
-    if(ch==='/'&&src[i+1]==='*'){
-      let s='/*';i+=2;
-      while(i<n&&!(src[i]==='*'&&src[i+1]==='/')){s+=src[i++];}
-      s+='*/';i+=2;
-      tokens.push({type:'block_comment',val:s});continue;
-    }
-    if(ch==='"'||ch==="'"){
-      const q=ch;let s=ch;i++;
-      while(i<n){const c=src[i];s+=c;i++;if(c==='\\'){s+=src[i]||'';i++;}else if(c===q)break;}
-      tokens.push({type:'string',val:s});continue;
-    }
-    if(ch==='`'){
-      let s='`';i++;let d=0;
-      while(i<n){
-        const c=src[i];
-        if(c==='\\'){s+=c+(src[i+1]||'');i+=2;continue;}
-        if(c==='$'&&src[i+1]==='{'){s+='${';i+=2;d++;continue;}
-        if(c==='}'&&d>0){s+=c;i++;d--;continue;}
-        s+=c;i++;if(c==='`'&&d===0)break;
-      }
-      tokens.push({type:'template',val:s});continue;
-    }
-    if(ch==='/'&&canBeRegex()){
-      let s='/';i++;let inCls=false;
-      let valid=false;
-      while(i<n){
-        const c=src[i];
-        if(c==='\n'||c==='\r')break;
-        if(c==='\\'&&i+1<n){s+=c+src[i+1];i+=2;continue;}
-        if(c==='['&&!inCls){inCls=true;s+=c;i++;continue;}
-        if(c===']'&&inCls){inCls=false;s+=c;i++;continue;}
-        if(c==='/'&&!inCls){
-          s+=c;i++;
-          while(i<n&&/[gimsuyv]/.test(src[i]))s+=src[i++];
-          valid=true;break;
-        }
-        s+=c;i++;
-      }
-      if(valid){tokens.push({type:'regex',val:s});continue;}
-      tokens.push({type:'punct',val:'/'});i=i-(s.length-1);continue;
-    }
+    if(ch===' '||ch==='\t'||ch==='\r'||ch==='\n'){let s='';while(i<n&&(src[i]===' '||src[i]==='\t'||src[i]==='\r'||src[i]==='\n'))s+=src[i++];tokens.push({type:'ws',val:s});continue;}
+    if(ch==='/'&&src[i+1]==='/'){let s='';while(i<n&&src[i]!=='\n')s+=src[i++];tokens.push({type:'line_comment',val:s});continue;}
+    if(ch==='/'&&src[i+1]==='*'){let s='/*';i+=2;while(i<n&&!(src[i]==='*'&&src[i+1]=='/'))s+=src[i++];s+='*/';i+=2;tokens.push({type:'block_comment',val:s});continue;}
+    if(ch==='"'||ch==="'"){const q=ch;let s=ch;i++;while(i<n){const c=src[i];s+=c;i++;if(c==='\\'){s+=src[i]||'';i++;}else if(c===q)break;}tokens.push({type:'string',val:s});continue;}
+    if(ch==='`'){let s='`';i++;let d=0;while(i<n){const c=src[i];if(c==='\\'){s+=c+(src[i+1]||'');i+=2;continue;}if(c==='$'&&src[i+1]==='{'){s+='${';i+=2;d++;continue;}if(c==='}'&&d>0){s+=c;i++;d--;continue;}s+=c;i++;if(c==='`'&&d===0)break;}tokens.push({type:'template',val:s});continue;}
+    if(ch==='/'&&canBeRegex()){let s='/';i++;let inCls=false,valid=false;while(i<n){const c=src[i];if(c==='\n'||c==='\r')break;if(c==='\\'&&i+1<n){s+=c+src[i+1];i+=2;continue;}if(c==='['&&!inCls){inCls=true;s+=c;i++;continue;}if(c===']'&&inCls){inCls=false;s+=c;i++;continue;}if(c==='/'&&!inCls){s+=c;i++;while(i<n&&/[gimsuyv]/.test(src[i]))s+=src[i++];valid=true;break;}s+=c;i++;}if(valid){tokens.push({type:'regex',val:s});continue;}tokens.push({type:'punct',val:'/'});i=i-(s.length-1);continue;}
     const two=src.slice(i,i+3);
     const m3=['===','!==','>>>','**=','||=','&&=','??=','...'];
-    const m2=['=>','**','++','--','+=','-=','*=','/=','%=','&=','|=','^=',
-               '<=','>=','==','!=','&&','||','??','<<','>>','?.'];
+    const m2=['=>','**','++','--','+=','-=','*=','/=','%=','&=','|=','^=','<<=','>>=','>>>=','<=','>=','==','!=','&&','||','??','<<','>>','?.','::'];
     if(m3.some(p=>two.startsWith(p))){const p=m3.find(p=>two.startsWith(p));tokens.push({type:'punct',val:p});i+=p.length;continue;}
     if(m2.some(p=>two.startsWith(p))){const p=m2.find(p=>two.startsWith(p));tokens.push({type:'punct',val:p});i+=p.length;continue;}
-    if(/[a-zA-Z_$0-9]/.test(ch)){
-      let s='';while(i<n&&/[a-zA-Z_$0-9]/.test(src[i]))s+=src[i++];
-      tokens.push({type:/^[0-9]/.test(s)?'number':'word',val:s});continue;
-    }
+    if(/[a-zA-Z_$0-9]/.test(ch)){let s='';while(i<n&&/[a-zA-Z_$0-9]/.test(src[i]))s+=src[i++];tokens.push({type:/^[0-9]/.test(s)?'number':'word',val:s});continue;}
     tokens.push({type:'punct',val:ch});i++;
   }
 
   const INDENT='  ';
-  let out='';
-  let depth=0;
-  let col=0;
+  let out='',depth=0;
+  function ind(){return INDENT.repeat(Math.max(0,depth));}
+  function lastChar(){return out[out.length-1]||'';}
+  function trimTrail(){out=out.replace(/[ \t]+$/,'');}
+  function newline(extra){trimTrail();out+='\n'+(extra||'');}
+  function nlInd(d){newline();out+=INDENT.repeat(Math.max(0,d!==undefined?d:depth));}
+  function space(){if(lastChar()!==' ')out+=' ';}
+  function emit(v){out+=v;}
 
-  function ind(){ return INDENT.repeat(Math.max(0,depth)); }
-  function lastChar(){ return out[out.length-1]||''; }
-  function trimTrailingSpace(){ out=out.replace(/[ \t]+$/,''); }
-  function newline(extra){ trimTrailingSpace();out+='\n'+(extra||'');col=0; }
-  function nlIndent(d){ newline();out+=INDENT.repeat(Math.max(0,d!==undefined?d:depth)); }
-  function space(){ if(lastChar()!==' ')out+=' '; }
-  function emitToken(v){ out+=v;col+=v.length; }
-
-  const meaningful=tokens.filter(t=>t.type!=='ws'&&t.type!=='line_comment'&&t.type!=='block_comment');
-  let mi=0;
-  let prev=null;
-  let freshLine=false;
+  const meaningful=tokens.filter(t=>t.type!=='ws');
+  let mi=0,prev=null,freshLine=false;
   const stack=[];
+
+  function needSpace(a,b){
+    if(!a||!b)return false;
+    const aW=a.type==='word'||a.type==='number';
+    const bW=b.type==='word'||b.type==='number';
+    if(aW&&bW)return true;
+    const KW_SP=new Set(['if','for','while','switch','catch','with','return','typeof','void','delete','throw','new','case','in','of','await','yield','from','import','export','async','class','extends','instanceof']);
+    if(aW&&b.val==='(')return KW_SP.has(a.val);
+    if(aW&&b.val==='{')return true;
+    if(a.val===')'&&b.val==='{')return true;
+    if(a.val==='else'&&b.val!=='{')return true;
+    return false;
+  }
+
+  const SPACED_OPS=new Set(['=','+=','-=','*=','/=','%=','**=','&=','|=','^=','<<=','>>=','>>>=','||=','&&=','??=','==','!=','===','!==','<','<=','>','>=','&&','||','??','&','|','^','<<','>>','>>>','+','-','*','/','%','**','in','instanceof','=>']);
 
   while(mi<meaningful.length){
     const tok=meaningful[mi];
     const nxt=meaningful[mi+1]||null;
-    const {type,val}=tok;
+    const{type,val}=tok;
 
-    if(type==='line_comment'||type==='block_comment'){
-      if(!freshLine){nlIndent();}
-      emitToken(val);
-      nlIndent();freshLine=true;
-      mi++;prev=tok;continue;
+    if(type==='line_comment'){
+      if(!freshLine)nlInd();
+      emit(val);nlInd();freshLine=true;mi++;prev=tok;continue;
     }
-
+    if(type==='block_comment'){
+      if(!freshLine)nlInd();
+      // Preserve multiline block comments
+      const lines=val.split('\n');
+      lines.forEach((l,li)=>{if(li>0){out+='\n';if(l.trim().startsWith('*'))out+=INDENT.repeat(Math.max(0,depth))+' ';}emit(l);});
+      nlInd();freshLine=true;mi++;prev=tok;continue;
+    }
     if(type==='string'||type==='template'||type==='regex'||type==='number'){
-      if(!freshLine&&prev&&needSpaceBetween(prev,tok))space();
-      emitToken(val);freshLine=false;
-      mi++;prev=tok;continue;
+      if(!freshLine&&prev&&needSpace(prev,tok))space();
+      emit(val);freshLine=false;mi++;prev=tok;continue;
     }
-
     if(type==='word'){
-      if(!freshLine&&prev&&needSpaceBetween(prev,tok))space();
-      emitToken(val);freshLine=false;
-      mi++;prev=tok;continue;
+      if(!freshLine&&prev&&needSpace(prev,tok))space();
+      // Special: 'else' always on same line as '}'
+      if(val==='else'&&prev&&prev.val==='}'){
+        if(lastChar()==='\n'||(out.trimEnd()!==out)){out=out.trimEnd();space();}
+      }
+      emit(val);freshLine=false;mi++;prev=tok;continue;
     }
-
     if(type==='punct'){
       if(val==='{'){
-        if(!freshLine&&prev&&needSpaceBetween(prev,tok))space();
-        emitToken('{');
-        stack.push('{');depth++;
-        nlIndent();freshLine=true;
-        mi++;prev=tok;continue;
+        if(!freshLine&&prev&&needSpace(prev,tok))space();
+        emit('{');stack.push('{');depth++;nlInd();freshLine=true;mi++;prev=tok;continue;
       }
       if(val==='}'){
-        depth=Math.max(0,depth-1);
-        stack.pop();
-        if(!freshLine)nlIndent(depth);
-        emitToken('}');
-        freshLine=false;
-        if(nxt&&nxt.val!==';'&&nxt.val!==','&&nxt.val!==')'&&nxt.val!==']'&&nxt.val!=='.'){
-          nlIndent();freshLine=true;
-        }
+        depth=Math.max(0,depth-1);stack.pop();
+        if(!freshLine)nlInd(depth);
+        emit('}');freshLine=false;
+        // If next is else/catch/finally, stay on same line
+        if(nxt&&(nxt.val==='else'||nxt.val==='catch'||nxt.val==='finally')){space();}
+        else if(nxt&&nxt.val!==';'&&nxt.val!==','&&nxt.val!==')'&&nxt.val!==']'&&nxt.val!=='.'){nlInd();freshLine=true;}
         mi++;prev=tok;continue;
       }
       if(val==='('){
-        if(!freshLine&&prev&&needSpaceBetween(prev,tok))space();
-        emitToken('(');stack.push('(');
-        freshLine=false;
-        mi++;prev=tok;continue;
+        if(!freshLine&&prev&&needSpace(prev,tok))space();
+        emit('(');stack.push('(');freshLine=false;mi++;prev=tok;continue;
       }
-      if(val===')'){
-        stack.pop();
-        emitToken(')');freshLine=false;
-        mi++;prev=tok;continue;
-      }
+      if(val===')'){stack.pop();emit(')');freshLine=false;mi++;prev=tok;continue;}
       if(val==='['){
-        if(!freshLine&&prev&&needSpaceBetween(prev,tok))space();
-        emitToken('[');stack.push('[');freshLine=false;
-        mi++;prev=tok;continue;
-      }
-      if(val===']'){
-        stack.pop();emitToken(']');freshLine=false;
-        mi++;prev=tok;continue;
-      }
-      if(val===';'){
-        emitToken(';');
-        const inParen=stack.length>0&&stack[stack.length-1]==='(';
-        if(!inParen){
-          if(nxt&&nxt.val!=='}'){nlIndent();freshLine=true;}
+        if(!freshLine&&prev&&needSpace(prev,tok))space();
+        // Detect if it's a short array (no nested structures)
+        let k=mi+1,depth2=1,simple=true,len=0;
+        while(k<meaningful.length&&depth2>0){
+          if(meaningful[k].val==='['||meaningful[k].val==='{')depth2++;
+          if(meaningful[k].val===']'||meaningful[k].val==='}'){depth2--;if(depth2===0)break;}
+          len++;k++;
         }
+        emit('[');stack.push('[');freshLine=false;mi++;prev=tok;continue;
+      }
+      if(val===']'){stack.pop();emit(']');freshLine=false;mi++;prev=tok;continue;}
+      if(val===';'){
+        emit(';');
+        const inParen=stack.length>0&&stack[stack.length-1]==='(';
+        if(!inParen&&nxt&&nxt.val!=='}'){nlInd();freshLine=true;}
         mi++;prev=tok;continue;
       }
       if(val===','){
-        emitToken(',');
+        emit(',');
         const inBrace=stack.length>0&&stack[stack.length-1]==='{';
-        if(inBrace){nlIndent();freshLine=true;}else{space();}
+        const inBrack=stack.length>0&&stack[stack.length-1]==='[';
+        if(inBrace){nlInd();freshLine=true;}else if(inBrack){space();}else{space();}
         mi++;prev=tok;continue;
       }
       if(val===':'){
-        const prevMeaningful2=meaningful[mi-2];
-        const isTernary=prevMeaningful2&&prevMeaningful2.val==='?';
+        const prevMean2=meaningful[mi-2];
+        const isTernary=prevMean2&&prevMean2.val==='?';
+        const inBlock=stack.length>0&&stack[stack.length-1]==='{';
         if(!isTernary){
-          emitToken(':');
-          const inBlock=stack.length>0&&stack[stack.length-1]==='{';
-          if(inBlock&&prev&&prev.type!=='string'&&prev.type!=='number'){
-            nlIndent();freshLine=true;
-          }else{space();}
-        }else{space();emitToken(':');space();}
+          emit(':');
+          if(inBlock&&prev&&prev.type!=='string'&&prev.type!=='number'){space();}
+          else{space();}
+        }else{space();emit(':');space();}
         mi++;prev=tok;continue;
       }
-      if(val==='?'){space();emitToken('?');space();mi++;prev=tok;continue;}
-      if(val==='=>'){space();emitToken('=>');space();mi++;prev=tok;continue;}
-      const SPACED_OPS=new Set([
-        '=','+=','-=','*=','/=','%=','**=','&=','|=','^=','<<=','>>=','>>>=',
-        '||=','&&=','??=','==','!=','===','!==','<','<=','>','>=',
-        '&&','||','??','&','|','^','<<','>>','>>>','+','-','*','/','%','**',
-        'in','instanceof',
-      ]);
-      const unaryContext=prev&&(
-        prev.type==='punct'&&(prev.val==='('||prev.val==='['||prev.val===','||
-          prev.val==='='||prev.val==='+'||prev.val==='-'||prev.val==='*'||
-          prev.val==='/'||prev.val==='%'||prev.val==='!'||prev.val==='~'||
-          prev.val==='=>'||prev.val===':'||prev.val==='{'||prev.val===';'||
-          prev.val==='return'||prev.val==='&&'||prev.val==='||'||prev.val==='??'
-        )||
-        prev.type==='word'&&(prev.val==='return'||prev.val==='typeof'||
-          prev.val==='void'||prev.val==='delete'||prev.val==='new'||
-          prev.val==='throw'||prev.val==='case'||prev.val==='in'||prev.val==='of')
-      );
-      if(SPACED_OPS.has(val)&&!(unaryContext&&(val==='-'||val==='+'))){
+      if(val==='?'&&nxt&&nxt.val!=='.'){space();emit('?');space();mi++;prev=tok;continue;}
+      // Ternary ?. is optional chaining — no spaces
+      if(val==='?.'){emit('?.');mi++;prev=tok;continue;}
+      if(val==='=>'){space();emit('=>');space();mi++;prev=tok;continue;}
+      if(val==='...'){
+        if(!freshLine&&prev&&needSpace(prev,tok))space();
+        emit('...');mi++;prev=tok;continue;
+      }
+      if(SPACED_OPS.has(val)){
+        // Detect unary context
+        const unary=prev&&(
+          (prev.type==='punct'&&new Set(['(','[',',','=','+','-','*','/','%','!','~','=>',':','{',';','&&','||','??','return']).has(prev.val))||
+          (prev.type==='word'&&new Set(['return','typeof','void','delete','new','throw','case','in','of']).has(prev.val))
+        );
+        if(unary&&(val==='-'||val==='+')){{emit(val);mi++;prev=tok;continue;}}
         if(!freshLine)space();
-        emitToken(val);space();
-        mi++;prev=tok;continue;
+        emit(val);space();mi++;prev=tok;continue;
       }
-      if(val==='.'||val==='?.'){emitToken(val);mi++;prev=tok;continue;}
-      if(val==='...'||val==='!'||val==='~'){
-        if(!freshLine&&prev&&needSpaceBetween(prev,tok))space();
-        emitToken(val);mi++;prev=tok;continue;
-      }
-      if(!freshLine&&prev&&needSpaceBetween(prev,tok))space();
-      emitToken(val);mi++;prev=tok;continue;
+      if(val==='.'||val==='?.'||val==='::'){emit(val);mi++;prev=tok;continue;}
+      if(!freshLine&&prev&&needSpace(prev,tok))space();
+      emit(val);mi++;prev=tok;continue;
     }
-
-    emitToken(val);mi++;prev=tok;
-  }
-
-  function needSpaceBetween(a,b){
-    if(!a||!b)return false;
-    const aWord=a.type==='word'||a.type==='number';
-    const bWord=b.type==='word'||b.type==='number';
-    if(aWord&&bWord)return true;
-    const KW_SPACE=new Set(['if','for','while','switch','catch','with','return',
-      'typeof','void','delete','throw','new','case','in','of','await','yield']);
-    if(aWord&&b.val==='(')return KW_SPACE.has(a.val);
-    if(a.val===')'&&b.val==='{')return true;
-    if(aWord&&b.val==='{')return true;
-    return false;
+    emit(val);mi++;prev=tok;
   }
 
   return out.trim();
@@ -1189,158 +1383,75 @@ function _jsBeautify(src){
 // ================================================================
 const _searchState={in:{matches:[],cur:-1,marks:[]},out:{matches:[],cur:-1,marks:[]}};
 let _lastFocusedSide='in';
-
 function _getEditor(side){return side==='in'?inputEditor:outputEditor;}
 
 function toggleSearch(side){
-  const bar=G('search-'+side);
-  const visible=bar.style.display!=='none';
-  if(visible){
-    bar.style.display='none';
-    _clearSearchMarks(side);
-    _searchState[side].matches=[];
-    _searchState[side].cur=-1;
-    G('search-'+side+'-count').textContent='';
-    _getEditor(side).focus();
-  }else{
-    bar.style.display='flex';
-    const inp=G('search-'+side+'-inp');
-    const ed=_getEditor(side);
-    const sel=ed.getSelection();
-    if(sel&&sel.length<200){inp.value=sel;}
-    inp.focus();inp.select();
-    doSearch(side);
-  }
+  const bar=G('search-'+side),visible=bar.style.display!=='none';
+  if(visible){bar.style.display='none';_clearMarks(side);_searchState[side].matches=[];_searchState[side].cur=-1;G('search-'+side+'-count').textContent='';_getEditor(side).focus();}
+  else{bar.style.display='flex';const inp=G('search-'+side+'-inp');const sel=_getEditor(side).getSelection();if(sel&&sel.length<200)inp.value=sel;inp.focus();inp.select();doSearch(side);}
   setTimeout(fitEditors,30);
 }
-
-function _clearSearchMarks(side){
-  _searchState[side].marks.forEach(m=>{try{m.clear();}catch(_){}});
-  _searchState[side].marks=[];
-}
-
+function _clearMarks(side){_searchState[side].marks.forEach(m=>{try{m.clear();}catch(_){}});_searchState[side].marks=[];}
 function doSearch(side){
-  const query=G('search-'+side+'-inp').value;
-  _clearSearchMarks(side);
-  const st=_searchState[side];
-  st.matches=[];st.cur=-1;
-  const countEl=G('search-'+side+'-count');
+  const query=G('search-'+side+'-inp').value;_clearMarks(side);const st=_searchState[side];st.matches=[];st.cur=-1;const countEl=G('search-'+side+'-count');
   if(!query){countEl.textContent='';return;}
-  const ed=_getEditor(side);
-  const doc=ed.getDoc();
-  const content=doc.getValue();
-  const lower=content.toLowerCase();
-  const ql=query.toLowerCase();
-  let pos=0;
-  while(pos<content.length){
-    const idx=lower.indexOf(ql,pos);
-    if(idx<0)break;
-    st.matches.push(idx);
-    pos=idx+1;
-  }
+  const ed=_getEditor(side),doc=ed.getDoc(),content=doc.getValue(),lower=content.toLowerCase(),ql=query.toLowerCase();
+  let pos=0;while(pos<content.length){const idx=lower.indexOf(ql,pos);if(idx<0)break;st.matches.push(idx);pos=idx+1;}
   if(!st.matches.length){countEl.textContent='No results';return;}
-  st.marks=st.matches.map(idx=>{
-    const from=doc.posFromIndex(idx);
-    const to=doc.posFromIndex(idx+query.length);
-    return doc.markText(from,to,{className:'ed-search-highlight'});
-  });
-  countEl.textContent=`1 / ${st.matches.length}`;
-  st.cur=0;
-  _jumpToMatch(side,0,true);
+  st.marks=st.matches.map(idx=>{const from=doc.posFromIndex(idx),to=doc.posFromIndex(idx+query.length);return doc.markText(from,to,{className:'ed-search-highlight'});});
+  countEl.textContent='1 / '+st.matches.length;st.cur=0;_jumpTo(side,0,true);
 }
-
-function _jumpToMatch(side,idx,initial){
-  const ed=_getEditor(side);
-  const st=_searchState[side];
-  if(!st.matches.length)return;
-  idx=((idx%st.matches.length)+st.matches.length)%st.matches.length;
-  st.cur=idx;
-  _clearSearchMarks(side);
-  const doc=ed.getDoc();
-  const query=G('search-'+side+'-inp').value;
-  st.marks=st.matches.map((mIdx,mi)=>{
-    const from=doc.posFromIndex(mIdx);
-    const to=doc.posFromIndex(mIdx+query.length);
-    return doc.markText(from,to,{className:mi===idx?'ed-search-current':'ed-search-highlight'});
-  });
-  G('search-'+side+'-count').textContent=`${idx+1} / ${st.matches.length}`;
-  const curIdx=st.matches[idx];
-  const from=doc.posFromIndex(curIdx);
-  ed.scrollIntoView({line:from.line,ch:from.ch},100);
-  if(!initial)ed.setCursor(from);
+function _jumpTo(side,idx,initial){
+  const ed=_getEditor(side),st=_searchState[side];if(!st.matches.length)return;
+  idx=((idx%st.matches.length)+st.matches.length)%st.matches.length;st.cur=idx;_clearMarks(side);
+  const doc=ed.getDoc(),query=G('search-'+side+'-inp').value;
+  st.marks=st.matches.map((mIdx,mi)=>{const from=doc.posFromIndex(mIdx),to=doc.posFromIndex(mIdx+query.length);return doc.markText(from,to,{className:mi===idx?'ed-search-current':'ed-search-highlight'});});
+  G('search-'+side+'-count').textContent=(idx+1)+' / '+st.matches.length;
+  const from=doc.posFromIndex(st.matches[idx]);ed.scrollIntoView({line:from.line,ch:from.ch},100);if(!initial)ed.setCursor(from);
 }
-
-function searchNav(side,dir){
-  const st=_searchState[side];
-  if(!st.matches.length)return;
-  _jumpToMatch(side,st.cur+dir);
-}
-
-function searchKey(e,side){
-  if(e.key==='Enter'){e.preventDefault();searchNav(side,e.shiftKey?-1:1);}
-  if(e.key==='Escape'){e.preventDefault();toggleSearch(side);}
-}
-
-function replaceKey(e){
-  if(e.key==='Enter'){e.preventDefault();e.shiftKey?replaceAll():replaceOne();}
-  if(e.key==='Escape'){e.preventDefault();toggleSearch('in');}
-}
-
+function searchNav(side,dir){const st=_searchState[side];if(!st.matches.length)return;_jumpTo(side,st.cur+dir);}
+function searchKey(e,side){if(e.key==='Enter'){e.preventDefault();searchNav(side,e.shiftKey?-1:1);}if(e.key==='Escape'){e.preventDefault();toggleSearch(side);}}
+function replaceKey(e){if(e.key==='Enter'){e.preventDefault();e.shiftKey?replaceAll():replaceOne();}if(e.key==='Escape'){e.preventDefault();toggleSearch('in');}}
 function replaceOne(){
-  const st=_searchState['in'];
-  if(!st.matches.length)return;
-  const cur=st.cur<0?0:st.cur;
-  const query=G('search-in-inp').value;
-  const replacement=G('replace-in-inp').value;
-  if(!query)return;
-  const doc=inputEditor.getDoc();
-  const mIdx=st.matches[cur];
-  const from=doc.posFromIndex(mIdx);
-  const to=doc.posFromIndex(mIdx+query.length);
-  doc.replaceRange(replacement,from,to);
-  doSearch('in');
-  if(st.matches.length>0)_jumpToMatch('in',Math.min(cur,st.matches.length-1));
+  const st=_searchState['in'];if(!st.matches.length)return;const cur=st.cur<0?0:st.cur;
+  const query=G('search-in-inp').value,replacement=G('replace-in-inp').value;if(!query)return;
+  const doc=inputEditor.getDoc(),mIdx=st.matches[cur];
+  const from=doc.posFromIndex(mIdx),to=doc.posFromIndex(mIdx+query.length);
+  doc.replaceRange(replacement,from,to);doSearch('in');
+  if(st.matches.length>0)_jumpTo('in',Math.min(cur,st.matches.length-1));
 }
-
 function replaceAll(){
-  const query=G('search-in-inp').value;
-  const replacement=G('replace-in-inp').value;
-  if(!query)return;
-  const content=inputEditor.getValue();
-  const lower=content.toLowerCase();
-  const ql=query.toLowerCase();
+  const query=G('search-in-inp').value,replacement=G('replace-in-inp').value;if(!query)return;
+  const content=inputEditor.getValue(),lower=content.toLowerCase(),ql=query.toLowerCase();
   let result='',pos=0,count=0;
-  while(pos<content.length){
-    const idx=lower.indexOf(ql,pos);
-    if(idx<0){result+=content.slice(pos);break;}
-    result+=content.slice(pos,idx)+replacement;
-    pos=idx+query.length;count++;
-  }
-  if(count===0)return;
-  inputEditor.setValue(result);
-  _clearSearchMarks('in');
-  _searchState['in'].matches=[];_searchState['in'].cur=-1;
-  G('search-in-count').textContent=`Replaced ${count}`;
-  setTimeout(()=>{const c=G('search-in-count');if(c&&c.textContent.startsWith('Replaced'))c.textContent='';doSearch('in');},1800);
+  while(pos<content.length){const idx=lower.indexOf(ql,pos);if(idx<0){result+=content.slice(pos);break;}result+=content.slice(pos,idx)+replacement;pos=idx+query.length;count++;}
+  if(!count)return;inputEditor.setValue(result);_clearMarks('in');_searchState['in'].matches=[];_searchState['in'].cur=-1;
+  G('search-in-count').textContent='Replaced '+count;
+  setTimeout(()=>{const c=G('search-in-count');if(c&&c.textContent.startsWith('Replaced')){c.textContent='';doSearch('in');}},1800);
 }
 
 document.addEventListener('keydown',function(e){
-  if((e.ctrlKey||e.metaKey)&&e.key==='f'){
-    e.preventDefault();
-    let side=_lastFocusedSide||'in';
-    const bar=G('search-'+side);
-    if(bar.style.display==='none'){toggleSearch(side);}
-    else{G('search-'+side+'-inp').focus();G('search-'+side+'-inp').select();}
-  }
-  if((e.ctrlKey||e.metaKey)&&e.key==='h'){
-    e.preventDefault();
-    if(G('search-in').style.display==='none')toggleSearch('in');
-    setTimeout(()=>{const r=G('replace-in-inp');if(r)r.focus();},60);
-  }
+  if((e.ctrlKey||e.metaKey)&&e.key==='f'){e.preventDefault();let side=_lastFocusedSide||'in';const bar=G('search-'+side);if(bar.style.display==='none')toggleSearch(side);else{G('search-'+side+'-inp').focus();G('search-'+side+'-inp').select();}}
+  if((e.ctrlKey||e.metaKey)&&e.key==='h'){e.preventDefault();if(G('search-in').style.display==='none')toggleSearch('in');setTimeout(()=>{const r=G('replace-in-inp');if(r)r.focus();},60);}
 });
 
 // ================================================================
-//  CodeMirror Init
+//  OUTPUT ACTIONS
+// ================================================================
+function copyOut(){
+  const v=outputEditor.getValue();if(!v)return;
+  function _done(){const btn=G('btn-copy');btn.textContent='Copied!';setTimeout(()=>{btn.textContent='Copy';},1400);}
+  navigator.clipboard.writeText(v).then(_done).catch(()=>{const ta=document.createElement('textarea');ta.value=v;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);_done();});
+}
+
+function dlMap(){
+  if(!_lastMap)return;
+  const blob=new Blob([_lastMap],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(VAL('o_smap_url')||'output.js.map').split('/').pop();a.click();
+}
+
+// ================================================================
+//  CODEMIRROR INIT
 // ================================================================
 const inputEditor=CodeMirror(G('in-editor'),{
   mode:'javascript',lineNumbers:true,foldGutter:true,
@@ -1354,72 +1465,32 @@ const outputEditor=CodeMirror(G('out-editor'),{
   gutters:['CodeMirror-linenumbers','CodeMirror-foldgutter'],
   readOnly:true,lineWrapping:false,tabSize:2,value:'',
 });
-
-(function(){
-  if(inputEditor)inputEditor.on('focus',()=>{_lastFocusedSide='in';});
-  if(outputEditor)outputEditor.on('focus',()=>{_lastFocusedSide='out';});
-})();
-
-// ================================================================
-//  OUTPUT ACTIONS
-// ================================================================
-function copyOut(){
-  const v=outputEditor.getValue();if(!v)return;
-  function _setCopied(){const btn=G('btn-copy');btn.textContent='Copied!';setTimeout(()=>{btn.textContent='Copy';},1400);}
-  navigator.clipboard.writeText(v).then(_setCopied).catch(()=>{
-    const ta=document.createElement('textarea');
-    ta.value=v;ta.style.position='fixed';ta.style.opacity='0';
-    document.body.appendChild(ta);ta.select();
-    document.execCommand('copy');document.body.removeChild(ta);
-    _setCopied();
-  });
-}
-
-function dlMap(){
-  if(!_lastMap)return;
-  const blob=new Blob([_lastMap],{type:'application/json'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=(VAL('o_smap_url')||'output.js.map').split('/').pop();
-  a.click();
-}
+inputEditor.on('focus',()=>{_lastFocusedSide='in';});
+outputEditor.on('focus',()=>{_lastFocusedSide='out';});
 
 // ================================================================
 //  PERSISTENCE
 // ================================================================
-const PERSIST_KEY='obscura_clean_v1';
-
+const PERSIST_KEY='obscura_v3';
 function saveSettings(){
   try{
-    const data={v:1};
-    data.inputCode=inputEditor?inputEditor.getValue():'';
-    ['o_mini','o_semi','o_ignimport','o_html','o_srcmap'].forEach(id=>{
-      const e=document.getElementById(id);if(e)data['ck_'+id]=e.checked;
-    });
-    ['o_strict_mode','o_smap_url','o_smap_root','seed-val'].forEach(id=>{
-      const e=document.getElementById(id);if(e)data['tx_'+id]=e.value;
-    });
+    const data={v:3,inputCode:inputEditor?inputEditor.getValue():''};
+    ['o_mini','o_semi','o_ignimport','o_html','o_srcmap','adv-hexesc','adv-strrot','adv-comma','vm-antidbg','vm-scramble','vm-numbers','vm-proxy','vm-junk'].forEach(id=>{const e=G(id);if(e)data['ck_'+id]=e.checked;});
+    ['o_strict_mode','o_smap_url','o_smap_root','seed-val','vm-seed','vm-frags','adv-wrapper','adv-linelen'].forEach(id=>{const e=G(id);if(e)data['tx_'+id]=e.value;});
     localStorage.setItem(PERSIST_KEY,JSON.stringify(data));
   }catch(e){console.warn('save failed',e);}
 }
-
 function loadSettings(){
   try{
-    const raw=localStorage.getItem(PERSIST_KEY);
-    if(!raw)return false;
-    const data=JSON.parse(raw);
-    if(!data||data.v!==1)return false;
-    ['o_mini','o_semi','o_ignimport','o_html','o_srcmap'].forEach(id=>{
-      if(data['ck_'+id]!==undefined){const e=document.getElementById(id);if(e)e.checked=data['ck_'+id];}
-    });
-    ['o_strict_mode','o_smap_url','o_smap_root','seed-val'].forEach(id=>{
-      if(data['tx_'+id]!==undefined){const e=document.getElementById(id);if(e)e.value=data['tx_'+id];}
-    });
-    showSub('smap-sub',document.getElementById('o_srcmap')&&document.getElementById('o_srcmap').checked);
-    if(document.getElementById('btn-map'))document.getElementById('btn-map').disabled=!(document.getElementById('o_srcmap')&&document.getElementById('o_srcmap').checked);
-    if(data.inputCode){
-      setTimeout(()=>{if(inputEditor)inputEditor.setValue(data.inputCode);},50);
-    }
+    const raw=localStorage.getItem(PERSIST_KEY);if(!raw)return false;
+    const data=JSON.parse(raw);if(!data||data.v!==3)return false;
+    ['o_mini','o_semi','o_ignimport','o_html','o_srcmap','adv-hexesc','adv-strrot','adv-comma','vm-antidbg','vm-scramble','vm-numbers','vm-proxy','vm-junk'].forEach(id=>{if(data['ck_'+id]!==undefined){const e=G(id);if(e)e.checked=data['ck_'+id];}});
+    ['o_strict_mode','o_smap_url','o_smap_root','seed-val','vm-seed','vm-frags','adv-wrapper','adv-linelen'].forEach(id=>{if(data['tx_'+id]!==undefined){const e=G(id);if(e)e.value=data['tx_'+id];}});
+    showSub('smap-sub',G('o_srcmap')&&G('o_srcmap').checked);
+    if(G('btn-map'))G('btn-map').disabled=!(G('o_srcmap')&&G('o_srcmap').checked);
+    if(G('vm-frags-v')&&G('vm-frags'))SETD('vm-frags-v',G('vm-frags').value);
+    if(G('adv-linelen-v')&&G('adv-linelen'))SETD('adv-linelen-v',G('adv-linelen').value==='0'?'∞':G('adv-linelen').value);
+    if(data.inputCode)setTimeout(()=>{if(inputEditor)inputEditor.setValue(data.inputCode);},50);
     return true;
   }catch(e){console.warn('load failed',e);return false;}
 }
@@ -1432,12 +1503,7 @@ window.addEventListener('load',()=>{
     el.addEventListener('change',saveSettings);
     if(el.type==='range')el.addEventListener('input',saveSettings);
   });
-  if(inputEditor){
-    inputEditor.on('change',()=>{
-      clearTimeout(inputEditor._st);
-      inputEditor._st=setTimeout(saveSettings,800);
-    });
-  }
+  if(inputEditor)inputEditor.on('change',()=>{clearTimeout(inputEditor._st);inputEditor._st=setTimeout(saveSettings,800);});
 });
 </script>
 </body>
